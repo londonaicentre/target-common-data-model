@@ -1,0 +1,71 @@
+version: 2
+
+# =============================================================================
+# TEMPLATE — repeating-element variant object
+# =============================================================================
+# Defines the flat object held in a repeating-element VARIANT column
+# (see template_schema.yml). One object per source occurrence of a native
+# FHIR backbone/array element. Each object is flat (single-level); where the
+# source is sequenced, keep the ordering field (e.g. rank) inside the object.
+#
+# Testing: a custom step explodes this variant array into its own view (one row
+# per object). This file is the contract for that view, so `constraints` and
+# `tests` are enforced there. Each object needs a surrogate PK unique across all
+# objects in the parent table (hash of parent PK + the ordering/array index).
+# =============================================================================
+
+variants:
+  - name: <element>_variant
+    description: <What one occurrence in this variant represents>
+    fhir_path: <Path to FHIR resource>     # the array / backbone element
+    fhir_type: <BackboneElement[] | object[]>
+    fields:
+
+      # Surrogate PK — unique across all objects in the parent table
+      - name: <element>_id
+        data_type: varchar
+        description: Surrogate PK = hash(<parent_pk>, <rank>)   # or array index
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
+        tests: [unique, not_null]
+
+      # Plain scalar field
+      - name: <field_a>
+        data_type: <varchar | number | boolean | timestamp_tz | date>
+        description: <Plain-English meaning>
+        constraints: null
+        meta:
+          fhir_path: <Resource.element.field>
+          fhir_type: <FHIR datatype>
+          value_set: null
+        tests: null
+
+      # Value-set-bounded field
+      - name: <field_b>_code
+        data_type: varchar
+        description: <Plain-English meaning>
+        constraints: null
+        meta:
+          fhir_path: <Resource.element.field>
+          fhir_type: <code | Coding.code>
+          value_set:
+            binding: <value set URL>
+            codes: [<CODE1>, <CODE2>]        # only if reasonable to constrain
+        tests:
+          - accepted_values:
+              values: [<CODE1>, <CODE2>]     # if enumerable
+
+      # Ordering field — present when the source array is sequenced
+      - name: <rank>
+        data_type: number
+        description: <Sequence position, e.g. 1 = primary>
+        constraints: null
+        meta:
+          fhir_path: <Resource.element.rank>
+          fhir_type: positiveInt
+          value_set: null
+        tests: null
