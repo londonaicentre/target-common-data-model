@@ -1,0 +1,208 @@
+version: 2
+
+# =============================================================================
+# dim_patient — flattened UK Core Patient
+# =============================================================================
+# One row per Patient resource. Scope is analyst / OMOP `person` / NHS CDS
+# core: demographics, NHS number, ethnicity, marital status, geography.
+# Profile: UKCore-Patient (R4 4.0.1).
+# =============================================================================
+
+models:
+  - name: dim_patient
+    description: >
+      Patient dimension. One row per Patient resource, keyed by patient_id.
+      Referenced by clinical fact tables (condition, encounter, observation, etc.).
+    config:
+      materialized: table
+      contract:
+        enforced: true
+    columns:
+
+      # Primary key
+      - name: master_person_id
+        data_type: varchar
+        description: master id (over other linked ids) for Patient resource. One row per patient.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Patient.id
+          fhir_type: id
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: [unique]
+
+      # NHS number
+      - name: nhs_number
+        data_type: varchar
+        description: NHS number (10-digit national patient identifier).
+        constraints: null
+        meta:
+          fhir_path: Patient.identifier:nhsNumber.value
+          fhir_type: string
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # EXCLUDE - tested upstream during entity resolution
+      # - name: nhs_number_verification_status
+      #   data_type: varchar
+      #   description: Whether the NHS number has been traced/verified.
+      #   constraints: null
+      #   meta:
+      #     fhir_path: Patient.identifier:nhsNumber.extension:nhsNumberVerificationStatus
+      #     fhir_type: code
+      #     value_set:
+      #       binding: https://fhir.hl7.org.uk/ValueSet/UKCore-NHSNumberVerificationStatus
+      #       codes: null
+      #     variant_fields: null
+      #     variant_schema: null
+      #   tests: null
+
+      # Status
+      - name: active
+        data_type: boolean
+        description: Whether this patient record is in active use.
+        constraints: null
+        meta:
+          fhir_path: Patient.active
+          fhir_type: boolean
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Demographics
+      - name: gender
+        data_type: varchar
+        description: Administrative gender used for record-keeping.
+        constraints: null
+        meta:
+          fhir_path: Patient.gender
+          fhir_type: code
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1
+            codes: [male, female, other, unknown]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [male, female, other, unknown]
+
+      - name: birth_date
+        data_type: date
+        description: Date of birth.
+        constraints: null
+        meta:
+          fhir_path: Patient.birthDate
+          fhir_type: date
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: deceased_boolean
+        data_type: boolean
+        description: Whether the patient is recorded as deceased.
+        constraints: null
+        meta:
+          fhir_path: Patient.deceasedBoolean
+          fhir_type: boolean
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: deceased_datetime
+        data_type: timestamp_tz
+        description: Date/time of death, when known.
+        constraints: null
+        meta:
+          fhir_path: Patient.deceasedDateTime
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: ethnic_category
+        data_type: varchar
+        description: Ethnic category (UK Core ethnicity, England/Wales code systems).
+        constraints: null
+        meta:
+          fhir_path: Patient.extension:ethnicCategory
+          fhir_type: code
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-EthnicCategory
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: marital_status
+        data_type: varchar
+        description: Marital (civil) status.
+        constraints: null
+        meta:
+          fhir_path: Patient.maritalStatus
+          fhir_type: code
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-PersonMaritalStatusCode
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Geography (usual/home address)
+      - name: postal_code
+        data_type: varchar
+        description: Postcode of the patient's usual address (deprivation/geography linkage).
+        constraints: null
+        meta:
+          fhir_path: Patient.address.postalCode
+          fhir_type: string
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: city
+        data_type: varchar
+        description: City/town of the patient's usual address.
+        constraints: null
+        meta:
+          fhir_path: Patient.address.city
+          fhir_type: string
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: lsoa  # (not native FHIR)
+        data_type: varchar
+        description: Lower-layer Super Output Area. Derived from postcode downstream; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Other identifiers (NHS number excluded — held as scalars above)
+      - name: identifier
+        data_type: variant
+        description: >
+          Non-NHS-number identifiers held as a repeatable VARIANT
+          (Patient.identifier[], excluding identifier:nhsNumber).
+        constraints: null
+        meta:
+          fhir_path: Patient.identifier
+          fhir_type: Identifier[]
+          value_set: null
+          variant_fields: [system, value, use]
+          variant_schema: patient_identifier_variant_schema.yml
+        tests: null
