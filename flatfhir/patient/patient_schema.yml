@@ -5,6 +5,7 @@ version: 2
 # =============================================================================
 # One row per Patient resource. Scope is analyst / OMOP `person` / NHS CDS
 # core: demographics, NHS number, ethnicity, marital status, geography.
+#
 # Profile: UKCore-Patient (R4 4.0.1).
 # =============================================================================
 
@@ -33,43 +34,6 @@ models:
           variant_schema: null
         tests: [unique]
 
-      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
-      - name: meta_source
-        data_type: varchar
-        description: Source system the record originated from.
-        constraints: null
-        meta:
-          fhir_path: Patient.meta.source
-          fhir_type: uri
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_tag
-        data_type: varchar
-        description: Feed/extract tag stamped by the source (meta.tag code).
-        constraints: null
-        meta:
-          fhir_path: Patient.meta.tag
-          fhir_type: Coding
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_last_updated
-        data_type: timestamp_tz
-        description: When the source last changed the record.
-        constraints: null
-        meta:
-          fhir_path: Patient.meta.lastUpdated
-          fhir_type: instant
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
       # NHS number
       - name: nhs_number
         data_type: varchar
@@ -82,21 +46,6 @@ models:
           variant_fields: null
           variant_schema: null
         tests: null
-
-      # EXCLUDE - tested upstream during entity resolution
-      # - name: nhs_number_verification_status
-      #   data_type: varchar
-      #   description: Whether the NHS number has been traced/verified.
-      #   constraints: null
-      #   meta:
-      #     fhir_path: Patient.identifier:nhsNumber.extension:nhsNumberVerificationStatus
-      #     fhir_type: code
-      #     value_set:
-      #       binding: https://fhir.hl7.org.uk/ValueSet/UKCore-NHSNumberVerificationStatus
-      #       codes: null
-      #     variant_fields: null
-      #     variant_schema: null
-      #   tests: null
 
       # Status
       - name: active
@@ -166,28 +115,56 @@ models:
 
       - name: ethnic_category
         data_type: varchar
-        description: Ethnic category (UK Core ethnicity, England/Wales code systems).
+        description: Ethnic category code (NHS England ethnic category).
         constraints: null
         meta:
           fhir_path: Patient.extension:ethnicCategory
           fhir_type: code
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-EthnicCategory
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-EthnicCategoryEngland
+            codes: [A, B, C, D, E, F, G, H, J, K, L, M, N, P, R, S, Z, "99"]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [A, B, C, D, E, F, G, H, J, K, L, M, N, P, R, S, Z, "99"]
+
+      - name: ethnic_category_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for ethnic_category. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
 
       - name: marital_status
         data_type: varchar
-        description: Marital (civil) status.
+        description: Marital (civil) status code (NHS England person marital status).
         constraints: null
         meta:
           fhir_path: Patient.maritalStatus
           fhir_type: code
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-PersonMaritalStatusCode
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-PersonMaritalStatusEngland
+            codes: [S, M, D, W, P, N, "8", "9"]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [S, M, D, W, P, N, "8", "9"]
+
+      - name: marital_status_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for marital_status. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
@@ -243,3 +220,64 @@ models:
           variant_fields: [system, value, use]
           variant_schema: patient_identifier_variant_schema.yml
         tests: null
+
+      # Source provenance — flattened Resource.meta
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # =====================================================================
+      # EXCLUDED — UKCore-Patient elements not modelled (kept for traceability)
+      # =====================================================================
+      # nhs_number_verification_status — tested upstream during entity resolution
+      # name — held in a separate PII-restricted table, not the analytical dim
+      # telecom — contact points (phone/email); PII, low analytical use
+      # multiple_birth — Patient.multipleBirth[x]; niche
+      # birth_sex — extension:birthSex; overlaps gender, add if needed downstream
+      # birth_place — extension:birthPlace; niche
+      # death_notification_status — extension:deathNotificationStatus; upstream
+      # residential_status — extension:residentialStatus; niche
+      # contact_preference — extension:contactPreference; comms, not analytical
+      # patient_interpreter_required — extension:patientInterpreterRequired; niche
+      # cadaveric_donor — extension:cadavericDonor; niche
+      # nhs_number_unavailable_reason — extension:nhsNumberUnavailableReason; upstream
+      # general_practitioner — Patient.generalPractitioner[]; registration, model separately
+      # managing_organization — Patient.managingOrganization; provenance-ish
+      # contact — Patient.contact[]; next-of-kin, PII
+      # communication — Patient.communication[]; language pref
+      # link — Patient.link[]; patient-record linkage, handled in entity resolution
+      # photo — Patient.photo[]; not analytical
+      # address (full) — only postal_code/city surfaced; other address parts dropped
+      # implicitRules / language / text — infrastructure / narrative

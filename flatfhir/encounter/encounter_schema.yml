@@ -5,11 +5,12 @@ version: 2
 # =============================================================================
 # One row per Encounter resource. Scope is analyst / OMOP `visit_occurrence` /
 # NHS CDS admitted-patient-care core: the visit, its class/type, timing,
-# admission/discharge (CDS) fields, reason, and diagnosis grid.
+# admission/discharge (CDS) fields, and diagnosis grid.
 #
 # Grain note: NHS CDS spells, episodes and ward movements are each modelled as
-# SEPARATE Encounter resources at different levels. The hierarchy between them
+# separate Encounter resources at different levels. The hierarchy between them
 # is carried by part_of_id (child -> parent, e.g. ward-stay -> episode -> spell)
+#
 # Profile: UKCore-Encounter (R4 4.0.1).
 # =============================================================================
 
@@ -39,43 +40,6 @@ models:
           variant_schema: null
         tests: [unique]
 
-      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
-      - name: meta_source
-        data_type: varchar
-        description: Source system the record originated from.
-        constraints: null
-        meta:
-          fhir_path: Encounter.meta.source
-          fhir_type: uri
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_tag
-        data_type: varchar
-        description: Feed/extract tag stamped by the source (meta.tag code).
-        constraints: null
-        meta:
-          fhir_path: Encounter.meta.tag
-          fhir_type: Coding
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_last_updated
-        data_type: timestamp_tz
-        description: When the source last changed the record.
-        constraints: null
-        meta:
-          fhir_path: Encounter.meta.lastUpdated
-          fhir_type: instant
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
       # Subject — resolved to the CDM master person (see dim_patient)
       - name: master_person_id
         data_type: varchar
@@ -94,7 +58,7 @@ models:
       - name: part_of_id
         data_type: varchar
         description: >
-          Parent encounter this one is part of (ward movement -> episode -> spell).
+          Parent encounter this one is part of (mainly episode -> spell).
           The primary link for the CDS encounter hierarchy.
         constraints: null
         meta:
@@ -104,6 +68,29 @@ models:
           variant_fields: null
           variant_schema: null
         tests: null
+
+      # Encounter category — CDM-defined kind of encounter record (not FHIR)
+      - name: encounter_category
+        data_type: varchar
+        description: >
+          CDM-defined classification (NOT a FHIR element).
+          Distinct from encounter_class (v3 act-encounter) and encounter_type (SNOMED setting).
+          This is the primary axis NHS analysts would use to slice encounter table
+          Pairs with part_of_id which carries any hierarchy (e.g. episode -> spell)
+          The value set is open and expected to grow. The codes below are the initial set.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set:
+            binding: null   # CDM-defined; no FHIR/UK Core binding
+            codes: [cds_spell, cds_episode, ecds_encounter, opd_attendance, gp_encounter, ward_stay, icu_stay]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [cds_spell, cds_episode, ae_encounter, outpatient_attendance, gp_encounter, ward_stay, icu_stay]
 
       # Status
       - name: encounter_status
@@ -139,21 +126,58 @@ models:
           - accepted_values:
               values: [AMB, EMER, FLD, HH, IMP, ACUTE, NONAC, OBSENC, PRENC, SS, VR]
 
-      # Type — specific type of encounter, mappable CodeableConcept
-      - name: encounter_type
-        data_type: variant
-        description: >
-          Specific type of encounter, held as a CodeableConcept VARIANT. Source
-          concept (is_source=true) plus any mapped standard-vocabulary concepts.
+      - name: encounter_class_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for encounter_class. Derived from the code; not a FHIR element.
         constraints: null
         meta:
-          fhir_path: Encounter.type
-          fhir_type: CodeableConcept
+          fhir_path: null
+          fhir_type: null
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Type — specific type of encounter. Bound to UKCore-EncounterType
+      - name: encounter_type_coding_system
+        data_type: varchar
+        description: >
+          Code system URI/OID for the encounter type (REQUIRED when coded).
+          Expected to be SNOMED CT (http://snomed.info/sct) per UKCore-EncounterType.
+        constraints: null
+        meta:
+          fhir_path: Encounter.type.coding.system
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: encounter_type_coding_code
+        data_type: varchar
+        description: >
+          The encounter type code. A SNOMED CT concept from UKCore-EncounterType
+        constraints: null
+        meta:
+          fhir_path: Encounter.type.coding.code
+          fhir_type: code
           value_set:
             binding: https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType
             codes: null
-          variant_fields: [coding_system, coding_code, coding_display, is_source]
-          variant_schema: encounter_type_variant_schema.yml
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: encounter_type_coding_display
+        data_type: varchar
+        description: Human-readable display for the encounter type.
+        constraints: null
+        meta:
+          fhir_path: Encounter.type.coding.display
+          fhir_type: string
+          value_set: null
+          variant_fields: null
+          variant_schema: null
         tests: null
 
       # Timing
@@ -193,74 +217,180 @@ models:
           variant_schema: null
         tests: null
 
-      # NHS CDS admission fields (extension + hospitalization), bounded scalars
+      # NHS CDS admission fields, England bindings
       - name: admission_method
         data_type: varchar
-        description: How the patient was admitted (CDS admission method, England/Wales code systems).
+        description: How the patient was admitted (NHS England admission method).
         constraints: null
         meta:
           fhir_path: Encounter.hospitalization.extension:admissionMethod
           fhir_type: CodeableConcept
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-AdmissionMethod
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-AdmissionMethodEngland
+            codes: [
+              "11", "12", "13",
+              "21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28",
+              "31", "32",
+              "82", "83", "81",
+              "98", "99",
+            ]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [
+                "11", "12", "13",
+                "21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28",
+                "31", "32",
+                "82", "83", "81",
+                "98", "99",
+              ]
+
+      - name: admission_method_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for admission_method. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
 
       - name: admit_source
         data_type: varchar
-        description: Where the patient was admitted from (CDS source of admission).
+        description: Where the patient was admitted from (NHS England source of admission).
         constraints: null
         meta:
           fhir_path: Encounter.hospitalization.admitSource
           fhir_type: CodeableConcept
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-SourceOfAdmission
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-SourceOfAdmissionEngland
+            codes: [
+              "19", "29", "39", "49",
+              "51", "52", "53", "54",
+              "65", "66", "79",
+              "85", "87", "88",
+              "98", "99",
+            ]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [
+                "19", "29", "39", "49",
+                "51", "52", "53", "54",
+                "65", "66", "79",
+                "85", "87", "88",
+                "98", "99",
+              ]
+
+      - name: admit_source_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for admit_source.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
 
-      # NHS CDS discharge fields
+      # NHS CDS discharge fields (England bindings)
       - name: discharge_method
         data_type: varchar
-        description: How the patient was discharged (CDS discharge method, England/Wales code systems).
+        description: How the patient was discharged (NHS England discharge method).
         constraints: null
         meta:
           fhir_path: Encounter.extension:dischargeMethod
           fhir_type: CodeableConcept
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-DischargeMethod
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-DischargeMethodEngland
+            codes: ["1", "3", "4", "5", "6", "7", "8", "9"]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: ["1", "3", "4", "5", "6", "7", "8", "9"]
+
+      - name: discharge_method_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for discharge_method. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
 
       - name: discharge_destination
         data_type: varchar
-        description: Where the patient was discharged to (CDS discharge destination).
+        description: Where the patient was discharged to (NHS England discharge destination).
         constraints: null
         meta:
           fhir_path: Encounter.hospitalization.dischargeDisposition
           fhir_type: CodeableConcept
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-DischargeDestination
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-DischargeDestinationEngland
+            codes: [
+              "19", "29", "30", "37", "38",
+              "48", "49", "50", "51", "52", "53", "54",
+              "65", "66", "79",
+              "84", "85", "87", "88",
+              "98", "99",
+            ]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [
+                "19", "29", "30", "37", "38",
+                "48", "49", "50", "51", "52", "53", "54",
+                "65", "66", "79",
+                "84", "85", "87", "88",
+                "98", "99",
+              ]
+
+      - name: discharge_destination_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for discharge_destination. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
 
       - name: outcome_of_attendance
         data_type: varchar
-        description: Outcome of an outpatient/emergency attendance (CDS outcome of attendance).
+        description: Outcome of an attendance (NHS England outcome of attendance).
         constraints: null
         meta:
           fhir_path: Encounter.extension:OutcomeOfAttendance
           fhir_type: CodeableConcept
           value_set:
-            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-OutcomeOfAttendance
-            codes: null
+            binding: https://fhir.hl7.org.uk/CodeSystem/UKCore-OutcomeOfAttendanceEngland
+            codes: ["1", "2", "3"]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: ["1", "2", "3"]
+
+      - name: outcome_of_attendance_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for outcome_of_attendance. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
           variant_fields: null
           variant_schema: null
         tests: null
@@ -268,7 +398,7 @@ models:
       # Service provider — the organisation responsible for the encounter
       - name: service_provider_id
         data_type: varchar
-        description: Organisation responsible for the encounter (provider trust/site).
+        description: Organisation responsible for the encounter.
         constraints: null
         meta:
           fhir_path: Encounter.serviceProvider
@@ -278,30 +408,13 @@ models:
           variant_schema: null
         tests: null
 
-      # Reason for the encounter — mappable CodeableConcept
-      - name: reason_concept
-        data_type: variant
-        description: >
-          Why the encounter took place, held as a CodeableConcept VARIANT
-          (Encounter.reasonCode[]), source plus any mapped concepts.
-        constraints: null
-        meta:
-          fhir_path: Encounter.reasonCode
-          fhir_type: CodeableConcept
-          value_set:
-            binding: http://hl7.org/fhir/ValueSet/encounter-reason
-            codes: null
-          variant_fields: [coding_system, coding_code, coding_display, is_source]
-          variant_schema: encounter_reason_variant_schema.yml
-        tests: null
-
       # Diagnosis grid — NHS CDS primary/secondary diagnoses for this encounter
       - name: diagnosis
         data_type: variant
         description: >
           Conditions diagnosed/relevant to this encounter with role and rank,
           held as a repeatable VARIANT (Encounter.diagnosis[]). This is the CDS
-          primary/secondary diagnosis grid.
+          primary/secondary diagnosis grid. FK to Condition resource.
         constraints: null
         meta:
           fhir_path: Encounter.diagnosis
@@ -311,20 +424,148 @@ models:
           variant_schema: encounter_diagnosis_variant_schema.yml
         tests: null
 
-      # ---------------------------------------------------------------------
-      # EXCLUDED — out of analytical scope / modelled elsewhere
-      # ---------------------------------------------------------------------
-      # location            — Encounter.location[]; ward movements are modelled as
-      #                       separate Encounters linked by part_of_id, not nested.
-      # statusHistory       — Encounter.statusHistory[]; status transitions, audit.
-      # classHistory        — Encounter.classHistory[]; class transitions, audit.
-      # priority            — Encounter.priority; low analytical use.
-      # participant         — Encounter.participant[]; practitioners not passed through.
-      # episodeOfCare       — Encounter.episodeOfCare[]; looser grouping than partOf.
-      # basedOn/appointment — Encounter.basedOn[]/appointment[]; workflow refs.
-      # account             — Encounter.account[]; billing.
-      # reasonReference     — Encounter.reasonReference[]; reason carried as code.
-      # hospitalization.*   — preAdmissionIdentifier/origin/destination/reAdmission/
-      #                       dietPreference/specialCourtesy/specialArrangement; niche.
-      # legalStatus / emergencyCareDischargeStatus — specialist extensions.
-      # implicitRules/language/text/identifier — infrastructure/narrative/business ids.
+      # Source provenance — flattened Resource.meta
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # =====================================================================
+      # EXCLUDED — UKCore-Encounter elements not modelled (kept for traceability)
+      # =====================================================================
+      # location — ward movements are modelled as separate Encounters (part_of_id)
+      # service_type — Encounter.serviceType; care-setting type, add if needed
+      # priority — Encounter.priority; urgency, low analytical use
+      # statusHistory — Encounter.statusHistory[]; status transitions, audit
+      # classHistory — Encounter.classHistory[]; class transitions, audit
+      # participant — Encounter.participant[]; practitioners not passed through
+      # episodeOfCare — Encounter.episodeOfCare[]; looser grouping than partOf
+      # basedOn — Encounter.basedOn[]; workflow request refs
+      # appointment — Encounter.appointment[]; workflow refs
+      # account — Encounter.account[]; billing
+      # reasonCode — Encounter.reasonCode[]; the encounter reason is captured via
+      #   the diagnosis grid (Encounter.diagnosis, use=AD for admission diagnosis)
+      # reasonReference — Encounter.reasonReference[]; see reasonCode above
+      # hospitalization.* — preAdmissionIdentifier / origin / destination /
+      #   reAdmission / dietPreference / specialCourtesy / specialArrangement; niche
+      # legalStatus — extension:legalStatus; mental-health legal status, specialist
+      # emergencyCareDischargeStatus — extension; ECDS-specific, specialist
+      # identifier — Encounter.identifier[]; business ids handled upstream
+      # implicitRules / language / text — infrastructure / narrative
+
+
+      # =====================================================================
+      # CDS ENGLAND CODE LOOKUP — reference for the *_display columns above.
+      # =====================================================================
+      # Displays are the UK Core England code-system meanings (verbatim, long
+      # texts abbreviated). Each *_display column carries the label for its code.
+      #
+      # admission_method — CodeSystem/UKCore-AdmissionMethodEngland
+      #   11 = Elective Admission: Waiting list
+      #   12 = Elective Admission: Booked
+      #   13 = Elective Admission: Planned
+      #   21 = Emergency Admission: Emergency Care / dental casualty dept of the provider
+      #   22 = Emergency Admission: GP direct request for immediate admission
+      #   23 = Emergency Admission: Bed bureau
+      #   24 = Emergency Admission: Consultant Clinic, of this or another provider
+      #   25 = Emergency Admission: via Mental Health Crisis Resolution Team
+      #   2A = Emergency Admission: Emergency Care Dept of another provider (not admitted there)
+      #   2B = Emergency Admission: Transfer of admitted Patient from another provider in emergency
+      #   2C = Emergency Admission: Baby born at home as intended
+      #   2D = Emergency Admission: Other emergency admission
+      #   28 = Emergency Admission: Other means
+      #   31 = Maternity Admission: Admitted ante partum
+      #   32 = Maternity Admission: Admitted post partum
+      #   82 = Other Admission: Birth of a baby in this provider
+      #   83 = Other Admission: Baby born outside the provider (except born at home as intended)
+      #   81 = Other Admission: Transfer of admitted Patient from other provider, non-emergency
+      #   98 = Not applicable
+      #   99 = Admission Method not known
+      #
+      # admit_source — CodeSystem/UKCore-SourceOfAdmissionEngland
+      #   19 = Usual place of residence (incl. no fixed abode)
+      #   29 = Temporary place of residence when usually resident elsewhere
+      #   39 = Penal establishment, Court, or Police Station / Custody Suite
+      #   49 = NHS other Hospital Provider - high security psychiatric accommodation
+      #   51 = NHS other Hospital Provider - Ward for general patients / younger physically disabled / ECD
+      #   52 = NHS other Hospital Provider - Ward for maternity patients or Neonates
+      #   53 = NHS other Hospital Provider - Ward for mentally ill / Learning Disabilities
+      #   54 = NHS run Care Home
+      #   65 = Local Authority residential accommodation (care provided)
+      #   66 = Local Authority foster care
+      #   79 = Babies born in or on the way to hospital
+      #   85 = Non-NHS (other than Local Authority) run Care Home
+      #   87 = Non NHS run hospital
+      #   88 = Non-NHS (other than Local Authority) run Hospice
+      #   98 = Not applicable
+      #   99 = Source of admission not known
+      #
+      # discharge_method — CodeSystem/UKCore-DischargeMethodEngland
+      #   1 = Patient discharged on clinical advice or with clinical consent
+      #   3 = Patient discharged by mental health review tribunal, Home Secretary or Court
+      #   4 = Patient died
+      #   5 = Stillbirth
+      #   6 = Patient discharged him/herself
+      #   7 = Patient discharged by a relative or advocate
+      #   8 = Not applicable (spell not finished / episode unfinished)
+      #   9 = Method of discharge not known
+      #
+      # discharge_destination — CodeSystem/UKCore-DischargeDestinationEngland
+      #   19 = Usual place of residence (incl. no fixed abode)
+      #   29 = Temporary place of residence when usually resident elsewhere
+      #   30 = Repatriation from high security psychiatric accommodation in an NHS provider
+      #   37 = Court
+      #   38 = Penal establishment or police station
+      #   48 = High Security Psychiatric Hospital, Scotland
+      #   49 = NHS other Hospital Provider - high security psychiatric accommodation
+      #   50 = NHS other Hospital Provider - medium secure unit
+      #   51 = NHS other Hospital Provider - Ward for general patients / younger physically disabled
+      #   52 = NHS other Hospital Provider - Ward for maternity patients or Neonates
+      #   53 = NHS other Hospital Provider - Ward for mentally ill / Learning Disabilities
+      #   54 = NHS run Care Home
+      #   65 = Local Authority residential accommodation (care provided)
+      #   66 = Local Authority foster care
+      #   79 = Not applicable - Patient died or stillbirth
+      #   84 = Non-NHS run hospital - medium secure unit
+      #   85 = Non-NHS (other than Local Authority) run Care Home
+      #   87 = Non-NHS run hospital
+      #   88 = Non-NHS (other than Local Authority) run Hospice
+      #   98 = Not applicable (spell not finished / episode unfinished)
+      #   99 = Not known
+      #
+      # outcome_of_attendance — CodeSystem/UKCore-OutcomeOfAttendanceEngland
+      #   1 = Discharged from consultant's care (last attendance)
+      #   2 = Another appointment given
+      #   3 = Appointment to be made at a later date
+      # =====================================================================

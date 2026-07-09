@@ -7,6 +7,7 @@ version: 2
 # analyst / OMOP `condition_occurrence` / NHS CDS diagnosis core: the coded
 # diagnosis, its clinical/verification status, provenance context, onset and
 # abatement, and links to person and encounter.
+#
 # Profile: UKCore-Condition (R4 4.0.1).
 # =============================================================================
 
@@ -35,43 +36,6 @@ models:
           variant_fields: null
           variant_schema: null
         tests: [unique]
-
-      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
-      - name: meta_source
-        data_type: varchar
-        description: Source system the record originated from.
-        constraints: null
-        meta:
-          fhir_path: Condition.meta.source
-          fhir_type: uri
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_tag
-        data_type: varchar
-        description: Feed/extract tag stamped by the source (meta.tag code).
-        constraints: null
-        meta:
-          fhir_path: Condition.meta.tag
-          fhir_type: Coding
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: meta_last_updated
-        data_type: timestamp_tz
-        description: When the source last changed the record.
-        constraints: null
-        meta:
-          fhir_path: Condition.meta.lastUpdated
-          fhir_type: instant
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
 
       # Subject — resolved to the CDM master person (see dim_patient)
       - name: master_person_id
@@ -146,6 +110,18 @@ models:
           - accepted_values:
               values: [problem-list-item, encounter-diagnosis, presenting-complaint, co-morbidity]
 
+      - name: condition_category_display  # (not native FHIR)
+        data_type: varchar
+        description: Human-readable label for condition_category. Derived from the code; not a FHIR element.
+        constraints: null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
       # Clinical status — closed HL7 value set
       - name: clinical_status
         data_type: varchar
@@ -193,19 +169,6 @@ models:
           variant_schema: null
         tests: null
 
-      # EXCLUDE - onset not usually measured as period
-      # - name: onset_period_end
-      #   data_type: timestamp_tz
-      #   description: End of the onset Period, when onset is expressed as a Period.
-      #   constraints: null
-      #   meta:
-      #     fhir_path: Condition.onsetPeriod.end
-      #     fhir_type: dateTime
-      #     value_set: null
-      #     variant_fields: null
-      #     variant_schema: null
-      #   tests: null
-
       # Abatement
       - name: abatement_datetime
         data_type: timestamp_tz
@@ -219,15 +182,55 @@ models:
           variant_schema: null
         tests: null
 
-      # EXCLUDE - resolution not usually measured as period
-      # - name: abatement_period_end
-      #   data_type: timestamp_tz
-      #   description: End of the abatement Period, when abatement is expressed as a Period.
-      #   constraints: null
-      #   meta:
-      #     fhir_path: Condition.abatementPeriod.end
-      #     fhir_type: dateTime
-      #     value_set: null
-      #     variant_fields: null
-      #     variant_schema: null
-      #   tests: null
+      # Source provenance — flattened Resource.meta
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # =====================================================================
+      # EXCLUDED — UKCore-Condition elements not modelled (kept for traceability)
+      # =====================================================================
+      # onset_period_end — onset not usually measured as a Period
+      # abatement_period_end — resolution not usually measured as a Period
+      # recorder — we don't usually pass practitioner through
+      # asserter — we don't usually pass practitioner through
+      # body_site — usually carried by the diagnosis code itself
+      # severity — Condition.severity; usually carried by the diagnosis code
+      # stage — Condition.stage[]; cancer staging etc., specialist
+      # evidence — Condition.evidence[]; references to observations, out of scope
+      # note — Condition.note[]; free-text annotations
+      # identifier — Condition.identifier[]; business ids handled upstream
+      # conditionEpisode — extension:conditionEpisode (episodicity); specialist
+      # implicitRules / language / text — infrastructure / narrative
