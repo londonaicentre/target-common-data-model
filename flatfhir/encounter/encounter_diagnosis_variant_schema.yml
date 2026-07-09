@@ -1,0 +1,62 @@
+version: 2
+
+# =============================================================================
+# Encounter.diagnosis[] — repeating-element variant
+# =============================================================================
+# One object per diagnosis linked to the encounter (the CDS primary/secondary
+# diagnosis grid). Each carries the condition reference, its role (use) and its
+# rank; the rank orders the array (1 = primary).
+# =============================================================================
+
+variants:
+  - name: diagnosis_variant
+    description: One diagnosis linked to the encounter, with role and rank.
+    fhir_path: Encounter.diagnosis
+    fhir_type: BackboneElement[]
+    fields:
+
+      - name: diagnosis_id
+        data_type: varchar
+        description: Surrogate PK = hash(encounter_id, rank).
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: null
+          fhir_type: null
+          value_set: null
+        tests: [unique, not_null]
+
+      - name: condition_id
+        data_type: varchar
+        description: The condition being diagnosed. Links to fact_condition.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Encounter.diagnosis.condition
+          fhir_type: Reference(Condition)
+          value_set: null
+        tests: null
+
+      - name: use
+        data_type: varchar
+        description: Role of the diagnosis for this encounter (admission, discharge, chief complaint, etc.).
+        constraints: null
+        meta:
+          fhir_path: Encounter.diagnosis.use
+          fhir_type: CodeableConcept
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/diagnosis-role
+            codes: [AD, DD, CC, CM, pre-op, post-op, billing]
+        tests:
+          - accepted_values:
+              values: [AD, DD, CC, CM, pre-op, post-op, billing]
+
+      - name: rank
+        data_type: number
+        description: Ordering position of the diagnosis (1 = primary).
+        constraints: null
+        meta:
+          fhir_path: Encounter.diagnosis.rank
+          fhir_type: positiveInt
+          value_set: null
+        tests: null

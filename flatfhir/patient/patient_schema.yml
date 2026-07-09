@@ -11,7 +11,7 @@ version: 2
 models:
   - name: dim_patient
     description: >
-      Patient dimension. One row per Patient resource, keyed by patient_id.
+      Patient dimension. One row per Patient resource, keyed by master_person_id.
       Referenced by clinical fact tables (condition, encounter, observation, etc.).
     config:
       materialized: table
@@ -32,6 +32,43 @@ models:
           variant_fields: null
           variant_schema: null
         tests: [unique]
+
+      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Patient.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
 
       # NHS number
       - name: nhs_number

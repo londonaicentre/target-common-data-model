@@ -1,0 +1,330 @@
+version: 2
+
+# =============================================================================
+# dim_encounter — flattened UK Core Encounter
+# =============================================================================
+# One row per Encounter resource. Scope is analyst / OMOP `visit_occurrence` /
+# NHS CDS admitted-patient-care core: the visit, its class/type, timing,
+# admission/discharge (CDS) fields, reason, and diagnosis grid.
+#
+# Grain note: NHS CDS spells, episodes and ward movements are each modelled as
+# SEPARATE Encounter resources at different levels. The hierarchy between them
+# is carried by part_of_id (child -> parent, e.g. ward-stay -> episode -> spell)
+# Profile: UKCore-Encounter (R4 4.0.1).
+# =============================================================================
+
+models:
+  - name: dim_encounter
+    description: >
+      Encounter dimension. One row per Encounter resource, keyed by encounter_id.
+      Referenced by clinical fact tables (condition, observation, procedure, etc.).
+      Encounters relate via part_of_id (ward movement -> spell, episode -> spell).
+    config:
+      materialized: table
+      contract:
+        enforced: true
+    columns:
+
+      # Primary key
+      - name: encounter_id
+        data_type: varchar
+        description: Key for the Encounter resource. One row per encounter.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Encounter.id
+          fhir_type: id
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: [unique]
+
+      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Encounter.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Subject — resolved to the CDM master person (see dim_patient)
+      - name: master_person_id
+        data_type: varchar
+        description: Master person this encounter belongs to. Resolved from Encounter.subject.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Encounter.subject
+          fhir_type: Reference(Patient)
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Encounter hierarchy — child (ward/episode) points up to its parent (spell)
+      - name: part_of_id
+        data_type: varchar
+        description: >
+          Parent encounter this one is part of (ward movement -> episode -> spell).
+          The primary link for the CDS encounter hierarchy.
+        constraints: null
+        meta:
+          fhir_path: Encounter.partOf
+          fhir_type: Reference(Encounter)
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Status
+      - name: encounter_status
+        data_type: varchar
+        description: Current state of the encounter.
+        constraints: null
+        meta:
+          fhir_path: Encounter.status
+          fhir_type: code
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/encounter-status|4.0.1
+            codes: [planned, arrived, triaged, in-progress, onleave, finished, cancelled, entered-in-error, unknown]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [planned, arrived, triaged, in-progress, onleave, finished, cancelled, entered-in-error, unknown]
+
+      # Class — inpatient/outpatient/emergency etc. (v3 ActEncounterCode)
+      - name: encounter_class
+        data_type: varchar
+        description: Classification of the encounter (inpatient, ambulatory, emergency, etc.).
+        constraints: null
+        meta:
+          fhir_path: Encounter.class
+          fhir_type: Coding
+          value_set:
+            binding: http://terminology.hl7.org/ValueSet/v3-ActEncounterCode
+            codes: [AMB, EMER, FLD, HH, IMP, ACUTE, NONAC, OBSENC, PRENC, SS, VR]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [AMB, EMER, FLD, HH, IMP, ACUTE, NONAC, OBSENC, PRENC, SS, VR]
+
+      # Type — specific type of encounter, mappable CodeableConcept
+      - name: encounter_type
+        data_type: variant
+        description: >
+          Specific type of encounter, held as a CodeableConcept VARIANT. Source
+          concept (is_source=true) plus any mapped standard-vocabulary concepts.
+        constraints: null
+        meta:
+          fhir_path: Encounter.type
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType
+            codes: null
+          variant_fields: [coding_system, coding_code, coding_display, is_source]
+          variant_schema: encounter_type_variant_schema.yml
+        tests: null
+
+      # Timing
+      - name: period_start
+        data_type: timestamp_tz
+        description: Start of the encounter (admission/arrival).
+        constraints: null
+        meta:
+          fhir_path: Encounter.period.start
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: period_end
+        data_type: timestamp_tz
+        description: End of the encounter (discharge/departure).
+        constraints: null
+        meta:
+          fhir_path: Encounter.period.end
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: length_minutes
+        data_type: number
+        description: Duration of the encounter in minutes (Encounter.length, normalised).
+        constraints: null
+        meta:
+          fhir_path: Encounter.length
+          fhir_type: Duration
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # NHS CDS admission fields (extension + hospitalization), bounded scalars
+      - name: admission_method
+        data_type: varchar
+        description: How the patient was admitted (CDS admission method, England/Wales code systems).
+        constraints: null
+        meta:
+          fhir_path: Encounter.hospitalization.extension:admissionMethod
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-AdmissionMethod
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: admit_source
+        data_type: varchar
+        description: Where the patient was admitted from (CDS source of admission).
+        constraints: null
+        meta:
+          fhir_path: Encounter.hospitalization.admitSource
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-SourceOfAdmission
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # NHS CDS discharge fields
+      - name: discharge_method
+        data_type: varchar
+        description: How the patient was discharged (CDS discharge method, England/Wales code systems).
+        constraints: null
+        meta:
+          fhir_path: Encounter.extension:dischargeMethod
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-DischargeMethod
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: discharge_destination
+        data_type: varchar
+        description: Where the patient was discharged to (CDS discharge destination).
+        constraints: null
+        meta:
+          fhir_path: Encounter.hospitalization.dischargeDisposition
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-DischargeDestination
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: outcome_of_attendance
+        data_type: varchar
+        description: Outcome of an outpatient/emergency attendance (CDS outcome of attendance).
+        constraints: null
+        meta:
+          fhir_path: Encounter.extension:OutcomeOfAttendance
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-OutcomeOfAttendance
+            codes: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Service provider — the organisation responsible for the encounter
+      - name: service_provider_id
+        data_type: varchar
+        description: Organisation responsible for the encounter (provider trust/site).
+        constraints: null
+        meta:
+          fhir_path: Encounter.serviceProvider
+          fhir_type: Reference(Organization)
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Reason for the encounter — mappable CodeableConcept
+      - name: reason_concept
+        data_type: variant
+        description: >
+          Why the encounter took place, held as a CodeableConcept VARIANT
+          (Encounter.reasonCode[]), source plus any mapped concepts.
+        constraints: null
+        meta:
+          fhir_path: Encounter.reasonCode
+          fhir_type: CodeableConcept
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/encounter-reason
+            codes: null
+          variant_fields: [coding_system, coding_code, coding_display, is_source]
+          variant_schema: encounter_reason_variant_schema.yml
+        tests: null
+
+      # Diagnosis grid — NHS CDS primary/secondary diagnoses for this encounter
+      - name: diagnosis
+        data_type: variant
+        description: >
+          Conditions diagnosed/relevant to this encounter with role and rank,
+          held as a repeatable VARIANT (Encounter.diagnosis[]). This is the CDS
+          primary/secondary diagnosis grid.
+        constraints: null
+        meta:
+          fhir_path: Encounter.diagnosis
+          fhir_type: BackboneElement[]
+          value_set: null
+          variant_fields: [condition_id, use, rank]
+          variant_schema: encounter_diagnosis_variant_schema.yml
+        tests: null
+
+      # ---------------------------------------------------------------------
+      # EXCLUDED — out of analytical scope / modelled elsewhere
+      # ---------------------------------------------------------------------
+      # location            — Encounter.location[]; ward movements are modelled as
+      #                       separate Encounters linked by part_of_id, not nested.
+      # statusHistory       — Encounter.statusHistory[]; status transitions, audit.
+      # classHistory        — Encounter.classHistory[]; class transitions, audit.
+      # priority            — Encounter.priority; low analytical use.
+      # participant         — Encounter.participant[]; practitioners not passed through.
+      # episodeOfCare       — Encounter.episodeOfCare[]; looser grouping than partOf.
+      # basedOn/appointment — Encounter.basedOn[]/appointment[]; workflow refs.
+      # account             — Encounter.account[]; billing.
+      # reasonReference     — Encounter.reasonReference[]; reason carried as code.
+      # hospitalization.*   — preAdmissionIdentifier/origin/destination/reAdmission/
+      #                       dietPreference/specialCourtesy/specialArrangement; niche.
+      # legalStatus / emergencyCareDischargeStatus — specialist extensions.
+      # implicitRules/language/text/identifier — infrastructure/narrative/business ids.

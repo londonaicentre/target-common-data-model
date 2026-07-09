@@ -1,0 +1,233 @@
+version: 2
+
+# =============================================================================
+# fact_condition — flattened UK Core Condition
+# =============================================================================
+# One row per Condition resource (a recorded diagnosis / problem). Scope is
+# analyst / OMOP `condition_occurrence` / NHS CDS diagnosis core: the coded
+# diagnosis, its clinical/verification status, provenance context, onset and
+# abatement, and links to person and encounter.
+# Profile: UKCore-Condition (R4 4.0.1).
+# =============================================================================
+
+models:
+  - name: fact_condition
+    description: >
+      Condition fact. One row per Condition resource, keyed by condition_id.
+      Links to dim_patient via master_person_id and to dim_encounter via
+      encounter_id. Analogue of OMOP condition_occurrence.
+    config:
+      materialized: table
+      contract:
+        enforced: true
+    columns:
+
+      # Primary key
+      - name: condition_id
+        data_type: varchar
+        description: Key for the Condition resource. One row per condition.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Condition.id
+          fhir_type: id
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: [unique]
+
+      # Source provenance — flattened Resource.meta (CONVENTIONS §8), every table
+      - name: meta_source
+        data_type: varchar
+        description: Source system the record originated from.
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.source
+          fhir_type: uri
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_tag
+        data_type: varchar
+        description: Feed/extract tag stamped by the source (meta.tag code).
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.tag
+          fhir_type: Coding
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      - name: meta_last_updated
+        data_type: timestamp_tz
+        description: When the source last changed the record.
+        constraints: null
+        meta:
+          fhir_path: Condition.meta.lastUpdated
+          fhir_type: instant
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Subject — resolved to the CDM master person (see dim_patient)
+      - name: master_person_id
+        data_type: varchar
+        description: Master person this condition belongs to. Resolved from Condition.subject.
+        constraints:
+          - type: not_null
+        meta:
+          fhir_path: Condition.subject
+          fhir_type: Reference(Patient)
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Encounter in which the condition was recorded
+      - name: encounter_id
+        data_type: varchar
+        description: Encounter during which the condition was recorded. Links to dim_encounter.
+        constraints: null
+        meta:
+          fhir_path: Condition.encounter
+          fhir_type: Reference(Encounter)
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # Record date
+      - name: recorded_date
+        data_type: timestamp_tz
+        description: Date/time the condition was first recorded.
+        constraints: null
+        meta:
+          fhir_path: Condition.recordedDate
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # The diagnosis code — core clinical concept
+      # Variants holds source concept, and mappables
+      - name: condition_concept
+        data_type: variant
+        description: >
+          The coded diagnosis/problem, held as a CodeableConcept VARIANT. Source
+          concept (is_source=true) plus any mapped standard-vocabulary concepts.
+        constraints: null
+        meta:
+          fhir_path: Condition.code
+          fhir_type: CodeableConcept
+          value_set: null
+          variant_fields: [coding_system, coding_code, coding_display, is_source]
+          variant_schema: condition_concept_variant_schema.yml
+        tests: null
+
+      # Provenance context — single record context, flattened to a scalar
+      - name: condition_category
+        data_type: varchar
+        description: Context in which the condition was recorded (problem list, encounter diagnosis, etc.).
+        constraints: null
+        meta:
+          fhir_path: Condition.category
+          fhir_type: CodeableConcept
+          value_set:
+            binding: https://fhir.hl7.org.uk/ValueSet/UKCore-ConditionCategory
+            codes: [problem-list-item, encounter-diagnosis, presenting-complaint, co-morbidity]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [problem-list-item, encounter-diagnosis, presenting-complaint, co-morbidity]
+
+      # Clinical status — closed HL7 value set
+      - name: clinical_status
+        data_type: varchar
+        description: Clinical status of the condition (active, resolved, etc.) on the recorded date.
+        constraints: null
+        meta:
+          fhir_path: Condition.clinicalStatus
+          fhir_type: CodeableConcept
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/condition-clinical|4.0.1
+            codes: [active, recurrence, relapse, inactive, remission, resolved]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [active, recurrence, relapse, inactive, remission, resolved]
+
+      # Verification status — closed HL7 value set
+      - name: verification_status
+        data_type: varchar
+        description: Verification status of the condition (confirmed, refuted, etc.) on the recorded date.
+        constraints: null
+        meta:
+          fhir_path: Condition.verificationStatus
+          fhir_type: CodeableConcept
+          value_set:
+            binding: http://hl7.org/fhir/ValueSet/condition-ver-status|4.0.1
+            codes: [unconfirmed, provisional, differential, confirmed, refuted, entered-in-error]
+          variant_fields: null
+          variant_schema: null
+        tests:
+          - accepted_values:
+              values: [unconfirmed, provisional, differential, confirmed, refuted, entered-in-error]
+
+      # Onset
+      - name: onset_datetime
+        data_type: timestamp_tz
+        description: When the condition began (onset dateTime, or start of onset Period).
+        constraints: null
+        meta:
+          fhir_path: Condition.onsetDateTime
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # EXCLUDE - onset not usually measured as period
+      # - name: onset_period_end
+      #   data_type: timestamp_tz
+      #   description: End of the onset Period, when onset is expressed as a Period.
+      #   constraints: null
+      #   meta:
+      #     fhir_path: Condition.onsetPeriod.end
+      #     fhir_type: dateTime
+      #     value_set: null
+      #     variant_fields: null
+      #     variant_schema: null
+      #   tests: null
+
+      # Abatement
+      - name: abatement_datetime
+        data_type: timestamp_tz
+        description: When the condition resolved/abated (abatement dateTime, or start of abatement Period).
+        constraints: null
+        meta:
+          fhir_path: Condition.abatementDateTime
+          fhir_type: dateTime
+          value_set: null
+          variant_fields: null
+          variant_schema: null
+        tests: null
+
+      # EXCLUDE - resolution not usually measured as period
+      # - name: abatement_period_end
+      #   data_type: timestamp_tz
+      #   description: End of the abatement Period, when abatement is expressed as a Period.
+      #   constraints: null
+      #   meta:
+      #     fhir_path: Condition.abatementPeriod.end
+      #     fhir_type: dateTime
+      #     value_set: null
+      #     variant_fields: null
+      #     variant_schema: null
+      #   tests: null

@@ -49,4 +49,8 @@ Wherever possible, elements which are not prone to repeating in the source data 
 
 ## 7. FHIR-aligned naming
 
-Column names mirror FHIR element paths where practical, so a reader can trace a column back to the spec.
+Column names use `snake_case` and mirror FHIR element paths where practical, so a reader can trace a column back to the spec.
+
+## 8. Source provenance
+
+Every table carries three flattened scalars from `Resource.meta`: `meta_source` (`meta.source`, origin system), `meta_tag` (`meta.tag`, feed/extract stamp), and `meta_last_updated` (`meta.lastUpdated`, source change time). These are never held as variants.
