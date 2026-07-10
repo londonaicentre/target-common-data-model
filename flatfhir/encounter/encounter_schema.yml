@@ -4,12 +4,12 @@ version: 2
 # dim_encounter — flattened UK Core Encounter
 # =============================================================================
 # One row per Encounter resource. Scope is analyst / OMOP `visit_occurrence` /
-# NHS CDS admitted-patient-care core: the visit, its class/type, timing,
-# admission/discharge (CDS) fields, and diagnosis grid.
+# NHS CDS / ECDS, and ward movements, GP encounters. Core: the visit, its class/type,
+# timing, admission/discharge (CDS) fields, and diagnosis grid.
 #
-# Grain note: NHS CDS spells, episodes and ward movements are each modelled as
+# Grain note: NHS CDS spells/episodes and ward movements are each modelled as
 # separate Encounter resources at different levels. The hierarchy between them
-# is carried by part_of_id (child -> parent, e.g. ward-stay -> episode -> spell)
+# is carried by part_of_id where possible (child -> parent, e.g. episode -> spell)
 #
 # Profile: UKCore-Encounter (R4 4.0.1).
 # =============================================================================
@@ -19,7 +19,7 @@ models:
     description: >
       Encounter dimension. One row per Encounter resource, keyed by encounter_id.
       Referenced by clinical fact tables (condition, observation, procedure, etc.).
-      Encounters relate via part_of_id (ward movement -> spell, episode -> spell).
+      Encounters relate via part_of_id (episode -> spell).
     config:
       materialized: table
       contract:
@@ -54,7 +54,7 @@ models:
           variant_schema: null
         tests: null
 
-      # Encounter hierarchy — child (ward/episode) points up to its parent (spell)
+      # Encounter hierarchy — child (episode) points up to its parent (spell)
       - name: part_of_id
         data_type: varchar
         description: >
@@ -76,8 +76,7 @@ models:
           CDM-defined classification (NOT a FHIR element).
           Distinct from encounter_class (v3 act-encounter) and encounter_type (SNOMED setting).
           This is the primary axis NHS analysts would use to slice encounter table
-          Pairs with part_of_id which carries any hierarchy (e.g. episode -> spell)
-          The value set is open and expected to grow. The codes below are the initial set.
+          The value set is open and expected to grow: the codes below are the initial set.
         constraints:
           - type: not_null
         meta:
@@ -85,12 +84,12 @@ models:
           fhir_type: null
           value_set:
             binding: null   # CDM-defined; no FHIR/UK Core binding
-            codes: [cds_spell, cds_episode, ecds_encounter, opd_attendance, gp_encounter, ward_stay, icu_stay]
+            codes: [cds_spell, cds_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
           variant_fields: null
           variant_schema: null
         tests:
           - accepted_values:
-              values: [cds_spell, cds_episode, ae_encounter, outpatient_attendance, gp_encounter, ward_stay, icu_stay]
+              values: [cds_spell, cds_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
 
       # Status
       - name: encounter_status
