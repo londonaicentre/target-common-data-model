@@ -17,7 +17,7 @@ variants:
 
       - name: diagnosis_id
         data_type: varchar
-        description: Surrogate PK = hash(encounter_id, rank).
+        description: Surrogate PK = hash(encounter_id, condition_id, rank).
         constraints:
           - type: not_null
         meta:

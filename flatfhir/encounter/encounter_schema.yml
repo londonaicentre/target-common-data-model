@@ -84,12 +84,12 @@ models:
           fhir_type: null
           value_set:
             binding: null   # CDM-defined; no FHIR/UK Core binding
-            codes: [cds_spell, cds_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
+            codes: [apc_spell, apc_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
           variant_fields: null
           variant_schema: null
         tests:
           - accepted_values:
-              values: [cds_spell, cds_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
+              values: [apc_spell, apc_episode, ecds_attendance, opd_attendance, gp_encounter, ward_stay, icu_stay]
 
       # Status
       - name: encounter_status
@@ -137,25 +137,12 @@ models:
           variant_schema: null
         tests: null
 
-      # Type — specific type of encounter. Bound to UKCore-EncounterType
-      - name: encounter_type_coding_system
+      # Type — specific type of encounter (SNOMED, UKCore-EncounterType).
+      - name: encounter_type
         data_type: varchar
         description: >
-          Code system URI/OID for the encounter type (REQUIRED when coded).
-          Expected to be SNOMED CT (http://snomed.info/sct) per UKCore-EncounterType.
-        constraints: null
-        meta:
-          fhir_path: Encounter.type.coding.system
-          fhir_type: uri
-          value_set: null
-          variant_fields: null
-          variant_schema: null
-        tests: null
-
-      - name: encounter_type_coding_code
-        data_type: varchar
-        description: >
-          The encounter type code. A SNOMED CT concept from UKCore-EncounterType
+          Encounter type code — a SNOMED CT concept from UKCore-EncounterType.
+          Expected system is SNOMED CT (http://snomed.info/sct).
         constraints: null
         meta:
           fhir_path: Encounter.type.coding.code
@@ -167,13 +154,13 @@ models:
           variant_schema: null
         tests: null
 
-      - name: encounter_type_coding_display
+      - name: encounter_type_display  # (not native FHIR)
         data_type: varchar
-        description: Human-readable display for the encounter type.
+        description: Human-readable label for encounter_type. Derived from the code; not a FHIR element.
         constraints: null
         meta:
-          fhir_path: Encounter.type.coding.display
-          fhir_type: string
+          fhir_path: null
+          fhir_type: null
           value_set: null
           variant_fields: null
           variant_schema: null
@@ -436,13 +423,13 @@ models:
           variant_schema: null
         tests: null
 
-      - name: meta_tag
+      - name: meta_tag_code
         data_type: varchar
-        description: Feed/extract tag stamped by the source (meta.tag code).
+        description: Feed/extract tag stamped by the source (meta.tag.code).
         constraints: null
         meta:
-          fhir_path: Encounter.meta.tag
-          fhir_type: Coding
+          fhir_path: Encounter.meta.tag.code
+          fhir_type: code
           value_set: null
           variant_fields: null
           variant_schema: null

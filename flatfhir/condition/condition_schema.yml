@@ -195,13 +195,13 @@ models:
           variant_schema: null
         tests: null
 
-      - name: meta_tag
+      - name: meta_tag_code
         data_type: varchar
-        description: Feed/extract tag stamped by the source (meta.tag code).
+        description: Feed/extract tag stamped by the source (meta.tag.code).
         constraints: null
         meta:
-          fhir_path: Condition.meta.tag
-          fhir_type: Coding
+          fhir_path: Condition.meta.tag.code
+          fhir_type: code
           value_set: null
           variant_fields: null
           variant_schema: null
