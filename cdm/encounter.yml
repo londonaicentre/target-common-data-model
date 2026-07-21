@@ -1,4 +1,4 @@
-id: https://aicentre.co.uk/cdm/flatfhir/encounter
+id: https://cdm.aicentre.co.uk/encounter
 name: encounter
 description: >
   Profile: UKCore-Encounter (R4 4.0.1).
@@ -12,6 +12,9 @@ classes:
     description: >
       Encounter dimension. One row per Encounter resource, keyed by encounter_id.
       Encounters relate via part_of_id (episode -> spell). Analogue of OMOP visit_occurrence.
+    annotations:
+      grain: one_row_per_resource
+      grain_key: encounter_id
     slots:
       - meta_source
       - meta_tag_code

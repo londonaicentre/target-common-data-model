@@ -1,4 +1,4 @@
-id: https://aicentre.co.uk/cdm/flatfhir
+id: https://cdm.aicentre.co.uk/
 name: flatfhir
 description: >
   FlatFHIR CDM — flattened UK Core FHIR R4 analytical schemas.
@@ -40,7 +40,6 @@ slots:
     #.         https://lewishamandgreenwich.nhs.uk/epic/
     range: uri
     required: true
-    multivalue: false
     description: Source system URI the record originated from.
     annotations:
       fhir_path: Resource.meta.source
@@ -48,7 +47,6 @@ slots:
 
   meta_tag_code:
     range: string
-    multivalue: false
     required: false
     description: Feed/extract tag stamped by the source (meta.tag.code).
     annotations:

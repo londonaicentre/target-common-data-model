@@ -1,8 +1,12 @@
-id: https://aicentre.co.uk/cdm/flatfhir/condition
+id: https://cdm.aicentre.co.uk/condition
 name: condition
 description: >
   Profile: UKCore-Condition (R4 4.0.1).
   Grain: One row per Condition resource.
+
+annotations:
+  grain: one_row_per_resource
+  grain_key: condition_id
 
 imports:
   - core
