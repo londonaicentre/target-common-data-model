@@ -4,6 +4,10 @@ description: >
   Profile: Based off of UKCore-Patient (R4 4.0.1).
   Grain: One row per patient (disambigutated)
 
+annotations:
+  grain: one_row_per_resource
+  grain_key: master_person_id
+
 imports:
   - core
 
@@ -12,9 +16,6 @@ classes:
     description: >
       Patient dimension. One row per Patient resource, keyed by master_person_id.
       Referenced by clinical fact tables. Analogue of OMOP person.
-    annotations:
-      grain: one_row_per_resource
-      grain_key: master_person_id
     slots:
       - meta_source
       - meta_tag_code
