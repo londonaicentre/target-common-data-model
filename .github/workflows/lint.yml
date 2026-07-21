@@ -8,6 +8,6 @@ jobs:
   linkml-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v8.3.2
       - run: uvx --with linkml linkml lint cdm --all --ignore-warnings
