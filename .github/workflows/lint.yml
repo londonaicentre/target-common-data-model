@@ -1,0 +1,13 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linkml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx --with linkml linkml lint cdm --all --ignore-warnings
