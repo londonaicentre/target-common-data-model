@@ -1,0 +1,166 @@
+id: https://aicentre.co.uk/cdm/flatfhir/patient
+name: patient
+description: >
+  Profile: Based off of UKCore-Patient (R4 4.0.1).
+  Grain: One row per patient (disambigutated)
+
+imports:
+  - core
+
+classes:
+  Patient:
+    description: >
+      Patient dimension. One row per Patient resource, keyed by master_person_id.
+      Referenced by clinical fact tables. Analogue of OMOP person.
+    slots:
+      - meta_source
+      - meta_tag_code
+      - meta_last_updated
+    attributes:
+      master_person_id:
+        identifier: true
+        range: string
+        required: true
+        description: Master person id for this Patient resource. One row per patient.
+        annotations:
+          fhir_path: Patient.id
+          fhir_type: id
+
+      nhs_number:
+        range: string
+        required: false
+        description: NHS number (10-digit national patient identifier).
+        annotations:
+          fhir_path: Patient.identifier:nhsNumber.value
+          fhir_type: string
+
+      active:
+        range: boolean
+        required: false
+        description: Whether this patient record is in active use.
+        annotations:
+          fhir_path: Patient.active
+          fhir_type: boolean
+
+      gender:
+        range: AdministrativeGenderEnum
+        required: false
+        description: Administrative gender used for record-keeping.
+        annotations:
+          fhir_path: Patient.gender
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1
+
+      birth_date:
+        range: date
+        required: false
+        description: Date of birth.
+        annotations:
+          fhir_path: Patient.birthDate
+          fhir_type: date
+
+      deceased_boolean:
+        range: boolean
+        required: false
+        description: Whether the patient is recorded as deceased.
+        annotations:
+          fhir_path: Patient.deceasedBoolean
+          fhir_type: boolean
+
+      deceased_datetime:
+        range: TimestampTz
+        required: false
+        description: Date/time of death, when known.
+        annotations:
+          fhir_path: Patient.deceasedDateTime
+          fhir_type: dateTime
+
+      ethnic_category:
+        range: EthnicCategoryEnum
+        required: false
+        description: Ethnic category code (NHS England ethnic category).
+        annotations:
+          fhir_path: Patient.extension:ethnicCategory
+          fhir_type: code
+          value_set: https://fhir.hl7.org.uk/CodeSystem/UKCore-EthnicCategoryEngland
+
+      ethnic_category_display:
+        range: string
+        required: false
+        description: Human-readable label for ethnic_category. Not a FHIR element.
+
+      marital_status:
+        range: MaritalStatusEnum
+        required: false
+        description: Marital (civil) status code (NHS England person marital status).
+        annotations:
+          fhir_path: Patient.maritalStatus
+          fhir_type: code
+          value_set: https://fhir.hl7.org.uk/CodeSystem/UKCore-PersonMaritalStatusEngland
+
+      marital_status_display:
+        range: string
+        required: false
+        description: Human-readable label for marital_status. Not a FHIR element.
+
+      postal_code:
+        range: string
+        required: false
+        description: Postcode of the patient's usual address (deprivation/geography linkage).
+        annotations:
+          fhir_path: Patient.address.postalCode
+          fhir_type: string
+
+      city:
+        range: string
+        required: false
+        description: City/town of the patient's usual address.
+        annotations:
+          fhir_path: Patient.address.city
+          fhir_type: string
+
+      lsoa:
+        range: string
+        required: false
+        description: Lower-layer Super Output Area. Derived from postcode; not a FHIR element.
+
+      identifier:
+        range: PatientIdentifierVariant
+        multivalued: true
+        inlined_as_list: true
+        required: false
+        description: Non-NHS-number patient identifiers (Patient.identifier[], excluding nhsNumber).
+        annotations:
+          fhir_path: Patient.identifier
+          fhir_type: Identifier[]
+
+  # ---------------------------------------------------------------------------
+  # PatientIdentifierVariant
+  # Repeating element for Patient.identifier[] (non-NHS-number entries).
+  # ---------------------------------------------------------------------------
+  PatientIdentifierVariant:
+    description: >
+      One non-NHS-number identifier for the patient (e.g. local hospital number).
+      Variant for Patient.identifier[].
+    attributes:
+      identifier_id:
+        identifier: true
+        range: string
+        required: true
+        description: Surrogate PK = hash(patient_id, system, value).
+
+      system:
+        range: uri
+        required: true
+        description: Namespace URI for the identifier value.
+        annotations:
+          fhir_path: Patient.identifier.system
+          fhir_type: uri
+
+      value:
+        range: string
+        required: true
+        description: The identifier value within the system namespace.
+        annotations:
+          fhir_path: Patient.identifier.value
+          fhir_type: string

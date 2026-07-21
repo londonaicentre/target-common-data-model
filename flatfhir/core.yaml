@@ -1,0 +1,64 @@
+id: https://aicentre.co.uk/cdm/flatfhir
+name: flatfhir
+description: >
+  FlatFHIR CDM — flattened UK Core FHIR R4 analytical schemas.
+  Covers Patient, Encounter, Condition, and FactObservation,
+  plus inline variant classes for repeating / complex FHIR elements.
+  Each main class represents one analytical table (one row per FHIR resource).
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  xsd: http://www.w3.org/2001/XMLSchema#
+  fhir: http://hl7.org/fhir/
+  ukcore: https://fhir.hl7.org.uk/
+  flatfhir: https://aic.example.org/flatfhir/
+
+default_prefix: flatfhir
+default_range: string
+
+imports:
+  - linkml:types
+  - enums
+
+# =============================================================================
+# Custom types
+# =============================================================================
+types:
+  TimestampTz:
+    uri: xsd:dateTime
+    base: str
+    description: Timezone-aware timestamp. Maps to FHIR dateTime / instant.
+
+# =============================================================================
+# Shared provenance slots — Resource.meta fields common to all tables
+# =============================================================================
+slots:
+  meta_source:
+    # example: https://discoverydataservice.org/discovery
+    #.         https://lewishamandgreenwich.nhs.uk/cerner/835
+    #.         https://lewishamandgreenwich.nhs.uk/rio
+    #.         https://lewishamandgreenwich.nhs.uk/epic/
+    range: uri
+    required: true
+    multivalue: false
+    description: Source system URI the record originated from.
+    annotations:
+      fhir_path: Resource.meta.source
+      fhir_type: uri
+
+  meta_tag_code:
+    range: string
+    multivalue: false
+    required: false
+    description: Feed/extract tag stamped by the source (meta.tag.code).
+    annotations:
+      fhir_path: Resource.meta.tag.code
+      fhir_type: code
+
+  meta_last_updated:
+    range: TimestampTz
+    required: false
+    description: When the source last changed the record.
+    annotations:
+      fhir_path: Resource.meta.lastUpdated
+      fhir_type: instant
