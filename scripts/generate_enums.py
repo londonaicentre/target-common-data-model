@@ -26,7 +26,7 @@ import yaml
 REPO_ROOT = Path(__file__).parent.parent
 MANIFEST_PATH = REPO_ROOT / "scripts" / "enum_manifest.yaml"
 NODE_MODULES = REPO_ROOT / "node_modules"
-OUTPUT_PATH = REPO_ROOT / "flatfhir" / "enums.yaml"
+OUTPUT_PATH = REPO_ROOT / "cdm" / "enums.yaml"
 
 # YAML keys that need quoting: start with a digit, contain special chars, or
 # are YAML boolean/null literals.
