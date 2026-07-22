@@ -1,3 +1,8 @@
+# FHIR packages (installed via npm install)
+node_modules/
+fhir_r4/
+fhir_ukcore/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

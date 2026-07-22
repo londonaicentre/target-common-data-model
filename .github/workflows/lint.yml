@@ -1,0 +1,27 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  linkml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v8.3.2
+      - run: uvx --with linkml linkml lint cdm --all --ignore-warnings
+
+      - name: Install FHIR packages
+        run: npm install .
+      - name: Ensure Enums are correct / up to date
+        run: |
+          if git diff --quiet --exit-code; then
+          echo "Regenerating output did not result in changed enums"
+          else
+            echo "Enum file changed on regeneration; ensure committed version is up to date."
+            exit 1
+          fi
+
