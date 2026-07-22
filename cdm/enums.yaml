@@ -2,12 +2,12 @@
 # Regenerate with:  uv run scripts/generate_enums.py
 #
 # Sources:
-#   Manual enums    – defined in scripts/enum_manifest.yaml
-#   fhir.r4.ukcore.stu2 – node_modules/fhir.r4.ukcore.stu2/package/
+#   Manual enums    - defined in scripts/enum_manifest.yaml
+#   fhir.r4.ukcore.stu2 - node_modules/fhir.r4.ukcore.stu2/package/
 
-id: https://aicentre.co.uk/cdm/flatfhir/enums
-name: flatfhir_enums
-description: LinkML enums for the FlatFHIR CDM, generated from FHIR terminology sources.
+id: https://cdm.aicentre.co.uk/enums
+name: enums
+description: LinkML enums for the AI Centre CDM, generated from FHIR terminology sources.
 
 imports:
   - linkml:types

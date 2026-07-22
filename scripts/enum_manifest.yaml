@@ -1,4 +1,4 @@
-# Enum manifest for flatfhir/enums.yaml generation.
+# Enum manifest for cdm/enums.yaml generation.
 # Run:  uv run scripts/generate_enums.py
 #
 # Requires FHIR packages to be installed first:
@@ -10,7 +10,6 @@
 #   manual      – values defined inline below (stable FHIR R4 / CDM-defined)
 
 enums:
-
   # ---------------------------------------------------------------------------
   # Patient
   # ---------------------------------------------------------------------------
@@ -19,9 +18,9 @@ enums:
     description: "Administrative gender (HL7 FHIR administrative-gender, R4 4.0.1)."
     source: manual
     values:
-      - { code: male,    display: "Male" }
-      - { code: female,  display: "Female" }
-      - { code: other,   display: "Other" }
+      - { code: male, display: "Male" }
+      - { code: female, display: "Female" }
+      - { code: other, display: "Other" }
       - { code: unknown, display: "Unknown" }
 
   EthnicCategoryEnum:
@@ -44,13 +43,16 @@ enums:
     description: "CDM-defined encounter category. Primary analyst axis; not a FHIR element."
     source: manual
     values:
-      - { code: apc_spell,         display: "APC spell (admission to discharge)" }
-      - { code: apc_episode,       display: "APC consultant episode (within a spell)" }
-      - { code: ecds_attendance,   display: "Emergency Care Data Set attendance" }
-      - { code: opd_attendance,    display: "Outpatient attendance" }
-      - { code: gp_encounter,      display: "GP/primary care encounter" }
-      - { code: ward_stay,         display: "Ward movement / bed-day record" }
-      - { code: icu_stay,          display: "ICU/HDU stay" }
+      - { code: apc_spell, display: "APC spell (admission to discharge)" }
+      - {
+          code: apc_episode,
+          display: "APC consultant episode (within a spell)",
+        }
+      - { code: ecds_attendance, display: "Emergency Care Data Set attendance" }
+      - { code: opd_attendance, display: "Outpatient attendance" }
+      - { code: gp_encounter, display: "GP/primary care encounter" }
+      - { code: ward_stay, display: "Ward movement / bed-day record" }
+      - { code: icu_stay, display: "ICU/HDU stay" }
 
   EncounterStatusEnum:
     description: "Encounter lifecycle status (HL7 FHIR encounter-status, R4 4.0.1)."
@@ -70,17 +72,17 @@ enums:
     description: "v3 ActEncounterCode — encounter class."
     source: manual
     values:
-      - { code: AMB,    display: "Ambulatory" }
-      - { code: EMER,   display: "Emergency" }
-      - { code: FLD,    display: "Field" }
-      - { code: HH,     display: "Home health" }
-      - { code: IMP,    display: "Inpatient encounter" }
-      - { code: ACUTE,  display: "Inpatient acute" }
-      - { code: NONAC,  display: "Inpatient non-acute" }
+      - { code: AMB, display: "Ambulatory" }
+      - { code: EMER, display: "Emergency" }
+      - { code: FLD, display: "Field" }
+      - { code: HH, display: "Home health" }
+      - { code: IMP, display: "Inpatient encounter" }
+      - { code: ACUTE, display: "Inpatient acute" }
+      - { code: NONAC, display: "Inpatient non-acute" }
       - { code: OBSENC, display: "Observation encounter" }
-      - { code: PRENC,  display: "Pre-admission" }
-      - { code: SS,     display: "Short stay" }
-      - { code: VR,     display: "Virtual" }
+      - { code: PRENC, display: "Pre-admission" }
+      - { code: SS, display: "Short stay" }
+      - { code: VR, display: "Virtual" }
 
   AdmissionMethodEnum:
     description: "NHS England admission method codes (UKCore-AdmissionMethodEngland)."
@@ -116,13 +118,13 @@ enums:
     description: "Role of the diagnosis for the encounter (HL7 diagnosis-role value set)."
     source: manual
     values:
-      - { code: AD,       display: "Admission diagnosis" }
-      - { code: DD,       display: "Discharge diagnosis" }
-      - { code: CC,       display: "Chief complaint" }
-      - { code: CM,       display: "Co-morbidity diagnosis" }
-      - { code: pre-op,   display: "Pre-op diagnosis" }
-      - { code: post-op,  display: "Post-op diagnosis" }
-      - { code: billing,  display: "Billing" }
+      - { code: AD, display: "Admission diagnosis" }
+      - { code: DD, display: "Discharge diagnosis" }
+      - { code: CC, display: "Chief complaint" }
+      - { code: CM, display: "Co-morbidity diagnosis" }
+      - { code: pre-op, display: "Pre-op diagnosis" }
+      - { code: post-op, display: "Post-op diagnosis" }
+      - { code: billing, display: "Billing" }
 
   # ---------------------------------------------------------------------------
   # Condition
@@ -132,10 +134,10 @@ enums:
     description: "Condition category (UKCore-ConditionCategory + FHIR core condition-category)."
     source: manual
     values:
-      - { code: problem-list-item,    display: "Problem list item" }
-      - { code: encounter-diagnosis,  display: "Encounter diagnosis" }
+      - { code: problem-list-item, display: "Problem list item" }
+      - { code: encounter-diagnosis, display: "Encounter diagnosis" }
       - { code: presenting-complaint, display: "Presenting complaint" }
-      - { code: co-morbidity,         display: "Co-morbidity" }
+      - { code: co-morbidity, display: "Co-morbidity" }
 
   ConditionClinicalStatusEnum:
     description: "Condition clinical status (HL7 FHIR condition-clinical, R4 4.0.1)."
@@ -181,14 +183,14 @@ enums:
     source: manual
     values:
       - { code: social-history, display: "Social history" }
-      - { code: vital-signs,    display: "Vital signs" }
-      - { code: imaging,        display: "Imaging" }
-      - { code: laboratory,     display: "Laboratory" }
-      - { code: procedure,      display: "Procedure" }
-      - { code: survey,         display: "Survey" }
-      - { code: exam,           display: "Exam" }
-      - { code: therapy,        display: "Therapy" }
-      - { code: activity,       display: "Activity" }
+      - { code: vital-signs, display: "Vital signs" }
+      - { code: imaging, display: "Imaging" }
+      - { code: laboratory, display: "Laboratory" }
+      - { code: procedure, display: "Procedure" }
+      - { code: survey, display: "Survey" }
+      - { code: exam, display: "Exam" }
+      - { code: therapy, display: "Therapy" }
+      - { code: activity, display: "Activity" }
 
   DataAbsentReasonEnum:
     description: "Why a result value is absent (HL7 FHIR data-absent-reason)."
@@ -214,22 +216,22 @@ enums:
     description: "Clinical interpretation of an observation result (HL7 FHIR observation-interpretation)."
     source: manual
     values:
-      - { code: L,     display: "Low" }
-      - { code: H,     display: "High" }
-      - { code: LL,    display: "Critical Low" }
-      - { code: HH,    display: "Critical High" }
-      - { code: N,     display: "Normal" }
-      - { code: A,     display: "Abnormal" }
-      - { code: AA,    display: "Critical Abnormal" }
-      - { code: U,     display: "Significant Change Up" }
-      - { code: D,     display: "Significant Change Down" }
-      - { code: B,     display: "Better" }
-      - { code: W,     display: "Worse" }
-      - { code: R,     display: "Resistant" }
-      - { code: S,     display: "Susceptible" }
-      - { code: I,     display: "Intermediate" }
-      - { code: MS,    display: "Moderately Susceptible" }
-      - { code: VS,    display: "Very Susceptible" }
-      - { code: IE,    display: "Insufficient Evidence" }
+      - { code: L, display: "Low" }
+      - { code: H, display: "High" }
+      - { code: LL, display: "Critical Low" }
+      - { code: HH, display: "Critical High" }
+      - { code: N, display: "Normal" }
+      - { code: A, display: "Abnormal" }
+      - { code: AA, display: "Critical Abnormal" }
+      - { code: U, display: "Significant Change Up" }
+      - { code: D, display: "Significant Change Down" }
+      - { code: B, display: "Better" }
+      - { code: W, display: "Worse" }
+      - { code: R, display: "Resistant" }
+      - { code: S, display: "Susceptible" }
+      - { code: I, display: "Intermediate" }
+      - { code: MS, display: "Moderately Susceptible" }
+      - { code: VS, display: "Very Susceptible" }
+      - { code: IE, display: "Insufficient Evidence" }
       - { code: SYN-R, display: "Synergy - Resistant" }
       - { code: SYN-S, display: "Synergy - Susceptible" }

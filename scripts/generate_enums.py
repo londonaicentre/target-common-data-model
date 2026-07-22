@@ -2,12 +2,12 @@
 # dependencies = ["pyyaml"]
 # ///
 """
-Generate flatfhir/enums.yaml from scripts/enum_manifest.yaml.
+Generate cdm/enums.yaml from scripts/enum_manifest.yaml.
 
 Sources:
-  codesystem  – concepts from a FHIR CodeSystem in node_modules/, looked up
+  codesystem  - concepts from a FHIR CodeSystem in node_modules/, looked up
                 by canonical URL via the package's .index.json
-  manual      – values defined inline in the manifest
+  manual      - values defined inline in the manifest
 
 Usage:
   npm install          # install FHIR packages once
@@ -82,7 +82,10 @@ def load_codesystem(url: str, package: str) -> list[dict]:
     filename = url_to_filename(url)
     path = pkg_dir / filename
     if not path.exists():
-        print(f"ERROR: {filename} not found in {package}.\n       URL: {url}", file=sys.stderr)
+        print(
+            f"ERROR: {filename} not found in {package}.\n       URL: {url}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     raw = json.loads(path.read_text())
     concepts = raw.get("concept", [])
@@ -98,7 +101,10 @@ def build_enum_block(name: str, spec: dict) -> str:
     if source == "codesystem":
         values = load_codesystem(spec["url"], spec["package"])
     elif source == "manual":
-        values = [{"code": str(v["code"]), "display": v.get("display", "")} for v in spec.get("values", [])]
+        values = [
+            {"code": str(v["code"]), "display": v.get("display", "")}
+            for v in spec.get("values", [])
+        ]
     else:
         print(f"ERROR: unknown source type '{source}' for {name}", file=sys.stderr)
         sys.exit(1)
@@ -117,23 +123,25 @@ def main() -> None:
     enums = manifest.get("enums", {})
 
     # Collect which packages are used, for the header comment.
-    packages_used = sorted({
-        spec["package"]
-        for spec in enums.values()
-        if spec.get("source") == "codesystem"
-    })
+    packages_used = sorted(
+        {
+            spec["package"]
+            for spec in enums.values()
+            if spec.get("source") == "codesystem"
+        }
+    )
 
     header = (
         "# AUTO-GENERATED — do not edit by hand.\n"
         "# Regenerate with:  uv run scripts/generate_enums.py\n"
         "#\n"
         "# Sources:\n"
-        "#   Manual enums    – defined in scripts/enum_manifest.yaml\n"
-        + "".join(f"#   {p} – node_modules/{p}/package/\n" for p in packages_used)
+        "#   Manual enums    - defined in scripts/enum_manifest.yaml\n"
+        + "".join(f"#   {p} - node_modules/{p}/package/\n" for p in packages_used)
         + "\n"
-        "id: https://aicentre.co.uk/cdm/flatfhir/enums\n"
-        "name: flatfhir_enums\n"
-        "description: LinkML enums for the FlatFHIR CDM, generated from FHIR terminology sources.\n"
+        "id: https://cdm.aicentre.co.uk/enums\n"
+        "name: enums\n"
+        "description: LinkML enums for the AI Centre CDM, generated from FHIR terminology sources.\n"
         "\n"
         "imports:\n"
         "  - linkml:types\n"
