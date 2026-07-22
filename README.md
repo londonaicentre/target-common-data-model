@@ -1,6 +1,6 @@
 # Target Data Model
 
-AI Centre FlatFHIR CDM — a flattened analytical data model mapped from UK Core FHIR R4 (4.0.1).
+AI Centre CDM — a flattened analytical data model mapped from UK Core FHIR R4 (4.0.1).
 
 Each table corresponds to a single FHIR resource, flattened into a fact or dimension table suitable for SQL analytics. Repeating/complex FHIR elements are held as `variant` columns (single-level flat objects in an array).
 
@@ -8,7 +8,7 @@ See [CONVENTIONS.md](./CONVENTIONS.md) for the full modelling rules.
 
 ## Schemas
 
-Schemas live under `flatfhir/`. Each resource has its own YAML file:
+Schemas live under `cdm/`. Each resource has its own YAML file:
 
 | File | Class | Grain | OMOP analogue |
 |---|---|---|---|
@@ -34,7 +34,7 @@ Each variant object has a content-based surrogate PK: `hash(<parent_pk>, <distin
 
 ## Enumerations
 
-Enums in `flatfhir/enums.yaml` are auto-generated from FHIR terminology packages. **Do not edit by hand.**
+Enums in `cdm/enums.yaml` are auto-generated from FHIR terminology packages. **Do not edit by hand.**
 
 Regenerate with:
 
@@ -74,12 +74,12 @@ uv sync
 ### Validate a schema
 
 ```bash
-uvx --with linkml linkml lint flatfhir/core.yaml
+uvx --with linkml linkml lint cdm/core.yaml
 ```
 
 ### Add a new resource
 
-1. Copy `template_schema.yml` to `flatfhir/<resource>.yml`.
+1. Copy `template_schema.yml` to `cdm/<resource>.yml`.
 2. Add an `imports: [core]` block so shared provenance slots are available.
 3. Define the primary class and any variant classes following the conventions in [CONVENTIONS.md](./CONVENTIONS.md).
 4. If you need new enums, add entries to `scripts/enum_manifest.yaml` and regenerate.
