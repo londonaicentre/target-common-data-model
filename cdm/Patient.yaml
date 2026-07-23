@@ -72,7 +72,7 @@ classes:
           fhir_type: boolean
 
       deceased_datetime:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Date/time of death, when known.
         annotations:

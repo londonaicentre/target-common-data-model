@@ -93,7 +93,7 @@ classes:
         description: Human-readable label for encounter_type. Not a FHIR element.
 
       period_start:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Start of the encounter (admission/arrival).
         annotations:
@@ -101,7 +101,7 @@ classes:
           fhir_type: dateTime
 
       period_end:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: End of the encounter (discharge/departure).
         annotations:

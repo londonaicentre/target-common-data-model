@@ -1,4 +1,4 @@
-# AUTO-GENERATED — do not edit by hand.
+# AUTO-GENERATED - do not edit by hand.
 # Regenerate with:  uv run scripts/generate_enums.py
 #
 # Sources:
@@ -80,7 +80,7 @@ enums:
       unknown:
 
   EncounterClassEnum:
-    description: "v3 ActEncounterCode — encounter class."
+    description: "v3 ActEncounterCode - encounter class."
     permissible_values:
       AMB: {description: "Ambulatory"}
       EMER: {description: "Emergency"}

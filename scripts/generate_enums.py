@@ -87,7 +87,7 @@ def load_codesystem(url: str, package: str) -> list[dict]:
             file=sys.stderr,
         )
         sys.exit(1)
-    raw = json.loads(path.read_text())
+    raw = json.loads(path.read_text(encoding="utf-8"))
     concepts = raw.get("concept", [])
     if not concepts:
         print(f"WARNING: no concept[] in {filename} ({package})", file=sys.stderr)
@@ -119,7 +119,7 @@ def build_enum_block(name: str, spec: dict) -> str:
 
 
 def main() -> None:
-    manifest = yaml.safe_load(MANIFEST_PATH.read_text())
+    manifest = yaml.safe_load(MANIFEST_PATH.read_text(encoding="utf-8"))
     enums = manifest.get("enums", {})
 
     # Collect which packages are used, for the header comment.
@@ -132,7 +132,7 @@ def main() -> None:
     )
 
     header = (
-        "# AUTO-GENERATED — do not edit by hand.\n"
+        "# AUTO-GENERATED - do not edit by hand.\n"
         "# Regenerate with:  uv run scripts/generate_enums.py\n"
         "#\n"
         "# Sources:\n"
@@ -155,7 +155,7 @@ def main() -> None:
         enum_blocks.append(block)
 
     output = header + "\n\n".join(enum_blocks) + "\n"
-    OUTPUT_PATH.write_text(output)
+    OUTPUT_PATH.write_text(output, encoding="utf-8")
     print(f"Written {OUTPUT_PATH.relative_to(REPO_ROOT)}")
     print(f"  {len(enums)} enums generated.")
 

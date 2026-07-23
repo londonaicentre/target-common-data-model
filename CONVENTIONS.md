@@ -31,15 +31,17 @@ Standardise on a content-based hash — `hash(<parent_pk>, <distinguishing sourc
 
 ## 3. Schema
 
-We use dbt `schema.yml` files as the contract for defining CDM tables.
+We define the CDM in [LinkML](https://linkml.io/) under `cdm/`: one `<resource>.yaml` per resource, with shared slots and types in `core.yaml` and enumerations in `enums.yaml`. Each first-class table is a LinkML class and each column is a slot.
 
-By default, dbt does not treat variant objects as first class objects and cannot constrain or test their content. We instead use `schema_variant.yml` files to define a variant object in the same way as a table.
+dbt model contracts and seed lookups are generated from the LinkML into `dist/` by the `scripts/generate_dbt_*.py` scripts. The generated files are the delivery artifacts and are not edited by hand; change the spec and regenerate.
+
+Variant objects are defined as inline LinkML classes in the same file as their parent. dbt does not treat them as first class objects and cannot constrain or test their content, so they surface on the parent as a `variant` column, with the inner shape recorded in `meta.variant_fields`.
 
 ## 4. Referring back to FHIR
 
-Every field definition in a `schema.yml` or `schema_variant.yml` must link back to a FHIR path IF that field represents a FHIR element. If this is the case, the field must inherit all conventions and constraints from the original FHIR element.
+Every slot that represents a FHIR element must link back to a FHIR path via a `fhir_path` annotation (with `fhir_type`). If this is the case, the field must inherit all conventions and constraints from the original FHIR element.
 
-Where the FHIR path is null, the field is CDM specific and is not present in FHIR.
+Where the FHIR path is null or absent, the field is CDM specific and is not present in FHIR.
 
 ## 5. Handling `CodeableConcept`: the fact code vs. everything else
 
@@ -47,7 +49,7 @@ A FHIR `CodeableConcept` is modelled in one of two ways, decided by whether the 
 
 ### 5a. Fact code (+ mappings)
 
-Where a single column on a fact table (for example `fact_condition`, `fact_observation`) whose code is the fact being recorded, this is stored as a **triple (+bool)** variant:
+Where a single column on a fact table (for example `condition`, `observation`) whose code is the fact being recorded, this is stored as a **triple (+bool)** variant:
 
 | Column suffix        | FHIR source            | Meaning                                    |
 |----------------------|------------------------|--------------------------------------------|

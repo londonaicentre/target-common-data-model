@@ -8,17 +8,15 @@ See [CONVENTIONS.md](./CONVENTIONS.md) for the full modelling rules.
 
 ## Schemas
 
-Schemas live under `cdm/`. Each resource has its own YAML file:
+Schemas live under `cdm/`, written in [LinkML](https://linkml.io/) for RDF-compatible, toolable schema description. Each resource has its own YAML file:
 
 | File | Class | Grain | OMOP analogue |
 |---|---|---|---|
-| `patient.yaml` | `Patient` | One row per master person | `person` |
-| `encounter.yml` | `Encounter` | One row per encounter | `visit_occurrence` |
-| `condition.yml` | `Condition` | One row per condition | `condition_occurrence` |
-| `core.yaml` | shared slots & types | — | — |
-| `enums.yaml` | all enumerations | — | — |
-
-The schemas are written in [LinkML](https://linkml.io/) for RDF-compatible, toolable schema description.
+| `Patient.yaml` | `Patient` | One row per master person | `person` |
+| `Encounter.yaml` | `Encounter` | One row per encounter | `visit_occurrence` |
+| `Condition.yaml` | `Condition` | One row per condition | `condition_occurrence` |
+| `core.yaml` | shared slots and types | | |
+| `enums.yaml` | all enumerations | | |
 
 ### Variant classes
 
@@ -31,6 +29,22 @@ Repeating FHIR elements are modelled as inline variant classes (arrays of flat o
 | `ConditionConceptVariant` | `Condition` | `Condition.code` CodeableConcept + mappings |
 
 Each variant object has a content-based surrogate PK: `hash(<parent_pk>, <distinguishing fields>)`.
+
+## Generated dbt artifacts
+
+The LinkML schemas are the source of truth. dbt model contracts and seed lookups are generated from them into `dist/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
+
+- `dist/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` / `relationships` tests, and FHIR lineage in `meta`.
+- `dist/seeds/mapping/seed_<entity>.csv` - code/display lookups, one per enumeration, plus `seeds_mapping.yml`.
+
+Generated files carry a "do not edit" banner. To change them, edit the `cdm/` spec and regenerate:
+
+```bash
+uv run scripts/generate_dbt_yaml.py     # model contracts -> dist/models/gold/
+uv run scripts/generate_dbt_seeds.py    # reference seeds  -> dist/seeds/mapping/
+```
+
+New resources are picked up automatically (every `cdm/*.yaml` except `core` and `enums`).
 
 ## Enumerations
 
@@ -57,35 +71,34 @@ Two schema templates are provided as a starting point for new resources:
 
 ## Prerequisites
 
-Install FHIR terminology packages (requires Node.js):
+Install FHIR terminology packages, required to regenerate enums (requires Node.js):
 
 ```bash
 npm install
 ```
 
-Install Python tooling (requires [uv](https://github.com/astral-sh/uv)):
-
-```bash
-uv sync
-```
+The Python scripts declare their dependencies inline (PEP 723) and run under [uv](https://github.com/astral-sh/uv); there is no separate install step.
 
 ## How To
 
-### Validate a schema
+### Validate the schemas
 
 ```bash
-uvx --with linkml linkml lint cdm/core.yaml
+uvx --with linkml linkml lint cdm --all --ignore-warnings
 ```
 
 ### Add a new resource
 
-1. Copy `template_schema.yml` to `cdm/<resource>.yml`.
-2. Add an `imports: [core]` block so shared provenance slots are available.
-3. Define the primary class and any variant classes following the conventions in [CONVENTIONS.md](./CONVENTIONS.md).
-4. If you need new enums, add entries to `scripts/enum_manifest.yaml` and regenerate.
+1. Add `cdm/<Resource>.yaml` with an `imports: [core]` block so shared provenance slots are available.
+2. Define the primary class and any variant classes following the conventions in [CONVENTIONS.md](./CONVENTIONS.md).
+3. If you need new enums, add entries to `scripts/enum_manifest.yaml` and regenerate.
+4. Regenerate the dbt artifacts; the new resource is included automatically.
 
-### Regenerate enums
+### Regenerate everything
 
 ```bash
-uv run scripts/generate_enums.py
+npm install                          # once, for FHIR packages
+uv run scripts/generate_enums.py     # cdm/enums.yaml
+uv run scripts/generate_dbt_seeds.py # dist/seeds/mapping/
+uv run scripts/generate_dbt_yaml.py  # dist/models/gold/
 ```
