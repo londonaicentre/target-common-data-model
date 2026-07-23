@@ -1,0 +1,22 @@
+code,display
+19,"Usual place of residence unless listed below, for example, a private dwelling whether owner occupied or owned by Local Authority, housing association or other landlord. This includes wardened accommodation but not residential accommodation where health care is provided. It also includes patients with no fixed abode."
+29,"Temporary place of residence when usually resident elsewhere (includes hotel, residential Educational Establishment)"
+30,Repatriation from high security psychiatric accommodation in an NHS Hospital Provider (NHS Trust or NHS Foundation Trust)
+37,Court
+38,Penal establishment or police station
+48,"High Security Psychiatric Hospital, Scotland"
+49,NHS other Hospital Provider - high security psychiatric accommodation
+50,NHS other Hospital Provider - medium secure unit
+51,NHS other Hospital Provider - Ward for general patients or the younger physically disabled
+52,NHS other Hospital Provider - Ward for maternity patients or Neonates
+53,NHS other Hospital Provider - Ward for patients who are mentally ill or have Learning Disabilities
+54,NHS run Care Home
+65,Local Authority residential accommodation i.e. where care is provided
+66,Local Authority foster care
+79,Not applicable - Patient died or stillbirth
+84,Non-NHS run hospital - medium secure unit
+85,Non-NHS (other than Local Authority) run Care Home
+87,Non-NHS run hospital
+88,Non-NHS (other than Local Authority) run Hospice
+98,Not applicable - Hospital Provider Spell not finished at episode end (i.e. not discharged) or current episode unfinished
+99,Not known

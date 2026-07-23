@@ -33,7 +33,7 @@ Standardise on a content-based hash — `hash(<parent_pk>, <distinguishing sourc
 
 We define the CDM in [LinkML](https://linkml.io/) under `cdm/`: one `<resource>.yaml` per resource, with shared slots and types in `core.yaml` and enumerations in `enums.yaml`. Each first-class table is a LinkML class and each column is a slot.
 
-dbt model contracts and seed lookups are generated from the LinkML into `dist/` by the `scripts/generate_dbt_*.py` scripts. The generated files are the delivery artifacts and are not edited by hand; change the spec and regenerate.
+dbt model contracts and seed lookups are generated from the LinkML into `dbt_metadata/` by the `scripts/generate_dbt_*.py` scripts. The generated files are the delivery artifacts and are not edited by hand; change the spec and regenerate.
 
 Variant objects are defined as inline LinkML classes in the same file as their parent. dbt does not treat them as first class objects and cannot constrain or test their content, so they surface on the parent as a `variant` column, with the inner shape recorded in `meta.variant_fields`.
 

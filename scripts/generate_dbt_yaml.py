@@ -5,7 +5,7 @@
 """Generate dbt model contract YAML from the LinkML CDM spec.
 
 For each cdm/<resource>.yaml, resolve the import closure (core slots + enums)
-via LinkML SchemaView and emit dist/models/gold/<resource>/<resource>.yml -
+via LinkML SchemaView and emit dbt_metadata/models/gold/<resource>/<resource>.yml -
 mirroring the consumer (lgt_phm) directory layout so delivery is a straight copy.
 
 Per model:
@@ -20,7 +20,7 @@ Per model:
 Inlined multivalued variant classes become Snowflake VARIANT columns on their
 parent; their inner shape is surfaced as meta.variant_class / meta.variant_fields.
 
-Usage:  uv run scripts/generate_dbt_yaml.py [OUTPUT_ROOT]   (default: dist/)
+Usage:  uv run scripts/generate_dbt_yaml.py [OUTPUT_ROOT]   (default: dbt_metadata/)
 """
 from __future__ import annotations
 
@@ -159,5 +159,5 @@ def main(outroot: Path) -> None:
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO / "dist"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO / "dbt_metadata"
     main(out)

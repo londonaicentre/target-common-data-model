@@ -32,16 +32,16 @@ Each variant object has a content-based surrogate PK: `hash(<parent_pk>, <distin
 
 ## Generated dbt artifacts
 
-The LinkML schemas are the source of truth. dbt model contracts and seed lookups are generated from them into `dist/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
+The LinkML schemas are the source of truth. dbt model contracts and seed lookups are generated from them into `dbt_metadata/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
 
-- `dist/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` / `relationships` tests, and FHIR lineage in `meta`.
-- `dist/seeds/mapping/seed_<entity>.csv` - code/display lookups, one per enumeration, plus `seeds_mapping.yml`.
+- `dbt_metadata/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` tests, and FHIR lineage in `meta`.
+- `dbt_metadata/seeds/mapping/seed_<entity>.csv` - code/display lookups, one per enumeration, plus `seeds_mapping.yml`.
 
 Generated files carry a "do not edit" banner. To change them, edit the `cdm/` spec and regenerate:
 
 ```bash
-uv run scripts/generate_dbt_yaml.py     # model contracts -> dist/models/gold/
-uv run scripts/generate_dbt_seeds.py    # reference seeds  -> dist/seeds/mapping/
+uv run scripts/generate_dbt_yaml.py     # model contracts -> dbt_metadata/models/gold/
+uv run scripts/generate_dbt_seeds.py    # reference seeds  -> dbt_metadata/seeds/mapping/
 ```
 
 New resources are picked up automatically (every `cdm/*.yaml` except `core` and `enums`).
@@ -99,6 +99,6 @@ uvx --with linkml linkml lint cdm --all --ignore-warnings
 ```bash
 npm install                          # once, for FHIR packages
 uv run scripts/generate_enums.py     # cdm/enums.yaml
-uv run scripts/generate_dbt_seeds.py # dist/seeds/mapping/
-uv run scripts/generate_dbt_yaml.py  # dist/models/gold/
+uv run scripts/generate_dbt_seeds.py # dbt_metadata/seeds/mapping/
+uv run scripts/generate_dbt_yaml.py  # dbt_metadata/models/gold/
 ```

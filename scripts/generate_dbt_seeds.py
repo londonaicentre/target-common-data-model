@@ -13,7 +13,7 @@ Code only enums with no descriptions are skipped.
 Seeds mirror the UK Core / HL7 CodeSystems captured in enums.yaml, so the dbt
 lookups never drift from the enums / from UK Core.
 
-Usage:  uv run scripts/generate_dbt_seeds.py [OUTPUT_ROOT]   (default: dist/)
+Usage:  uv run scripts/generate_dbt_seeds.py [OUTPUT_ROOT]   (default: dbt_metadata/)
 """
 from __future__ import annotations
 
@@ -86,5 +86,5 @@ def main(outroot: Path) -> None:
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO / "dist"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else REPO / "dbt_metadata"
     main(out)
