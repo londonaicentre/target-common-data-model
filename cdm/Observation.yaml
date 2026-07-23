@@ -85,7 +85,7 @@ classes:
           fhir_type: CodeableConcept
 
       effective_datetime:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Clinically relevant time for the observation (dateTime form).
         annotations:
@@ -93,7 +93,7 @@ classes:
           fhir_type: dateTime
 
       effective_period_start:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Start of the clinically relevant period (Period form).
         annotations:
@@ -101,7 +101,7 @@ classes:
           fhir_type: dateTime
 
       effective_period_end:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: End of the clinically relevant period (Period form).
         annotations:
@@ -109,7 +109,7 @@ classes:
           fhir_type: dateTime
 
       issued:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Date/time this version of the observation was made available.
         annotations:
@@ -199,7 +199,7 @@ classes:
           fhir_type: integer
 
       value_datetime:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Date/time result value. I.e. if a patient was asked a date.
         annotations:
