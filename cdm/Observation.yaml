@@ -1,0 +1,446 @@
+id: https://cdm.aicentre.co.uk/observation
+name: observation
+description: >
+  Profile: UKCore-Observation (R4 4.0.1).
+  Grain: One row per Observation resource.
+
+annotations:
+  grain: one_row_per_resource
+  grain_key: observation_id
+
+imports:
+  - core
+  - Patient
+  - Encounter
+
+classes:
+  Observation:
+    description: >
+      Observation fact. One row per Observation resource, keyed by observation_id.
+      Links to Patient via master_person_id and to Encounter via encounter_id.
+      Analogue of OMOP measurement / observation.
+    slots:
+      - meta_source
+      - meta_tag_code
+      - meta_last_updated
+    attributes:
+      observation_id:
+        identifier: true
+        range: string
+        required: true
+        description: Key for the Observation resource. One row per observation.
+        annotations:
+          fhir_path: Observation.id
+          fhir_type: id
+
+      master_person_id:
+        range: Patient
+        required: true
+        description: Master person this observation belongs to. Resolved from Observation.subject.
+        annotations:
+          fhir_path: Observation.subject
+          fhir_type: Reference(Patient)
+
+      encounter_id:
+        range: Encounter
+        required: false
+        description: Encounter during which the observation was made. Links to Encounter.
+        annotations:
+          fhir_path: Observation.encounter
+          fhir_type: Reference(Encounter)
+
+      status:
+        range: ObservationStatusEnum
+        required: true
+        description: Lifecycle status of the observation (registered, preliminary, final, amended, etc.).
+        annotations:
+          fhir_path: Observation.status
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/observation-status|4.0.1
+
+      category:
+        range: ObservationCategoryEnum
+        required: false
+        description: Classification of type of observation (laboratory, vital-signs, etc.).
+        annotations:
+          fhir_path: Observation.category
+          fhir_type: CodeableConcept
+          value_set: http://hl7.org/fhir/ValueSet/observation-category
+
+      category_display:
+        range: string
+        required: false
+        description: Human-readable label for category. Not a FHIR element.
+
+      observation_concept:
+        range: ObservationConceptVariant
+        multivalued: true
+        inlined_as_list: true
+        required: false
+        description: >
+          The coded observation type as a CodeableConcept VARIANT. Source concept
+          (is_source=true) plus any mapped standard-vocabulary concepts.
+        annotations:
+          fhir_path: Observation.code
+          fhir_type: CodeableConcept
+
+      effective_datetime:
+        range: TimestampTz
+        required: false
+        description: Clinically relevant time for the observation (dateTime form).
+        annotations:
+          fhir_path: Observation.effectiveDateTime
+          fhir_type: dateTime
+
+      effective_period_start:
+        range: TimestampTz
+        required: false
+        description: Start of the clinically relevant period (Period form).
+        annotations:
+          fhir_path: Observation.effectivePeriod.start
+          fhir_type: dateTime
+
+      effective_period_end:
+        range: TimestampTz
+        required: false
+        description: End of the clinically relevant period (Period form).
+        annotations:
+          fhir_path: Observation.effectivePeriod.end
+          fhir_type: dateTime
+
+      issued:
+        range: TimestampTz
+        required: false
+        description: Date/time this version of the observation was made available.
+        annotations:
+          fhir_path: Observation.issued
+          fhir_type: instant
+
+      # ----- value[x] — flattened polymorphic forms -----
+
+      value_quantity:
+        range: decimal
+        required: false
+        description: Numeric result value (Quantity.value).
+        annotations:
+          fhir_path: Observation.valueQuantity.value
+          fhir_type: decimal
+
+      value_quantity_unit:
+        range: string
+        required: false
+        description: Unit string for the numeric result (Quantity.unit).
+        annotations:
+          fhir_path: Observation.valueQuantity.unit
+          fhir_type: string
+
+      value_quantity_system:
+        range: uri
+        required: false
+        description: Code system for the unit (Quantity.system), typically UCUM.
+        annotations:
+          fhir_path: Observation.valueQuantity.system
+          fhir_type: uri
+
+      value_quantity_code:
+        range: string
+        required: false
+        description: Coded form of the unit (Quantity.code), typically a UCUM code.
+        annotations:
+          fhir_path: Observation.valueQuantity.code
+          fhir_type: code
+
+      value_codeable_concept:
+        range: string
+        required: false
+        description: Coded result value (CodeableConcept.coding.code).
+        annotations:
+          fhir_path: Observation.valueCodeableConcept.coding.code
+          fhir_type: code
+
+      value_codeable_concept_display:
+        range: string
+        required: false
+        description: Human-readable label for value_codeable_concept.
+        annotations:
+          fhir_path: Observation.valueCodeableConcept.coding.display
+          fhir_type: string
+
+      value_codeable_concept_system:
+        range: uri
+        required: false
+        description: Code system for the coded result value.
+        annotations:
+          fhir_path: Observation.valueCodeableConcept.coding.system
+          fhir_type: uri
+
+      value_string:
+        range: string
+        required: false
+        description: Free-text result value (string form).
+        annotations:
+          fhir_path: Observation.valueString
+          fhir_type: string
+
+      value_boolean:
+        range: boolean
+        required: false
+        description: Boolean result value.
+        annotations:
+          fhir_path: Observation.valueBoolean
+          fhir_type: boolean
+
+      value_integer:
+        range: integer
+        required: false
+        description: Integer result value.
+        annotations:
+          fhir_path: Observation.valueInteger
+          fhir_type: integer
+
+      value_datetime:
+        range: TimestampTz
+        required: false
+        description: Date/time result value. I.e. if a patient was asked a date.
+        annotations:
+          fhir_path: Observation.valueDateTime
+          fhir_type: dateTime
+
+      # ----- end value[x] -----
+
+      data_absent_reason:
+        range: DataAbsentReasonEnum
+        required: false
+        description: Why the result value is absent (only when value[x] is not present).
+        annotations:
+          fhir_path: Observation.dataAbsentReason
+          fhir_type: CodeableConcept
+          value_set: http://hl7.org/fhir/ValueSet/data-absent-reason
+
+      interpretation:
+        range: ObservationInterpretationEnum
+        required: false
+        description: Clinical interpretation of the result (high, low, normal, etc.).
+        annotations:
+          fhir_path: Observation.interpretation
+          fhir_type: CodeableConcept
+          value_set: http://hl7.org/fhir/ValueSet/observation-interpretation
+
+      interpretation_display:
+        range: string
+        required: false
+        description: Human-readable label for interpretation. Not a FHIR element.
+
+      body_site:
+        range: string
+        required: false
+        description: Body site code (SNOMED CT) where the observation was made.
+        annotations:
+          fhir_path: Observation.bodySite.coding.code
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/body-site
+
+      body_site_display:
+        range: string
+        required: false
+        description: Human-readable label for body_site. Not a FHIR element.
+
+      method:
+        range: string
+        required: false
+        description: Observation method code.
+        annotations:
+          fhir_path: Observation.method.coding.code
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/observation-methods
+
+      method_display:
+        range: string
+        required: false
+        description: Human-readable label for method. Not a FHIR element.
+
+      note:
+        range: string
+        required: false
+        description: Comments about the observation (Annotation.text, first entry).
+        annotations:
+          fhir_path: Observation.note.text
+          fhir_type: string
+
+      reference_range_low:
+        range: decimal
+        required: false
+        description: Low bound of the reference range (SimpleQuantity.value).
+        annotations:
+          fhir_path: Observation.referenceRange.low.value
+          fhir_type: decimal
+
+      reference_range_high:
+        range: decimal
+        required: false
+        description: High bound of the reference range (SimpleQuantity.value).
+        annotations:
+          fhir_path: Observation.referenceRange.high.value
+          fhir_type: decimal
+
+      reference_range_text:
+        range: string
+        required: false
+        description: Text-based reference range when numeric bounds are not available.
+        annotations:
+          fhir_path: Observation.referenceRange.text
+          fhir_type: string
+
+      component:
+        range: ObservationComponentVariant
+        multivalued: true
+        inlined_as_list: true
+        required: false
+        description: >
+          Component results for multi-part observations (e.g. blood pressure systolic/diastolic).
+          Each entry carries its own code and value.
+        annotations:
+          fhir_path: Observation.component
+          fhir_type: BackboneElement[]
+
+  # ---------------------------------------------------------------------------
+  # ObservationConceptVariant
+  # CodeableConcept variant for Observation.code.
+  # ---------------------------------------------------------------------------
+  ObservationConceptVariant:
+    description: >
+      One coding of the observation type (source LOINC/SNOMED, or a mapped standard concept).
+      Variant for Observation.code CodeableConcept.
+    attributes:
+      observation_concept_id:
+        identifier: true
+        range: string
+        required: true
+        description: Surrogate PK = hash(observation_id, coding_system, coding_code).
+
+      coding_system:
+        range: uri
+        required: true
+        description: Code system URI/OID (REQUIRED when coded).
+        annotations:
+          fhir_path: Observation.code.coding.system
+          fhir_type: uri
+
+      coding_code:
+        range: string
+        required: true
+        description: The code.
+        annotations:
+          fhir_path: Observation.code.coding.code
+          fhir_type: code
+
+      coding_display:
+        range: string
+        required: false
+        description: Human-readable display for the code.
+        annotations:
+          fhir_path: Observation.code.coding.display
+          fhir_type: string
+
+      is_source:
+        range: boolean
+        required: true
+        description: >
+          True on the source concept, false on mapped concepts.
+          Exactly one true per array. NOT a canonical FHIR element.
+
+  # ---------------------------------------------------------------------------
+  # ObservationComponentVariant
+  # Repeating element for Observation.component[].
+  # ---------------------------------------------------------------------------
+  ObservationComponentVariant:
+    description: >
+      One component of a multi-part observation (e.g. systolic or diastolic blood pressure).
+      Variant for Observation.component[].
+    attributes:
+      component_id:
+        identifier: true
+        range: string
+        required: true
+        description: Surrogate PK = hash(observation_id, component_coding_system, component_coding_code).
+
+      component_coding_system:
+        range: uri
+        required: true
+        description: Code system URI for this component's code.
+        annotations:
+          fhir_path: Observation.component.code.coding.system
+          fhir_type: uri
+
+      component_coding_code:
+        range: string
+        required: true
+        description: Code identifying this component.
+        annotations:
+          fhir_path: Observation.component.code.coding.code
+          fhir_type: code
+
+      component_coding_display:
+        range: string
+        required: false
+        description: Human-readable display for the component code.
+        annotations:
+          fhir_path: Observation.component.code.coding.display
+          fhir_type: string
+
+      value_quantity:
+        range: decimal
+        required: false
+        description: Numeric result value for this component (Quantity.value).
+        annotations:
+          fhir_path: Observation.component.valueQuantity.value
+          fhir_type: decimal
+
+      value_quantity_unit:
+        range: string
+        required: false
+        description: Unit string for the component numeric result (Quantity.unit).
+        annotations:
+          fhir_path: Observation.component.valueQuantity.unit
+          fhir_type: string
+
+      value_quantity_code:
+        range: string
+        required: false
+        description: Coded form of the component unit (Quantity.code).
+        annotations:
+          fhir_path: Observation.component.valueQuantity.code
+          fhir_type: code
+
+      value_codeable_concept:
+        range: string
+        required: false
+        description: Coded result for this component (CodeableConcept.coding.code).
+        annotations:
+          fhir_path: Observation.component.valueCodeableConcept.coding.code
+          fhir_type: code
+
+      value_codeable_concept_display:
+        range: string
+        required: false
+        description: Human-readable label for the component coded result.
+        annotations:
+          fhir_path: Observation.component.valueCodeableConcept.coding.display
+          fhir_type: string
+
+      value_string:
+        range: string
+        required: false
+        description: Free-text result for this component.
+        annotations:
+          fhir_path: Observation.component.valueString
+          fhir_type: string
+
+      interpretation:
+        range: ObservationInterpretationEnum
+        required: false
+        description: Clinical interpretation of the component result.
+        annotations:
+          fhir_path: Observation.component.interpretation
+          fhir_type: CodeableConcept
+          value_set: http://hl7.org/fhir/ValueSet/observation-interpretation
