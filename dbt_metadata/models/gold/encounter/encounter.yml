@@ -19,12 +19,21 @@ models:
     description: Master person this encounter belongs to. Resolved from Encounter.subject.
     data_tests:
     - not_null
+    - relationships:
+        arguments:
+          to: ref('patient')
+          field: master_person_id
     meta:
       fhir_path: Encounter.subject
       fhir_type: Reference(Patient)
   - name: part_of_id
     data_type: varchar
     description: Parent encounter this one is part of (episode -> spell).
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('encounter')
+          field: encounter_id
     meta:
       fhir_path: Encounter.partOf
       fhir_type: Reference(Encounter)

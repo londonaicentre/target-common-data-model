@@ -12,7 +12,8 @@ Per model:
   * data_type on every column
   * not_null / unique expressed as data_tests on identifier/required slots
   * accepted_values with values nested under `arguments:` (binding_strength
-    severity and relationships/FK tests are implemented but commented out for now)
+    severity is implemented but commented out for now)
+  * relationships (foreign-key) tests on class-typed reference columns
   * FHIR lineage in `meta` (fhir_path / fhir_type / value_set) - the meta block
     is omitted entirely for CDM-derived columns that have none
   * own columns first, shared provenance slots (meta_*) last
@@ -92,14 +93,14 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
         # if ann(slot, "binding_strength") in ("extensible", "preferred", "example"):
         #     av["accepted_values"]["config"] = {"severity": "warn"}
         tests.append(av)
-    # relationships (foreign-key) test on class-typed reference columns / commented out for now.
-    # elif rng in classes and not is_variant:
-    #     # foreign key -> referential-integrity test against the parent model
-    #     target = sv.get_identifier_slot(rng)
-    #     tests.append({"relationships": {"arguments": {
-    #         "to": f"ref('{rng.lower()}')",
-    #         "field": target.name if target else "id",
-    #     }}})
+    # relationships (foreign-key) test on class-typed reference columns.
+    elif rng in classes and not is_variant:
+        # foreign key -> referential-integrity test against the parent model
+        target = sv.get_identifier_slot(rng)
+        tests.append({"relationships": {"arguments": {
+            "to": f"ref('{rng.lower()}')",
+            "field": target.name if target else "id",
+        }}})
     if tests:
         col["data_tests"] = tests
 

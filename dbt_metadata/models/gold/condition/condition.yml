@@ -19,12 +19,21 @@ models:
     description: Master person this condition belongs to. Resolved from Condition.subject.
     data_tests:
     - not_null
+    - relationships:
+        arguments:
+          to: ref('patient')
+          field: master_person_id
     meta:
       fhir_path: Condition.subject
       fhir_type: Reference(Patient)
   - name: encounter_id
     data_type: varchar
     description: Encounter during which the condition was recorded. Links to Encounter.
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('encounter')
+          field: encounter_id
     meta:
       fhir_path: Condition.encounter
       fhir_type: Reference(Encounter)

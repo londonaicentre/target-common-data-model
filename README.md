@@ -34,7 +34,7 @@ Each variant object has a content-based surrogate PK: `hash(<parent_pk>, <distin
 
 The LinkML schemas are the source of truth. dbt model contracts and seed lookups are generated from them into `dbt_metadata/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
 
-- `dbt_metadata/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` tests, and FHIR lineage in `meta`.
+- `dbt_metadata/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` / `relationships` tests, and FHIR lineage in `meta`.
 - `dbt_metadata/seeds/mapping/seed_<entity>.csv` - code/display lookups, one per enumeration, plus `seeds_mapping.yml`.
 
 Generated files carry a "do not edit" banner. To change them, edit the `cdm/` spec and regenerate:
