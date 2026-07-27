@@ -16,12 +16,20 @@ jobs:
 
       - name: Install FHIR packages
         run: npm install .
-      - name: Ensure Enums are correct / up to date
+
+      - name: Regenerate enums and dbt artifacts
         run: |
-          if git diff --quiet --exit-code; then
-          echo "Regenerating output did not result in changed enums"
+          uv run scripts/generate_enums.py
+          uv run scripts/generate_dbt_seeds.py
+          uv run scripts/generate_dbt_yaml.py
+
+      - name: Ensure generated files are up to date
+        run: |
+          git add -A cdm dbt_metadata
+          if git diff --cached --quiet -- cdm dbt_metadata; then
+            echo "Generated files are up to date."
           else
-            echo "Enum file changed on regeneration; ensure committed version is up to date."
+            echo "Generated files are stale; regenerate locally and commit the result."
+            git diff --cached --stat -- cdm dbt_metadata
             exit 1
           fi
-
