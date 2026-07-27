@@ -1,9 +1,0 @@
-code,display
-1,Patient discharged on clinical advice or with clinical consent
-3,"Patient discharged by mental health review tribunal, Home Secretary or Court"
-4,Patient died
-5,Stillbirth
-6,Patient discharged him/herself
-7,Patient discharged by a relative or advocate
-8,Not applicable (Hospital Provider Spell not finished at episode end (i.e. not discharged) or current episode unfinished)
-9,Method of discharge not known

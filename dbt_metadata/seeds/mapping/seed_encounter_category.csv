@@ -1,8 +1,0 @@
-code,display
-apc_spell,APC spell (admission to discharge)
-apc_episode,APC consultant episode (within a spell)
-ecds_attendance,Emergency Care Data Set attendance
-opd_attendance,Outpatient attendance
-gp_encounter,GP/primary care encounter
-ward_stay,Ward movement / bed-day record
-icu_stay,ICU/HDU stay

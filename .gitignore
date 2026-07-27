@@ -3,6 +3,9 @@ node_modules/
 fhir_r4/
 fhir_ukcore/
 
+# Generated dbt artifacts - rebuilt from the spec by the Deliver workflow
+dbt_metadata/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

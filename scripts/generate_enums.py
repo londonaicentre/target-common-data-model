@@ -1,5 +1,6 @@
 # /// script
-# dependencies = ["pyyaml"]
+# requires-python = ">=3.10"
+# dependencies = ["pyyaml==6.0.3"]
 # ///
 """
 Generate cdm/enums.yaml from scripts/enum_manifest.yaml.
@@ -155,7 +156,7 @@ def main() -> None:
         enum_blocks.append(block)
 
     output = header + "\n\n".join(enum_blocks) + "\n"
-    OUTPUT_PATH.write_text(output, encoding="utf-8")
+    OUTPUT_PATH.write_text(output, encoding="utf-8", newline="\n")
     print(f"Written {OUTPUT_PATH.relative_to(REPO_ROOT)}")
     print(f"  {len(enums)} enums generated.")
 

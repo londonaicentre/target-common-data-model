@@ -5,7 +5,10 @@ on:
     branches:
       - main
     paths:
-      - 'dbt_metadata/**'
+      - 'cdm/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
 
 jobs:
   deliver:
@@ -14,6 +17,14 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           path: spec
+
+      - uses: astral-sh/setup-uv@v8.3.2
+
+      - name: Generate dbt metadata from the spec
+        working-directory: spec
+        run: |
+          uv run scripts/generate_dbt_seeds.py
+          uv run scripts/generate_dbt_yaml.py
 
       - uses: actions/checkout@v7.0.1
         with:
