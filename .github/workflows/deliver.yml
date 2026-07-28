@@ -1,0 +1,68 @@
+name: Deliver
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cdm/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: spec
+
+      - uses: astral-sh/setup-uv@v8.3.2
+
+      - name: Generate dbt metadata from the spec
+        working-directory: spec
+        run: |
+          uv run scripts/generate_dbt_seeds.py
+          uv run scripts/generate_dbt_yaml.py
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: londonaicentre/lgt_populationhealth
+          token: ${{ secrets.CDM_SYNC_TOKEN }}
+          path: consumer
+
+      - name: Copy generated artifacts
+        run: |
+          rm -rf consumer/lgt_phm/cdm_spec/models
+          mkdir -p consumer/lgt_phm/cdm_spec/models
+          cp -R spec/dbt_metadata/models/. consumer/lgt_phm/cdm_spec/models/
+          rm -rf consumer/lgt_phm/seeds/mapping
+          mkdir -p consumer/lgt_phm/seeds/mapping
+          cp -R spec/dbt_metadata/seeds/mapping/. consumer/lgt_phm/seeds/mapping/
+
+      - uses: peter-evans/create-pull-request@v8.1.1
+        with:
+          path: consumer
+          token: ${{ secrets.CDM_SYNC_TOKEN }}
+          branch: bot/cdm-sync
+          title: 'chore: update CDM data model spec'
+          commit-message: 'chore: update CDM data model from target-common-data-model@${{ github.sha }}'
+          reviewers: lawrenceadams,mcanroe
+          body: |
+            The CDM data model has changed. This updates the generated dbt metadata in
+            `lgt_phm` to match the current spec.
+
+            Source: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+
+            **Model contracts** (`lgt_phm/cdm_spec/models/**`) - These are the target dbt yaml contracts that modelling should be done towards.
+            Relationship tests and unique/not null tests are added by default on core columns.
+
+            These sit outside dbt's `model-paths`, so they are not compiled and merging
+            this cannot break the build.
+
+            **Reference seeds** (`lgt_phm/seeds/mapping/**`) - code and display lookups
+            for the coded value sets. These are inside `seed-paths`, so `dbt seed` will
+            build them.
+
+            Generated from the [LinkML spec](https://github.com/${{ github.repository }}/tree/${{ github.sha }}/cdm) - do not hand edit these files.

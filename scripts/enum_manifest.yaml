@@ -69,7 +69,7 @@ enums:
       - { code: unknown }
 
   EncounterClassEnum:
-    description: "v3 ActEncounterCode — encounter class."
+    description: "v3 ActEncounterCode - encounter class."
     source: manual
     values:
       - { code: AMB, display: "Ambulatory" }

@@ -16,6 +16,14 @@ jobs:
 
       - name: Install FHIR packages
         run: npm install .
+
+      # Quick smoke test to ensure scripts run okay
+      - name: Check the spec generates cleanly
+        run: |
+          uv run scripts/generate_enums.py
+          uv run scripts/generate_dbt_seeds.py
+          uv run scripts/generate_dbt_yaml.py
+
       - name: Ensure Enums are correct / up to date
         run: |
           if git diff --quiet --exit-code; then
@@ -24,4 +32,3 @@ jobs:
             echo "Enum file changed on regeneration; ensure committed version is up to date."
             exit 1
           fi
-

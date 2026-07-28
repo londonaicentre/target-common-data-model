@@ -24,10 +24,10 @@ imports:
 # Custom types
 # =============================================================================
 types:
-  TimestampTz:
+  TimestampNtz:
     uri: xsd:dateTime
     base: str
-    description: Timezone-aware timestamp. Maps to FHIR dateTime / instant.
+    description: Wall clock timestamp. Maps to FHIR dateTime / instant.
 
 # =============================================================================
 # Shared provenance slots — Resource.meta fields common to all tables
@@ -54,7 +54,7 @@ slots:
       fhir_type: code
 
   meta_last_updated:
-    range: TimestampTz
+    range: TimestampNtz
     required: false
     description: When the source last changed the record.
     annotations:

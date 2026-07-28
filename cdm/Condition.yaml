@@ -50,7 +50,7 @@ classes:
           fhir_type: Reference(Encounter)
 
       recorded_date:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: Date/time the condition was first recorded.
         annotations:
@@ -103,7 +103,7 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/condition-ver-status|4.0.1
 
       onset_datetime:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: When the condition began (onset dateTime, or start of onset Period).
         annotations:
@@ -111,7 +111,7 @@ classes:
           fhir_type: dateTime
 
       abatement_datetime:
-        range: TimestampTz
+        range: TimestampNtz
         required: false
         description: When the condition resolved/abated (abatement dateTime, or start of abatement Period).
         annotations:
