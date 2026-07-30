@@ -113,7 +113,7 @@ def report_status(args, held: str | None, available: str) -> None:
         return
     print(f"\nPromoted contracts   (compared with {DEST}/models/)\n")
     for name, state, path in rows:
-        print(f"  {name:<14} {state:<14} {path}".rstrip())
+        print(f"  {name:<14} {state:<14} {f'({path})' if path else ''}".rstrip())
     counts = {s: sum(1 for _, st, _ in rows if st == s) for s in ("identical", "modified", "not promoted")}
     print("\n  " + ", ".join(f"{n} {s}" for s, n in counts.items() if n))
 
