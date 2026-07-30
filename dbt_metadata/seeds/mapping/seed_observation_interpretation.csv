@@ -1,0 +1,20 @@
+code,display
+L,Low
+H,High
+LL,Critical Low
+HH,Critical High
+N,Normal
+A,Abnormal
+AA,Critical Abnormal
+U,Significant Change Up
+D,Significant Change Down
+B,Better
+W,Worse
+R,Resistant
+S,Susceptible
+I,Intermediate
+MS,Moderately Susceptible
+VS,Very Susceptible
+IE,Insufficient Evidence
+SYN-R,Synergy - Resistant
+SYN-S,Synergy - Susceptible

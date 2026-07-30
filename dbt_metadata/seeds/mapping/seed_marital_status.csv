@@ -1,0 +1,9 @@
+code,display
+S,Single
+M,Married/Civil Partner
+D,Divorced/Person whose Civil Partnership has been dissolved
+W,Widowed/Surviving Civil Partner
+P,Separated
+N,Not disclosed
+8,Not applicable
+9,Not known
