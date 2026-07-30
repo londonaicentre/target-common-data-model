@@ -294,6 +294,7 @@ models:
         fhir_path: Encounter.diagnosis
         fhir_type: BackboneElement[]
         variant_class: EncounterDiagnosisVariant
+        variant_pk: diagnosis_id
         variant_fields:
         - condition_id
         - use

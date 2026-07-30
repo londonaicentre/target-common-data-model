@@ -57,6 +57,7 @@ models:
         fhir_type: CodeableConcept
         value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-ConditionCode
         variant_class: ConditionConceptVariant
+        variant_pk: condition_concept_id
         variant_fields:
         - coding_system
         - coding_code

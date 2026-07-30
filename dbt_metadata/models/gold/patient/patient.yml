@@ -147,6 +147,7 @@ models:
         fhir_path: Patient.identifier
         fhir_type: Identifier[]
         variant_class: PatientIdentifierVariant
+        variant_pk: identifier_id
         variant_fields:
         - system
         - value

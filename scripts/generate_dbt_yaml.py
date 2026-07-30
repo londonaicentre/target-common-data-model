@@ -111,8 +111,12 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
         if val is not None:
             meta[key] = val
     if is_variant:
+        variant_slots = sv.class_induced_slots(rng)
+        pk = next((s.name for s in variant_slots if s.identifier), None)
         meta["variant_class"] = rng
-        meta["variant_fields"] = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
+        if pk:
+            meta["variant_pk"] = pk
+        meta["variant_fields"] = [s.name for s in variant_slots if not s.identifier]
     if meta:
         col["config"] = {"meta": meta}
 
