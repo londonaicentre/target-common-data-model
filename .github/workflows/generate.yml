@@ -37,8 +37,8 @@ jobs:
             r=$(( $(cat dbt_metadata/REVISION) + 1 ))
             echo "$r" > dbt_metadata/REVISION
             git add dbt_metadata/REVISION
-            git commit -m "chore: regenerate dbt metadata (r$r)"
-            git tag "r$r"
+            git commit -m "chore: regenerate dbt metadata (revision $r)"
+            git tag "v$r"
             git push || (git pull --rebase && git push)
             git push --tags
           fi
