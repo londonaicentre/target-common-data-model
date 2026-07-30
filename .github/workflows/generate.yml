@@ -1,0 +1,44 @@
+name: Generate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cdm/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v8.3.2
+
+      - name: Regenerate dbt metadata
+        run: |
+          uv run scripts/generate_dbt_seeds.py
+          uv run scripts/generate_dbt_yaml.py
+
+      # Regenerate dbt metadata and bump up Revision
+      - name: Commit and tag if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A dbt_metadata
+          if git diff --cached --quiet -- dbt_metadata; then
+            echo "dbt metadata already up to date."
+          else
+            r=$(( $(cat dbt_metadata/REVISION) + 1 ))
+            echo "$r" > dbt_metadata/REVISION
+            git add dbt_metadata/REVISION
+            git commit -m "chore: regenerate dbt metadata (revision $r)"
+            git tag "v$r"
+            git push || (git pull --rebase && git push)
+            git push --tags
+          fi
