@@ -235,3 +235,72 @@ enums:
       - { code: IE, display: "Insufficient Evidence" }
       - { code: SYN-R, display: "Synergy - Resistant" }
       - { code: SYN-S, display: "Synergy - Susceptible" }
+  # ---------------------------------------------------------------------------
+  # Appointment
+  # ---------------------------------------------------------------------------
+
+  AppointmentCategoryEnum:
+    description: "CDM-defined appointment category. Primary analyst axis; not a FHIR element."
+    source: manual
+    values:
+      - { code: opd_appointment, display: "Outpatient clinic appointment" }
+      - { code: gp_appointment, display: "GP/primary care appointment" }
+      - { code: community_appointment, display: "Community service appointment" }
+      - { code: mental_health_appointment, display: "Mental health service appointment" }
+      - { code: diagnostic_appointment, display: "Diagnostic / imaging appointment" }
+      - { code: procedure_appointment, display: "Day case / procedure appointment" }
+
+  PracticeSettingCodeEnum:
+    description: "NHS England main specialty / treatment function codes (UKCore-PracticeSettingCode)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-PracticeSettingCode
+    package: fhir.r4.ukcore.stu2
+
+  DeliveryChannelEnum:
+    description: "Medium an appointment is delivered through (UKCore-DeliveryChannel)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-DeliveryChannel
+    package: fhir.r4.ukcore.stu2
+
+  AppointmentStatusEnum:
+    description: "Appointment lifecycle status (HL7 FHIR appointmentstatus, R4 4.0.1)."
+    source: manual
+    values:
+      - { code: proposed, display: "Proposed" }
+      - { code: pending, display: "Pending" }
+      - { code: booked, display: "Booked" }
+      - { code: arrived, display: "Arrived" }
+      - { code: fulfilled, display: "Fulfilled" }
+      - { code: cancelled, display: "Cancelled" }
+      - { code: noshow, display: "No Show" }
+      - { code: entered-in-error, display: "Entered in error" }
+      - { code: checked-in, display: "Checked In" }
+      - { code: waitlist, display: "Waitlisted" }
+
+  AppointmentTypeEnum:
+    description: "Appointment type (UKCore-AppointmentReasonCode = HL7 v2-0276 plus UK Core additions)."
+    source: manual
+    values:
+      - { code: CHECKUP, display: "A routine check-up, such as an annual physical" }
+      - { code: EMERGENCY, display: "Emergency appointment" }
+      - { code: FOLLOWUP, display: "A follow up visit from a previous appointment" }
+      - { code: ROUTINE, display: "Routine appointment - default if not valued" }
+      - { code: WALKIN, display: "A previously unscheduled walk-in visit" }
+      - { code: urgent-follow-up, display: "Urgent follow-up" }
+
+  ParticipantRequiredEnum:
+    description: "Whether a participant's attendance is required (HL7 FHIR participantrequired, R4 4.0.1)."
+    source: manual
+    values:
+      - { code: required, display: "Required" }
+      - { code: optional, display: "Optional" }
+      - { code: information-only, display: "Information Only" }
+
+  ParticipationStatusEnum:
+    description: "Participant acceptance status (HL7 FHIR participationstatus, R4 4.0.1)."
+    source: manual
+    values:
+      - { code: accepted, display: "Accepted" }
+      - { code: declined, display: "Declined" }
+      - { code: tentative, display: "Tentative" }
+      - { code: needs-action, display: "Needs Action" }

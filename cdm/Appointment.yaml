@@ -1,0 +1,437 @@
+id: https://cdm.aicentre.co.uk/appointment
+name: appointment
+description: >
+  Profile: UKCore-Appointment 1.3.0 (R4 4.0.1).
+  Grain: One row per Appointment resource.
+
+annotations:
+  grain: one_row_per_resource
+  grain_key: appointment_id
+
+imports:
+  - core
+  - Patient
+  - Encounter
+
+classes:
+  Appointment:
+    description: >
+      Appointment fact. One row per Appointment resource, keyed by appointment_id.
+      Records the intent to be seen (booked / cancelled / did not attend); what
+      actually happened is the Encounter. Links to Patient via master_person_id.
+      Part analogue of OMOP visit_occurrence.
+    slots:
+      - meta_source
+      - meta_tag_code
+      - meta_last_updated
+    attributes:
+      appointment_id:
+        identifier: true
+        range: string
+        required: true
+        description: Key for the Appointment resource. One row per appointment.
+        annotations:
+          fhir_path: Appointment.id
+          fhir_type: id
+
+      master_person_id:
+        range: Patient
+        required: true
+        description: >
+          Master person this appointment is for. Appointment has no subject element,
+          so this is resolved from the Patient participant.
+        annotations:
+          fhir_path: Appointment.participant.actor.where(resolve() is Patient)
+          fhir_type: Reference(Patient)
+
+      encounter_id:
+        range: Encounter
+        required: false
+        description: >
+          Encounter that fulfilled this appointment, where one exists. Null for
+          cancellations and DNAs.
+
+      appointment_category:
+        range: AppointmentCategoryEnum
+        required: true
+        description: >
+          CDM defined classification - not a FHIR element. Primary analyst axis for
+          slicing the appointment table (opd_appointment, gp_appointment, etc.).
+
+      identifier:
+        range: AppointmentIdentifierVariant
+        multivalued: true
+        inlined_as_list: true
+        required: false
+        description: Local booking references for the appointment (Appointment.identifier[]).
+        annotations:
+          fhir_path: Appointment.identifier
+          fhir_type: Identifier[]
+
+      appointment_status:
+        range: AppointmentStatusEnum
+        required: false
+        description: Current lifecycle state of the appointment (booked, fulfilled, cancelled, noshow, etc.).
+        annotations:
+          fhir_path: Appointment.status
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/appointmentstatus|4.0.1
+
+      cancelation_reason:
+        range: string
+        required: false
+        description: >
+          Why the appointment was cancelled, and by whom. 
+        annotations:
+          fhir_path: Appointment.cancelationReason.coding.code
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/appointment-cancellation-reason
+
+      cancelation_reason_display:
+        range: string
+        required: false
+        description: Human-readable label for cancelation_reason. Not a FHIR element.
+
+      service_category:
+        range: string
+        required: false
+        description: Broad grouping of the service the appointment sits under, as coded by the source.
+        annotations:
+          fhir_path: Appointment.serviceCategory.coding.code
+          fhir_type: code
+
+      service_category_display:
+        range: string
+        required: false
+        description: Human-readable label for service_category. Not a FHIR element.
+
+      service_type:
+        range: string
+        required: false
+        description: Clinic / service the appointment sits under, as coded by the source system.
+        annotations:
+          fhir_path: Appointment.serviceType.coding.code
+          fhir_type: code
+
+      service_type_display:
+        range: string
+        required: false
+        description: Human-readable label for service_type. Not a FHIR element.
+
+      specialty:
+        range: PracticeSettingCodeEnum
+        required: false
+        description: >
+          Specialty the appointment sits under - NHS England main specialty /
+          treatment function code (UKCore-PracticeSettingCode).
+        annotations:
+          fhir_path: Appointment.specialty
+          fhir_type: CodeableConcept
+          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-PracticeSettingCode
+
+      specialty_display:
+        range: string
+        required: false
+        description: Human-readable label for specialty. Not a FHIR element.
+
+      appointment_type:
+        range: AppointmentTypeEnum
+        required: false
+        description: >
+          Style of appointment (routine, follow-up, walk-in, etc.). UK Core rebinds this
+          element to UKCore-AppointmentReasonCode.
+        annotations:
+          fhir_path: Appointment.appointmentType
+          fhir_type: CodeableConcept
+          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-AppointmentReasonCode
+
+      appointment_type_display:
+        range: string
+        required: false
+        description: Human-readable label for appointment_type. Not a FHIR element.
+
+      reason_code:
+        range: string
+        required: false
+        description: Coded reason the appointment was booked - a SNOMED CT concept.
+        annotations:
+          fhir_path: Appointment.reasonCode.coding.code
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/encounter-reason
+
+      reason_code_display:
+        range: string
+        required: false
+        description: Human-readable label for reason_code. Not a FHIR element.
+
+      reason_reference_id:
+        range: string
+        required: false
+        description: >
+          Resource the appointment was booked for. May point at a Condition, Procedure,
+          Observation or ImmunizationRecommendation, so it is left untyped.
+        annotations:
+          fhir_path: Appointment.reasonReference
+          fhir_type: Reference
+
+      priority:
+        range: integer
+        required: false
+        description: >
+          Booking priority. FHIR semantics are 0 = no priority and lower = more urgent,
+          which is not the NHS priority type convention.
+        annotations:
+          fhir_path: Appointment.priority
+          fhir_type: unsignedInt
+
+      description:
+        range: string
+        required: false
+        description: >
+          Short label shown on the booking - in practice usually the clinic or service name.
+        annotations:
+          fhir_path: Appointment.description
+          fhir_type: string
+
+      appointment_start:
+        range: TimestampNtz
+        required: false
+        description: >
+          Scheduled start of the appointment. Named appointment_start rather than start
+          because START is a reserved word in Snowflake.
+        annotations:
+          fhir_path: Appointment.start
+          fhir_type: instant
+
+      appointment_end:
+        range: TimestampNtz
+        required: false
+        description: Scheduled end of the appointment. Named to pair with appointment_start.
+        annotations:
+          fhir_path: Appointment.end
+          fhir_type: instant
+
+      minutes_duration:
+        range: integer
+        required: false
+        description: Scheduled duration in minutes. May be present without a start and end.
+        annotations:
+          fhir_path: Appointment.minutesDuration
+          fhir_type: positiveInt
+
+      slot_id:
+        range: string
+        required: false
+        description: Slot the appointment fills.
+        annotations:
+          fhir_path: Appointment.slot
+          fhir_type: Reference(Slot)
+
+      created:
+        range: TimestampNtz
+        required: false
+        description: When the appointment was booked. Basis for booking-to-appointment lead time.
+        annotations:
+          fhir_path: Appointment.created
+          fhir_type: dateTime
+
+      comment:
+        range: string
+        required: false
+        description: Additional comment about the appointment.
+        annotations:
+          fhir_path: Appointment.comment
+          fhir_type: string
+
+      patient_instruction:
+        range: string
+        required: false
+        description: Instruction given to the patient about the appointment.
+        annotations:
+          fhir_path: Appointment.patientInstruction
+          fhir_type: string
+
+      based_on_id:
+        range: string
+        required: false
+        description: Referral (ServiceRequest) the appointment was booked against.
+        annotations:
+          fhir_path: Appointment.basedOn
+          fhir_type: Reference(ServiceRequest)
+
+      practitioner_id:
+        range: string
+        required: false
+        description: >
+          Clinician the appointment is with. Flattened from the practitioner participant;
+          where several are present this is the required one.
+        annotations:
+          fhir_path: Appointment.participant.actor.where(resolve() is Practitioner)
+          fhir_type: Reference(Practitioner)
+
+      location_id:
+        range: string
+        required: false
+        description: Site / clinic the appointment is held at. Flattened from the location participant.
+        annotations:
+          fhir_path: Appointment.participant.actor.where(resolve() is Location)
+          fhir_type: Reference(Location)
+
+      participant:
+        range: AppointmentParticipantVariant
+        multivalued: true
+        inlined_as_list: true
+        required: false
+        description: >
+          All participants of the appointment (Appointment.participant[]), including the
+          patient, clinicians, location and service. Each entry carries the actor, its
+          resource type, and the participant's acceptance status.
+        annotations:
+          fhir_path: Appointment.participant
+          fhir_type: BackboneElement[]
+
+      requested_period_start:
+        range: TimestampNtz
+        required: false
+        description: Start of the period the appointment was requested for, before it was booked.
+        annotations:
+          fhir_path: Appointment.requestedPeriod.start
+          fhir_type: dateTime
+
+      requested_period_end:
+        range: TimestampNtz
+        required: false
+        description: End of the period the appointment was requested for, before it was booked.
+        annotations:
+          fhir_path: Appointment.requestedPeriod.end
+          fhir_type: dateTime
+
+      delivery_channel:
+        range: DeliveryChannelEnum
+        required: false
+        description: >
+          Medium the appointment is delivered through (In-person, Telephone, Video).
+          Closest FHIR equivalent of NHS consultation medium used.
+        annotations:
+          fhir_path: Appointment.extension:deliveryChannel
+          fhir_type: CodeableConcept
+          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-DeliveryChannel
+
+      delivery_channel_display:
+        range: string
+        required: false
+        description: Human-readable label for delivery_channel. Not a FHIR element.
+
+      booking_organization_id:
+        range: string
+        required: false
+        description: Organisation that made the booking.
+        annotations:
+          fhir_path: Appointment.extension:bookingOrganization
+          fhir_type: Reference(Organization)
+
+  # ---------------------------------------------------------------------------
+  # AppointmentIdentifierVariant
+  # Repeating element for Appointment.identifier[].
+  # ---------------------------------------------------------------------------
+  AppointmentIdentifierVariant:
+    description: >
+      One local identifier for the appointment (e.g. a PAS booking reference).
+      Variant for Appointment.identifier[].
+    attributes:
+      identifier_id:
+        identifier: true
+        range: string
+        required: true
+        description: Surrogate PK = hash(appointment_id, system, value).
+
+      system:
+        range: uri
+        required: true
+        description: Namespace URI for the identifier value.
+        annotations:
+          fhir_path: Appointment.identifier.system
+          fhir_type: uri
+
+      value:
+        range: string
+        required: true
+        description: The identifier value within the system namespace.
+        annotations:
+          fhir_path: Appointment.identifier.value
+          fhir_type: string
+
+  # ---------------------------------------------------------------------------
+  # AppointmentParticipantVariant
+  # Repeating element for Appointment.participant[].
+  # ---------------------------------------------------------------------------
+  AppointmentParticipantVariant:
+    description: >
+      One participant of the appointment with its role and acceptance status.
+      Variant for Appointment.participant[].
+    attributes:
+      participant_id:
+        identifier: true
+        range: string
+        required: true
+        description: Surrogate PK = hash(appointment_id, actor_type, actor_id).
+
+      actor_id:
+        range: string
+        required: true
+        description: >
+          Id of the participating resource. Untyped because the actor may be a Patient,
+          Practitioner, PractitionerRole, RelatedPerson, Device, HealthcareService or Location.
+        annotations:
+          fhir_path: Appointment.participant.actor
+          fhir_type: Reference
+
+      actor_type:
+        range: string
+        required: true
+        description: >
+          FHIR resource type of actor_id (Patient, Practitioner, Location, etc.).
+          Derived from the reference; not a FHIR element.
+
+      type:
+        range: string
+        required: false
+        description: Role the actor plays in the appointment (attender, translator, admitter, etc.).
+        annotations:
+          fhir_path: Appointment.participant.type.coding.code
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/encounter-participant-type
+
+      required:
+        range: ParticipantRequiredEnum
+        required: false
+        description: Whether this participant's attendance is required, optional or information-only.
+        annotations:
+          fhir_path: Appointment.participant.required
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/participantrequired|4.0.1
+
+      status:
+        range: ParticipationStatusEnum
+        required: true
+        description: Whether this participant has accepted the appointment.
+        annotations:
+          fhir_path: Appointment.participant.status
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/participationstatus|4.0.1
+
+      period_start:
+        range: TimestampNtz
+        required: false
+        description: Start of this participant's involvement, where it differs from the appointment.
+        annotations:
+          fhir_path: Appointment.participant.period.start
+          fhir_type: dateTime
+
+      period_end:
+        range: TimestampNtz
+        required: false
+        description: End of this participant's involvement, where it differs from the appointment.
+        annotations:
+          fhir_path: Appointment.participant.period.end
+          fhir_type: dateTime
