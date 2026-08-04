@@ -1,14 +1,14 @@
 # Flattened-FHIR (FlatFHIR) CDM Conventions
 
-FlatFHIR is an intermediate layer built by SQL pipelines from transactional source data. We do not ingest FHIR messages, so we expect referential integrity already holds at source.
+FlatFHIR is used as an intermediate layer in a medallion data pipeline, predominantly built from transactional source data. Each FHIR resource is modelled as a table in a fact/dimensional schema, flattened where possible, using variants to capture repeating items. This document describes conventions that are followed when generating machine readable descriptions of schema.
 
 FHIR version target: **R4 (4.0.1)**, using NHS England / UK Core bindings where available and appropriate.
 
 Schemas under `cdm/` are auto-generated from the UK Core StructureDefinition.
 
-**Part A** describes what the script derives from the profile.
+**Part A** describes the general rules used in deriving a schema from a FHIR profile, which are baked into the generation script.
 
-**Part B** describes custom configurations that are declared globally and per resource.
+**Part B** describes configurations that are declared globally, and per resource.
 
 ---
 
@@ -27,64 +27,83 @@ Drop the resource prefix, replace `.` and `:` with `_`, lowercase. No camelCase 
     Condition.onsetDateTime                -> onsetdatetime
     Patient.deceasedBoolean                -> deceasedboolean
 
-The only time there is custom field naming is creation of FK equivalent `_id` fields (see §6)
+The only time there is custom field naming is creation of FK equivalent `_id` fields (see §7)
 
-We do not introduce custom field naming at this stage.
+Otherwise, we do not introduce custom field naming at this stage.
 
 ## 3. Primary keys
 
 PK is `id` from `Resource.id`. Facts carry `subject_id` from `<Resource>.subject`. Patient is keyed by `id` like everything else.
 
-## 4. Referring back to FHIR
+## 4. Referring back to canonical FHIR resource
 
 Every slot representing a FHIR element carries `fhir_path` and `fhir_type`, and inherits the constraints of that element.
 
-## 5. Coding
+## 5. Flattening
+
+Everything flattens to a scalar column with the §2 name. Children of `Encounter.period` becomes `period_start`, `period_end`.
+
+There are four exceptions, each covered below:
+
+    Coding / CodeableConcept   -> an object of system, code, display   §6
+    Reference                  -> a scalar _id foreign key             §7
+    the fact code              -> a variant of codings                 §8
+    a repeating element        -> a variant, an array of objects       §10
+
+## 6. Coding Variants
 
 `Coding` and `CodeableConcept` are never flattened - they surface as an object of `system`, `code`, `display`. Keys inside the object are the FHIR element names.
 
-A bare `code` primitive (`Encounter.status`) stays scalar and keeps its `accepted_values` test. Instead of introducing a `_display` value for a scalar code, these resolve by joining to `seed_*.csv` in a later analyst view.
+A bare `code` primitive (`Encounter.status`) stays scalar. Note that these do not carry a human readable `_display` value, but these are resolved downstream by joining to `seed_*.csv` in a later analyst view.
 
-An object column carries its `value_set` binding and, where the set is enumerable (see §8), the enum name in `meta`. No `accepted_values` test is emitted on it as an object never = a bare code. The binding is recorded so the test is derivable downstream.
+Either kind may carry a value set binding, which is handled in §9 (Enums).
 
-## 6. References
+## 7. References (foreign keys)
 
-`Reference` flattens per §9 to a scalar FK. An `_id` suffix is added as the one exception to §2.
+A FHIR `Reference` is a pointer from one resource to another - the equivalent of a foreign key. In FlatFHIR, the reference is flattened to a scalar field, with an `_id` suffix (exception to §2).
 
-    Encounter.subject -> subject_id  VARCHAR
-    Encounter.partOf  -> partof_id   VARCHAR
+    Encounter.subject             -> subject_id     the patient the encounter was with
+    Encounter.partOf              -> partof_id      the parent encounter, where one
+                                                    encounter sits inside another - a
+                                                    consultant episode within a spell
+    Encounter.diagnosis.condition -> condition_id   the condition this encounter was about
 
-As our sources all hold real keys (`patient_id`, `encounter_id`), the FK is a straight mapping.
+The column holds the target's `id` (or primary key). So `subject_id` on an encounter row holds a value found in `patient.id`. Where sources already hold real keys (`patient_id`, `encounter_id`), the FK is a straight mapping from source data.
 
-The other `Reference` fields (`type`, `identifier`, `display`) describe cross-server pointers in FHIR messages and are globally excluded (Part B §1). Display resolves by joining to the target table.
+Note that the `_id` name comes from the FHIR element: `Encounter.subject` is `subject_id`, not `patient_id`.
 
-The config declares a FK target (Part B §6) for relationships testing.
+A profile may allows several targets, for example, `subject` may be a Patient *or* a Group. Which resource the column is a foreign key into is declared in config (Part B §6).
 
-## 7. The Fact code
+This applies at any depth, so a `Reference` inside a variant becomes an `_id` field on the variant object, as `condition_id` above.
 
-Where a column is the code that is the Fact (e.g. `Condition.code`, `Observation.code`), it is a variant holding one object per coding: the source coding plus any mapped standard-vocabulary codings.
+A `Reference` also carries `type`, `identifier` and `display`, which exist so a FHIR server can resolve a pointer to a resource held elsewhere. That problem does not arise in a warehouse where every target is a table, so they are globally excluded (Part B §1).
 
-Each object is `system`, `code`, `display`, `is_source`. The source coding has `is_source` true; a mapping step adds standard vocabulary codes with `is_source` false. Only ever one true per array. **note: `is_source` is not canonical FHIR**. Paths to Fact codes are declared in the config (see Part B §1).
+## 8. The Fact code and custom is_source field
 
-## 8. Enumerations
+Where a column is the code that is the Fact (e.g. `Condition.code`, `Observation.code`), it is represented as a variant holding one object per coding: the source coding plus any mapped standard-vocabulary codings.
 
-A value set of 100 concepts or fewer becomes an enum with an `accepted_values` test and a seed. Larger sets stay `string` with the binding recorded.
+Each object is `system`, `code`, `display`, `is_source`. The source coding has `is_source` true; a mapping step adds standard vocabulary codes with `is_source` false. Only ever one true per array. **note: `is_source` is a custom field and not native to FHIR**. Paths to Fact codes are declared in the config (see Part B §1).
 
-Counting is offline only, so generation is deterministic. Sets that are SNOMED `is-a` queries with no shipped expansion cannot be counted and stay `string`. If expansion is ever fetched, the NHS England Ontology Server is the source.
+## 9. Enumerations
 
-The threshold is fixed in the script and is not tunable per resource, so changing it reclassifies columns across every resource at once. The counts behind the choice of 100 need re-deriving before it is relied on.
+A value set of 100 concepts or fewer becomes an enum with a seed. Larger sets stay `string` with the binding recorded. 
 
-## 9. Flattening
+100 is an arbitrary cut-off that separates well defined UK codesets, and exceptionally large `is_a` SNOMED codelists.
 
-Non-repeating elements flatten with the §2 name. `Encounter.period` becomes `period_start`, `period_end`.
+Every bound column records its `value_set`, and the enum name where the set is enumerable. What that yields depends on the column:
 
-## 10. Variants
+    scalar code (§6)   -> range is the enum, and an accepted_values test
+    object column (§6) -> enum name in meta, no test
+
+An object never equals a bare code, so `accepted_values` cannot be applied directly to one. Recording the enum name keeps the test derivable once an object-aware macro lands downstream.
+
+## 10. Repeating Element Variants
 
 A repeating element is held on the parent as a `variant` column: an array of flat objects, one layer of hierarchy only. Ordering fields (e.g. `diagnosis.rank`) stay inside the object so the array can be re-sequenced.
 
 ## 11. Repeats inside repeats
 
-Keep the outer repeat as the variant, flatten a repeating primitive inside it to its first entry.
+In these special cases (multiple layers of nesting) we keep the outer repeat as the variant, flatten a repeating primitive inside it to its first entry.
 
     Patient.name -> one object per name
       { use: "official", family: "Smith", given: "Jane", prefix: "Dr" }
@@ -98,7 +117,7 @@ The script will hard-fail on any repeat inside a repeat that is not resolved by 
 
 ## 12. Source provenance
 
-Every table carries `meta_source`, `meta_tag_code` and `meta_last_updated` from `Resource.meta`, flattened.
+As a result of flattening rules, every table carries `meta_source`, `meta_tag_code` and `meta_last_updated` from `Resource.meta`.
 
 ---
 
@@ -122,7 +141,7 @@ Anonymous `extension` and `modifierExtension` elements are also dropped. These a
     Patient.name.extension             -> dropped
     Patient.extension:ethnicCategory   -> kept
 
-`Reference` children are dropped where present - only `reference` survives, as the `_id` FK (Part A §6):
+`Reference` children are dropped where present - only `reference` survives, as the `_id` FK (Part A §7):
 
     Encounter.subject.reference   -> subject_id (the only time a field name is changed)
     Encounter.subject.type        -> dropped
@@ -133,7 +152,7 @@ Everything else is included by default, and only excluded per a resource config.
 
 ## 2. Fact codes
 
-`fact_code` lists the paths where the code is the Fact (see Part A §7). Default empty.
+`fact_code` lists the paths where the code is the Fact (see Part A §8). Default empty.
 
 ## 3. Exclusions
 
@@ -147,18 +166,39 @@ Declared with a reason, and list of fields forming the `key` (see §5).
 
 Declaring a path a variant makes its children the variant's fields automatically.
 
-## 5. Surrogate keys for variant objects
+## 5. Variant object identity
 
-Each variant object needs a deterministic PK, unique across all objects in the parent table.
+`key` names the fields that, together with the parent PK, uniquely identify one object in the array. It is a uniqueness assertion, not a hash recipe. The parent PK is always implied and is never listed.
 
-This is a content-based hash of the parent PK and the fields identifying the object in source. E.g. for a CodeableConcept, `hash(parent_id, system, code)`.
+    Encounter.diagnosis:  key: [condition_id]   ->  (id, condition_id) is unique
+    Patient.identifier:   key: [system, value]  ->  (id, system, value) is unique
+
+Members are variant field names, so a `Reference` member takes its `_id` form (Part A §7). A member must survive exclusion, or the generator hard-fails - the assertion would not be checkable.
+
+Worked example. `Encounter.diagnosis` is the many-to-many bridge between an encounter and the conditions relevant to it; `use` and `rank` are properties of that relationship, not of the disease:
+
+    encounter row  id = enc-1
+      diagnosis: [ {condition_id: cond-4, use: {..CC}, rank: 1},
+                   {condition_id: cond-9, use: {..CM}, rank: 2} ]
+
+    condition.id             cond-9  PK - identifies the disease
+    diagnosis[].condition_id cond-9  FK into condition - same value, but here it
+                                     means "this entry points at that disease"
+    (id, condition_id)               identifies the entry itself
+
+`rank` is not a key member: it is `0..1`, and FHIR ranks per role, so two entries with different `use` can share a rank.
+
+LinkML records `key_fields`. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
 
 ## 6. Foreign key targets
 
-`fk` declares which reference paths get a `relationships` test, and against which resource (see Part A §6). Default empty - no test is emitted for an undeclared path.
+A profile usually allows several targets for a reference, so `fk` declares which one the CDM points at (see Part A §7). Default empty.
 
     fk:
-      Encounter.subject: Patient   # profile allows [Patient, Group]
-      Encounter.partOf:  Encounter
+      Encounter.subject:            Patient     # profile allows [Patient, Group]
+      Encounter.partOf:             Encounter
+      Encounter.diagnosis.condition: Condition  # inside a variant - meta only
 
 Only declare a target the CDM actually models, and only where rows genuinely point at it.
+
+A top-level `_id` gets a `relationships` test. An `_id` inside a variant gets the target recorded in `meta` but no test, as the key sits in a VARIANT array that stock dbt cannot reach - the same gap as `accepted_values` on an object column (Part A §6), closed by the same macro work.
