@@ -172,7 +172,7 @@ Any combination of the object's own fields is available. The objective is a prim
 
 LinkML records `key_fields`. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
 
-## 6. Foreign key targets
+## 6. Resource configuration: Foreign key targets
 
 A profile may allow several targets for a reference, so `fk` declares which one the CDM points at (see Part A §7) for referential integrity tests. Default empty.
 
