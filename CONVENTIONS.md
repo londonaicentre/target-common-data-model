@@ -125,15 +125,15 @@ As a result of flattening rules, every table carries `meta_source`, `meta_tag_co
 
 One global configuration defines exclusions that apply to all resources
 
-One configuration file then exists per resource at `scripts/resources/<Resource>.yaml`. Each file declares **only deviations**.
+A configuration file exists per resource at `scripts/resources/<Resource>.yaml`. Each file declares **only deviations**.
 
 Part A is otherwise fixed in the script.
 
-## 1. Global exclusions
+## 1. Global configuration: Exclusions
 
 Some fields are subject to **global exclusion**.
 
-These include backbone `.id`, `text`, `contained`, `implicitRules`, `language`, `note`, `photo`, `attachment`. Note `Resource.id` is the PK and is never dropped.
+These include backbone `.id`, `text`, `contained`, `implicitRules`, `language`, `note`, `photo`, `attachment` (note `Resource.id` is the PK and is never dropped).
 
 Anonymous `extension` and `modifierExtension` elements are also dropped. These are placeholders with no name, type or binding, so no column can be derived from them. Named extension slices are not excluded by default. The distinction is taken from the element `id`, not the path: a last segment of `extension` is anonymous, `extension:ethnicCategory` is a named slice:
 
@@ -150,43 +150,25 @@ Anonymous `extension` and `modifierExtension` elements are also dropped. These a
 
 Everything else is included by default, and only excluded per a resource config.
 
-## 2. Fact codes
+## 2. Resource configuration: Fact codes
 
-`fact_code` lists the paths where the code is the Fact (see Part A §8). Default empty.
+In each config, `fact_code` lists paths where the code is the Fact (see Part A §8). Default empty.
 
-## 3. Exclusions
+## 3. Resource configuration: Exclusions
 
-`exclude` drops paths and **everything beneath them**. A reason is required for each.
+`exclude` drops additional paths and everything beneath them. A reason is required for each.
 
-## 4. Variants
+## 4. Resource configuration: Additional Variants
 
 A repeating element becomes a variant when the repetition carries information (e.g. several diagnoses on a spell, several identifiers for a patient).
 
-Declared with a reason, and list of fields forming the `key` (see §5).
+These are declared with a reason, and list of fields forming the `key` (see §5 below). Declaring a path a variant makes its children the variant's fields automatically.
 
-Declaring a path a variant makes its children the variant's fields automatically.
+## 5. Resource configuration: Variant object identity
 
-## 5. Variant object identity
+`key` names the fields that, together with the parent PK, uniquely identify one object in the array.
 
-`key` names the fields that, together with the parent PK, uniquely identify one object in the array. It is a uniqueness assertion, not a hash recipe. The parent PK is always implied and is never listed.
-
-    Encounter.diagnosis:  key: [condition_id]   ->  (id, condition_id) is unique
-    Patient.identifier:   key: [system, value]  ->  (id, system, value) is unique
-
-Members are variant field names, so a `Reference` member takes its `_id` form (Part A §7). A member must survive exclusion, or the generator hard-fails - the assertion would not be checkable.
-
-Worked example. `Encounter.diagnosis` is the many-to-many bridge between an encounter and the conditions relevant to it; `use` and `rank` are properties of that relationship, not of the disease:
-
-    encounter row  id = enc-1
-      diagnosis: [ {condition_id: cond-4, use: {..CC}, rank: 1},
-                   {condition_id: cond-9, use: {..CM}, rank: 2} ]
-
-    condition.id             cond-9  PK - identifies the disease
-    diagnosis[].condition_id cond-9  FK into condition - same value, but here it
-                                     means "this entry points at that disease"
-    (id, condition_id)               identifies the entry itself
-
-`rank` is not a key member: it is `0..1`, and FHIR ranks per role, so two entries with different `use` can share a rank.
+Any combination of the object's own fields is available. The objective is a primary key for the repeating object that has uniqueness. Where an object holds its own content, that content is usually the natural key. Where it holds a pointer to another resource, the `_id` field (Part A §7) or an ordering field such as `rank` can be candidates instead.
 
 LinkML records `key_fields`. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
 
