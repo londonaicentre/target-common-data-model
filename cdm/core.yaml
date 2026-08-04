@@ -30,6 +30,39 @@ types:
     description: Wall clock timestamp. Maps to FHIR dateTime / instant.
 
 # =============================================================================
+# Coding object — CONVENTIONS §5
+#
+# Coding and CodeableConcept are never flattened; they surface as an object of
+# system / code / display. Keys are the FHIR element names — the column name
+# supplies the context a `coding_` prefix used to carry.
+#
+# Emitted as a Snowflake VARIANT. No accepted_values is emitted on an object
+# column, since an object never equals a bare code; the binding is recorded in
+# meta so the test stays derivable downstream.
+# =============================================================================
+classes:
+  CodingObject:
+    description: >
+      A single coding as an object of system, code and display. Used for every
+      Coding- and CodeableConcept-typed column (CONVENTIONS §5).
+    attributes:
+      system:
+        range: uri
+        description: Code system the code is drawn from.
+        annotations:
+          fhir_type: uri
+      code:
+        range: string
+        description: Symbol in syntax defined by the system.
+        annotations:
+          fhir_type: code
+      display:
+        range: string
+        description: Representation defined by the system.
+        annotations:
+          fhir_type: string
+
+# =============================================================================
 # Shared provenance slots — Resource.meta fields common to all tables
 # =============================================================================
 slots:

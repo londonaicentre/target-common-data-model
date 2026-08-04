@@ -174,7 +174,7 @@ LinkML records `key_fields`. Whether the consumer also materialises a single has
 
 ## 6. Foreign key targets
 
-A profile usually allows several targets for a reference, so `fk` declares which one the CDM points at (see Part A §7). Default empty.
+A profile may allow several targets for a reference, so `fk` declares which one the CDM points at (see Part A §7) for referential integrity tests. Default empty.
 
     fk:
       Encounter.subject:            Patient     # profile allows [Patient, Group]
@@ -182,5 +182,3 @@ A profile usually allows several targets for a reference, so `fk` declares which
       Encounter.diagnosis.condition: Condition  # inside a variant - meta only
 
 Only declare a target the CDM actually models, and only where rows genuinely point at it.
-
-A top-level `_id` gets a `relationships` test. An `_id` inside a variant gets the target recorded in `meta` but no test, as the key sits in a VARIANT array that stock dbt cannot reach - the same gap as `accepted_values` on an object column (Part A §6), closed by the same macro work.

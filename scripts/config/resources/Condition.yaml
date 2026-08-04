@@ -1,0 +1,30 @@
+# Condition - deviations from the Part A defaults only.
+
+resource: Condition
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Condition
+package: fhir.r4.ukcore.stu2
+
+# Condition.code is the fact: a variant of one object per coding, source coding
+# plus any mapped standard-vocabulary codings (Part A §7).
+fact_code:
+  - Condition.code
+
+variants:
+  Condition.category:
+    reason: a condition is legitimately both a problem-list item and an encounter diagnosis
+    key: [system, code]
+  Condition.identifier:
+    reason: several identifiers per condition across source systems
+    key: [system, value]
+
+exclude:
+  Condition.stage: stage.assessment is a complex repeat inside a repeat (Part A §11) and staging is not in scope for v1
+  Condition.evidence: evidence.detail is a complex repeat inside a repeat (Part A §11); evidence is free-text in practice
+  Condition.bodySite: SNOMED body-site set is unbounded and not analytically used in v1
+  Condition.recorder: Practitioner is not modelled
+  Condition.asserter: Practitioner is not modelled
+  Condition.extension:conditionEpisode: episodicity not populated in current feeds
+
+fk:
+  Condition.subject: Patient      # profile allows [Patient, Group]
+  Condition.encounter: Encounter

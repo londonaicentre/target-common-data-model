@@ -1,0 +1,89 @@
+# Global configuration for the FlatFHIR CDM generator.
+#
+# Everything in CONVENTIONS.md Part A is fixed in scripts/generate_linkml.py.
+#
+# This file defines the complete set of FHIR elements dropped from *every*
+# resource. Per-resource deviations live in resources/<Resource>.yaml.
+#
+# Run:  uv run scripts/generate_linkml.py
+
+# ===========================================================================
+# FHIR packages (node_modules/, installed by `npm install`)
+# ===========================================================================
+packages:
+  profile: fhir.r4.ukcore.stu2      # UK Core resource profiles
+  core: hl7.fhir.r4.core            # base datatype snapshots and value sets
+
+# ===========================================================================
+# Global exclusions (CONVENTIONS.md Part B §1)
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 1. Resource-metadata elements, by path relative to the resource root.
+#
+# The DomainResource housekeeping fields that describe the FHIR document
+#
+# Note `language` is Resource.language (the language of the resource content).
+# ---------------------------------------------------------------------------
+exclude_paths:
+  - text            # Narrative - the rendered human-readable summary
+  - contained       # inline resources; the CDM holds real FKs
+  - implicitRules   # processing rules for a FHIR server
+  - language        # language of the resource content, not of the patient
+
+# ---------------------------------------------------------------------------
+# 2. Rendered and binary payloads at any depth
+# ---------------------------------------------------------------------------
+exclude_types:
+  - Narrative       # Patient.text, and the .text on name/address
+  - Attachment      # Patient.photo, DiagnosticReport.presentedForm
+
+# ---------------------------------------------------------------------------
+# 3. Element-level `.id`, at any depth below the resource root.
+#
+# Every FHIR element carries an optional `.id` for intra-document referencing.
+# It is meaningless outside a FHIR message. Surrogate keys are instead generated
+# where required.
+#
+# Resource.id is NOT affected - it is used as the primary key (Part A §3).
+# ---------------------------------------------------------------------------
+exclude_element_id: true
+
+# ---------------------------------------------------------------------------
+# 4. Anonymous extension and modifierExtension elements, at any depth.
+#
+# An unsliced `extension` is a placeholder with no name, type or binding, so no
+# column can be derived from it.
+#
+# The distinction is taken from the element id, not the path: a last segment of
+# exactly `extension` is anonymous, `extension:ethnicCategory` is a named
+# slice.
+#
+#   Patient.extension                  -> dropped
+#   Patient.name.extension             -> dropped
+#   Patient.extension:ethnicCategory   -> kept, pruned per resource config
+#
+# Named slices are where the judgment lives ("is ethnicCategory in scope?"),
+# which is why they stay in the resource configs.
+# ---------------------------------------------------------------------------
+exclude_anonymous_extensions: true
+
+# ---------------------------------------------------------------------------
+# 5. Reference children other than `reference` itself.
+#
+# A Reference is flattened to a scalar `_id` foreign key (Part A §6), so
+# only `reference` survives. The rest describe cross-server pointers in a
+# FHIR message and have no meaning in a data warehouse layer.
+#
+#   Encounter.subject.reference   -> subject_id
+#   Encounter.subject.type        -> dropped
+#   Encounter.subject.identifier  -> dropped
+#   Encounter.subject.display     -> dropped
+#
+# ---------------------------------------------------------------------------
+exclude_reference_children:
+  - id
+  - extension
+  - type
+  - identifier
+  - display

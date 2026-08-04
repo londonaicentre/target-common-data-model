@@ -13,6 +13,51 @@ imports:
   - linkml:types
 
 enums:
+  IdentifierUseEnum:
+    description: "Purpose of an identifier (HL7 FHIR identifier-use, R4 4.0.1)."
+    permissible_values:
+      usual: {description: "Usual"}
+      official: {description: "Official"}
+      temp: {description: "Temp"}
+      secondary: {description: "Secondary"}
+      old: {description: "Old"}
+
+  NameUseEnum:
+    description: "Purpose of a human name (HL7 FHIR name-use, R4 4.0.1)."
+    permissible_values:
+      usual: {description: "Usual"}
+      official: {description: "Official"}
+      temp: {description: "Temp"}
+      nickname: {description: "Nickname"}
+      anonymous: {description: "Anonymous"}
+      old: {description: "Old"}
+      maiden: {description: "Name changed for marriage"}
+
+  AddressUseEnum:
+    description: "Purpose of an address (HL7 FHIR address-use, R4 4.0.1)."
+    permissible_values:
+      home: {description: "Home"}
+      work: {description: "Work"}
+      temp: {description: "Temporary"}
+      old: {description: "Old / Incorrect"}
+      billing: {description: "Billing"}
+
+  AddressTypeEnum:
+    description: "Kind of address (HL7 FHIR address-type, R4 4.0.1)."
+    permissible_values:
+      postal: {description: "Postal"}
+      physical: {description: "Physical"}
+      both: {description: "Postal & Physical"}
+
+  QuantityComparatorEnum:
+    description: "Comparator on a Quantity (HL7 FHIR quantity-comparator, R4 4.0.1). Carries < / > semantics - dropping it would silently turn \"less than 5mg\" into \"5mg\".
+"
+    permissible_values:
+      "<": {description: "Less than"}
+      "<=": {description: "Less or Equal to"}
+      ">=": {description: "Greater or Equal to"}
+      ">": {description: "Greater than"}
+
   AdministrativeGenderEnum:
     description: "Administrative gender (HL7 FHIR administrative-gender, R4 4.0.1)."
     permissible_values:
