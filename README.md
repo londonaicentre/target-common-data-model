@@ -1,146 +1,99 @@
-# Target Data Model
+# Target Common Data Model (FlatFHIR)
 
-AI Centre CDM — a flattened analytical data model mapped from UK Core FHIR R4 (4.0.1).
+This repository contains a computable and machine-readable CDM called "FlatFHIR" - a flattened analytical data model derived from UK Core FHIR R4 (4.0.1).
 
-Each table corresponds to a single FHIR resource, flattened into a fact or dimension table suitable for SQL analytics. Repeating/complex FHIR elements are held as `variant` columns (single-level flat objects in an array).
+Within the CDM, each FHIR resource becomes one fact or dimension table, partially flattened for SQL analytics, and with specific elements taken as tabular fields. Repeating and complex FHIR elements may be held as `variant` columns.
 
-See [CONVENTIONS.md](./CONVENTIONS.md) for the full modelling rules.
+The schemas in `cdm/` are **generated** and should never be edited by hand. All generation is driven by configuration files in `config/` that name the FHIR paths that become fields. These configuration files are **hand-written**, but we strongly recommend using a coding agent to help with validation of paths and bindings against the source.
 
-## How generation works
+See [CONVENTIONS.md](./CONVENTIONS.md) for detailed modelling rules and thought processes.
 
-Two stages. Stage 1 is pure FHIR with no opinions in it; stage 2 is where every modelling rule lives.
+## Mechanics
+
+Generation runs in two stages. Stage 1 is pure FHIR with no opinions in it. Stage 2 is where configurable modelling rules are applied.
 
 ```
 UK Core StructureDefinition (node_modules/)
           |
           |  stage 1   scripts/expand_fhir.py
-          |            resolve datatypes, choice types and extensions
           v
-build/    expanded/<Resource>.yaml   every element the CDM could name
-          fhir_bindings.yaml         every bound field -> value set URL
-          fhir_enums.yaml            every value set -> concepts
+build/    an opinion-free cache of FHIR: structure, which vocabulary
+          applies where, and full expansion of each vocabulary
           |
           |  stage 2   scripts/generate_linkml.py
           |            apply the whitelist in config/resources/
           v
-cdm/<Resource>.yaml                LinkML, plus cdm/enums.yaml
+cdm/<Resource>.yaml   LinkML, plus cdm/enums.yaml
 ```
 
-Everything in `build/` is an opinion-free cache of FHIR: three artefacts with three jobs — structure, which vocabulary applies where, and what each vocabulary contains. None of them knows anything about the whitelist, and all three record everything they find.
+A schema exists for a resource only where `config/resources/<Resource>.yaml` exists.
 
-`build/fhir_bindings.yaml` is keyed by the field a binding *applies to* — the bare `code` — rather than the element FHIR declares it on, so `Condition.clinicalStatus` is recorded against `Condition.clinicalStatus.coding.code`.
+## Why "CDM-as-code"?
+
+The alternative is a schema maintained by hand, often in a DDL or a spreadsheet, that is liable to drift. This is particularly a concern when trying to align a target data model as set of rules based on a recognised standard.
+
+Generating from the FHIR packages makes those things explicit and checkable:
+- Every tabular field carries the `fhir_path` and `fhir_type` it came from, so any column traces back to the element that produced it.
+- Path/field decisions are documented in code through the whitelist and reasoning for notable missing fields (via `rejected`). These are all reviewable in diff.
+- Vocabularies are derived where possible from installed FHIR packages, but auditable and machine-readable vocabularies can be maintained,declared, and stay visible.
+- **All changes are reviewable.** A modelling decision becomes a diff on a config file with a comment attached.
+
+## Why LinkML?
+
+Stage 2 emits [LinkML](https://linkml.io/), rather than a SQL DDL or a dbt project, or some other representation.
+
+We take LinkML as the **canonical representation** of the model. It is a formal, toolable schema language with a stable API, which can be rendered to whatever a consumer needs — SQL DDL, JSON Schema, RDF/OWL, Pydantic, documentation. Keeping the canonical form target-agnostic means the modelling decisions live in one place and are not entangled with idioms of any one warehouse or transformation tool.
+
+We currently generate dbt configuration from LinkML in this repo, but others can be added without touching `config/` or `cdm/`.
+
+## dbt artifacts
+
+In the current repo, dbt model contracts and seed lookups are generated from them into `dbt_metadata/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
+
+- `dbt_metadata/models/gold/<resource>/<resource>.yml` — one model contract per resource: column types, `not_null` / `unique` / `accepted_values` / `relationships` tests, and FHIR lineage in `meta`.
+- `dbt_metadata/seeds/mapping/seed_<entity>.csv` — code/display lookups, one per enum, plus `seeds_mapping.yml`.
+
+The contract generator reads `cdm/` through the LinkML `SchemaView` API rather than parsing the YAML.
+
+Generated files carry a "do not edit" banner. To change them, edit the config and regenerate. New resources are picked up automatically.
+
+## How to...
+
+### Get started
+
+Requires [uv](https://github.com/astral-sh/uv) and Node.js. The Python scripts declare their dependencies inline (PEP 723).
 
 ```bash
-npm install                        # once, for the FHIR packages
-uv run scripts/expand_fhir.py      # stage 1
-uv run scripts/generate_linkml.py  # stage 2
+npm install                          # once, for the FHIR packages
+uv run scripts/expand_fhir.py        # stage 1 -> build/
+uv run scripts/generate_linkml.py    # stage 2 -> cdm/
+uv run scripts/generate_dbt_seeds.py # -> dbt_metadata/seeds/mapping/
+uv run scripts/generate_dbt_yaml.py  # -> dbt_metadata/models/gold/
 ```
 
-## Schemas
+### Add a new resource
 
-Schemas under `cdm/` are **generated** — written in [LinkML](https://linkml.io/) for RDF-compatible, toolable schema description, and produced from the FHIR packages by the two-stage generator below. Do not edit them by hand.
+1. Add `config/resources/<Resource>.yaml` naming the profile and, initially, any single path. The file is the opt-in.
+2. Run stage 1, then **read `build/expanded/<Resource>.yaml`** to see the shape beneath each path before whitelisting it. Naming a path whose shape you have not looked at is how you get an array of objects holding arrays of objects.
+3. Write the whitelist. Add `key` on every variant, `fk` on every reference, and `exclude` with a reason for unwanted children.
+4. Declare bindings. `build/fhir_bindings.yaml` lists every bound field in the resource, keyed by the field the binding applies to — copy those paths into `bindings:` and mark each `default` or a manifest entry name (CONVENTIONS.md §12).
+5. Run stage 2. A `default` FHIR cannot honour is an error; the run also reports any bound field left undeclared.
+6. Regenerate the dbt artifacts.
 
-A schema exists for a resource only where `config/resources/<Resource>.yaml` exists; the config file is the opt-in.
+### Change what a table contains
 
-| File | Class | Grain | OMOP analogue |
-|---|---|---|---|
-| `Patient.yaml` | `Patient` | One row per patient | `person` |
-| `Encounter.yaml` | `Encounter` | One row per encounter | `visit_occurrence` |
-| `Condition.yaml` | `Condition` | One row per condition | `condition_occurrence` |
-| `Observation.yaml` | `Observation` | One row per observation | `measurement` / `observation` |
-| `Organization.yaml` | `Organization` | One row per organisation | `care_site` / `provider` |
-| `enums.yaml` | the enums the above reference | | |
+Edit `config/resources/<Resource>.yaml` and re-run stage 2. Stage 1 only needs re-running when the FHIR packages change.
 
-### Variant classes
+### Add an optional FHIR enum (i.e. preferred or example)
 
-Where a whitelisted FHIR path repeats (`0..*`), the field is a **variant** — an array of objects — and the generator emits an inline class for it in the same file as its parent, named after the path it came from (`PatientIdentifier`, `EncounterDiagnosis`, `ObservationComponent`).
+Where a binding is `preferred` or `example`, or its value set will not expand offline, `default` cannot resolve it. Add a hand-written entry to `config/enum_manifest.yaml` and name it from the config. The manifest is hand-authored and holds nothing derived.
 
-Each variant declares `key_fields`: the fields that, with the parent PK, identify one object in the array (CONVENTIONS.md §9). Whether a consumer also materialises a single hashed column over those fields is a downstream join-ergonomics decision, not part of this spec.
-
-## Generated dbt artifacts
-
-The LinkML schemas are the source of truth. dbt model contracts and seed lookups are generated from them into `dbt_metadata/`, which mirrors the consumer dbt project layout so delivery is a straight copy:
-
-- `dbt_metadata/models/gold/<resource>/<resource>.yml` - one dbt model contract per resource: column types, `not_null` / `unique` / `accepted_values` / `relationships` tests, and FHIR lineage in `meta`.
-- `dbt_metadata/seeds/mapping/seed_<entity>.csv` - code/display lookups, one per enumeration, plus `seeds_mapping.yml`.
-
-Generated files carry a "do not edit" banner. To change them, edit the `cdm/` spec and regenerate:
-
-```bash
-uv run scripts/generate_dbt_yaml.py     # model contracts -> dbt_metadata/models/gold/
-uv run scripts/generate_dbt_seeds.py    # reference seeds  -> dbt_metadata/seeds/mapping/
-```
-
-New resources are picked up automatically (every `cdm/*.yaml` except `core` and `enums`).
-
-## Enumerations
-
-Enums in `cdm/enums.yaml` are generated, not hand-written. **Do not edit by hand.**
-
-**Bindings are declared, never inferred.** A resource config names the field carrying the bare `code` and says where its vocabulary comes from, as set out in [CONVENTIONS.md](./CONVENTIONS.md) under *How bindings work*:
-
-```yaml
-Condition.clinicalStatus:
-  bindings:
-    Condition.clinicalStatus.coding.code: default        # the FHIR binding
-
-Patient.maritalStatus:
-  bindings:
-    Patient.maritalStatus.coding.code: MaritalStatusEnum # a manifest entry
-```
-
-```
-config/resources/*.yaml   bindings: <field path>: default | <EnumName>
-        |
-  default             <EnumName>
-        |                   |
-        v                   v
-build/fhir_bindings.yaml   config/enum_manifest.yaml
-build/fhir_enums.yaml      HAND-WRITTEN. Manual bindings only.
-        |                        |
-        +-----------+------------+
-                    v
-              cdm/enums.yaml     PUBLISHED, only what configs name.
-```
-
-`default` resolves only where FHIR genuinely constrains: the strength is `required` or `extensible`, **and** the value set expands offline. Anything else is an error rather than a silent fallback to `string` — a config that writes `default` on a `preferred` field, or on a SNOMED `is-a` subset, has asked for something FHIR does not offer.
-
-A manifest entry is for the cases `default` cannot serve: a `preferred` vocabulary the CDM enforces anyway (much of the NHS CDS grid), an England codeset narrowing a UK-wide value set, or a CDM-defined vocabulary. A whitelisted field with no declaration is a plain field, and the run reports which bound fields were left undeclared.
-
-Only enums a config names are emitted, so `cdm/enums.yaml` contains exactly what the schemas reference. A manifest entry referenced by no config, or one that reproduces what `default` would have resolved, is reported.
-
-## Prerequisites
-
-Install FHIR terminology packages, required to regenerate enums (requires Node.js):
-
-```bash
-npm install
-```
-
-The Python scripts declare their dependencies inline (PEP 723) and run under [uv](https://github.com/astral-sh/uv); there is no separate install step.
-
-## How To
-
-### Validate the schemas
+### Validate
 
 ```bash
 uvx --with linkml linkml lint cdm --all --ignore-warnings
 ```
 
-### Add a new resource
-
-1. Add `config/resources/<Resource>.yaml` naming the profile and the whitelist of FHIR paths. The config file is the opt-in — no other registration is needed.
-2. Run `uv run scripts/expand_fhir.py` and read `build/expanded/<Resource>.yaml` to see the shape beneath each path before whitelisting it.
-3. Declare bindings. `build/fhir_bindings.yaml` lists every bound field in the resource, keyed by the field the binding applies to — copy those paths into `bindings:` and mark each `default` or a manifest entry name (CONVENTIONS.md §12). Nothing is bound that is not declared.
-4. Run `uv run scripts/generate_linkml.py`. A `default` that FHIR cannot honour is an error; the run also reports any bound field left undeclared.
-5. Regenerate the dbt artifacts; the new resource is included automatically.
-
 ### Regenerate everything
 
-```bash
-npm install                          # once, for FHIR packages
-uv run scripts/expand_fhir.py        # stage 1 -> build/expanded/
-uv run scripts/generate_linkml.py    # stage 2 -> cdm/
-uv run scripts/generate_dbt_seeds.py # dbt_metadata/seeds/mapping/
-uv run scripts/generate_dbt_yaml.py  # dbt_metadata/models/gold/
-```
+Run the four commands under [Getting started](#getting-started) in order.
