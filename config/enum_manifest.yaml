@@ -140,6 +140,154 @@ enums:
       - { code: therapy, display: "Therapy" }
       - { code: activity, display: "Activity" }
 
+  # ---------------------------------------------------------------------------
+  # Medications
+  # ---------------------------------------------------------------------------
+
+  MedicationRouteEnum:
+    description: >-
+      Route of administration. A CDM-chosen SUBSET of the SNOMED CT route
+      hierarchy as bound by UKCore-SubstanceOrProductAdministrationRoute
+      (http://snomed.info/sct), which FHIR binds `preferred` and which
+      `default` therefore cannot reach. Codes and displays are SNOMED concept
+      IDs taken from that value set; this list is deliberately INCOMPLETE,
+      covering the routes seen in hospital EHR prescribing and administration
+      data. A conformant record using a route outside this list fails its
+      accepted_values test rather than resolving - widen the list when that
+      happens.
+    source: manual
+    values:
+      - { code: "26643006", display: "Oral" }
+      - { code: "47625008", display: "Intravenous" }
+      - { code: "78421000", display: "Intramuscular" }
+      - { code: "34206005", display: "Subcutaneous" }
+      - { code: "6064005", display: "Topical" }
+      - { code: "18679011000001101", display: "Inhalation" }
+      - { code: "37161004", display: "Rectal" }
+      - { code: "16857009", display: "Vaginal" }
+      - { code: "37839007", display: "Sublingual" }
+      - { code: "54471007", display: "Buccal" }
+      - { code: "46713006", display: "Nasal" }
+      - { code: "54485002", display: "Ophthalmic route" }
+      - { code: "10547007", display: "Otic" }
+      - { code: "45890007", display: "Transdermal" }
+      - { code: "72607000", display: "Intrathecal" }
+      - { code: "404820008", display: "Epidural" }
+      - { code: "58100008", display: "Intraarterial" }
+      - { code: "12130007", display: "Intraarticular" }
+      - { code: "417255000", display: "Intraosseous" }
+      - { code: "38239002", display: "Intraperitoneal" }
+      - { code: "127492001", display: "Nasogastric route" }
+      - { code: "127490009", display: "Gastrostomy route" }
+      - { code: "90028008", display: "Urethral" }
+      - { code: "372464004", display: "Intradermal" }
+      - { code: "372468001", display: "Intraocular" }
+      - { code: "3594011000001102", display: "Route of administration not applicable" }
+
+  # ---------------------------------------------------------------------------
+  # Appointment
+  # ---------------------------------------------------------------------------
+
+  AppointmentTypeEnum:
+    description: "Appointment type - the v2-0276 general codes plus the UK Core urgent-follow-up supplement. This is the union UKCore-AppointmentReasonCode binds; the value set spans two code systems so it cannot be expanded offline, and UKCore-AppointmentReasonCode alone is a one-code supplement rather than a usable list."
+    source: manual
+    values:
+      - { code: ROUTINE, display: "Routine appointment - default if not valued" }
+      - { code: WALKIN, display: "A previously unscheduled walk-in visit" }
+      - { code: CHECKUP, display: "A routine check-up, such as an annual physical" }
+      - { code: FOLLOWUP, display: "A follow up visit from a previous appointment" }
+      - { code: EMERGENCY, display: "Emergency appointment" }
+      - { code: urgent-follow-up, display: "Urgent follow-up (UK Core)" }
+
+  AppointmentCancellationReasonEnum:
+    description: "CDM-defined cancellation reason. Attributes a cancellation to the patient or the provider - the DNA-vs-cancellation breakdown. The FHIR CodeSystem is marked incomplete, so this cannot be derived."
+    source: manual
+    values:
+      - { code: pat, display: "Patient cancelled" }
+      - { code: pat-crs, display: "Patient: canceled via received schedule" }
+      - { code: pat-cpp, display: "Patient: change in patient priority" }
+      - { code: pat-dec, display: "Patient: deceased" }
+      - { code: pat-mv, display: "Patient: moved" }
+      - { code: prov, display: "Provider cancelled" }
+      - { code: prov-pat-dec, display: "Provider: patient deceased" }
+      - { code: prov-esc, display: "Provider: escalation of care" }
+      - { code: maint, display: "Equipment maintenance or repair" }
+      - { code: meds-inc, display: "Prep or meds incomplete" }
+      - { code: other, display: "Other" }
+
+  # ---------------------------------------------------------------------------
+  # DiagnosticReport
+  # ---------------------------------------------------------------------------
+
+  DiagnosticServiceSectionEnum:
+    description: >-
+      Diagnostic service section - the axis separating a microbiology culture
+      from a chemistry panel from a radiology report. A CDM-chosen SUBSET of
+      HL7 v2-0074
+      (http://terminology.hl7.org/CodeSystem/v2-0074), which FHIR binds
+      `example` and which `default` therefore cannot reach. Codes and displays
+      are taken from that code system; this list is deliberately INCOMPLETE,
+      covering the services seen in UK LIMS and RIS feeds. A report using a
+      section outside this list fails its accepted_values test rather than
+      resolving - widen the list when that happens.
+
+      The imaging modalities in v2-0074 (CT, NMR, NMS, RUS, CUS, OUS, XRC,
+      IMG, RX) are collapsed into RAD. Modality is a property of the study
+      rather than of the reporting service, and it is carried by
+      DiagnosticReport.code; splitting the service axis by modality would
+      make a plain radiology report and a CT report look like different
+      services when they come from the same department.
+    source: manual
+    values:
+      - { code: CH, display: "Chemistry" }
+      - { code: HM, display: "Hematology" }
+      - { code: MB, display: "Microbiology" }
+      - { code: BLB, display: "Blood Bank" }
+      - { code: SR, display: "Serology" }
+      - { code: VR, display: "Virology" }
+      - { code: MYC, display: "Mycology" }
+      - { code: PAR, display: "Parasitology" }
+      - { code: IMM, display: "Immunology" }
+      - { code: SP, display: "Surgical Pathology" }
+      - { code: PAT, display: "Pathology (gross & histopath, not surgical)" }
+      - { code: CP, display: "Cytopathology" }
+      - { code: GE, display: "Genetics" }
+      - { code: RAD, display: "Radiology" }
+      - { code: BG, display: "Blood Gases" }
+      - { code: URN, display: "Urinalysis" }
+      - { code: TX, display: "Toxicology" }
+      - { code: OTH, display: "Other" }
+
+  # ---------------------------------------------------------------------------
+  # Location
+  # ---------------------------------------------------------------------------
+
+  LocationPhysicalTypeEnum:
+    description: >-
+      Physical form of a location - which level of the partOf hierarchy a row
+      sits at (site > building > wing > ward > room > bed). The complete FHIR
+      R4 location-physical-type list
+      (http://terminology.hl7.org/CodeSystem/location-physical-type), which
+      FHIR binds `example` and which `default` therefore cannot reach. Taken
+      whole rather than subsetted: at 14 codes a subset saves nothing and
+      would make a conformant value fail.
+    source: manual
+    values:
+      - { code: si, display: "Site" }
+      - { code: bu, display: "Building" }
+      - { code: wi, display: "Wing" }
+      - { code: wa, display: "Ward" }
+      - { code: lvl, display: "Level" }
+      - { code: co, display: "Corridor" }
+      - { code: ro, display: "Room" }
+      - { code: bd, display: "Bed" }
+      - { code: ve, display: "Vehicle" }
+      - { code: ho, display: "House" }
+      - { code: ca, display: "Cabinet" }
+      - { code: rd, display: "Road" }
+      - { code: area, display: "Area" }
+      - { code: jdn, display: "Jurisdiction" }
+
   ObservationInterpretationEnum:
     description: "Clinical interpretation of an observation result (HL7 FHIR observation-interpretation)."
     source: manual
