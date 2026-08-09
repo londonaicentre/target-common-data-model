@@ -34,7 +34,7 @@ Generation runs in two stages.
               v
     cdm/<Resource>.yaml   (LinkML)
 
-A schema is generated from a resource only where `scripts/config/resources/<Resource>.yaml` exists. The config file is therefore the opt-in.
+A schema is generated from a resource only where `config/resources/<Resource>.yaml` exists. The config file is therefore the opt-in.
 
 ---
 
@@ -55,7 +55,7 @@ Stage 1 resolves this and records the binding against the field it applies to. A
 
     default        the FHIR binding recorded for that field in
                    build/fhir_bindings.yaml
-    <EnumName>     an entry in scripts/enum_manifest.yaml, used instead (§12)
+    <EnumName>     an entry in config/enum_manifest.yaml, used instead (§12)
 
 Note that `default` only resolves where strength is `required` or `extensible`. These are the strengths under which a source system is obliged to use the value set. A `preferred` or `example` binding is considered a suggestion, and is not reachable through `default`.
 
@@ -72,7 +72,7 @@ For users, where the CDM wants to enforce a `preferred` binding (e.g. much of th
         default             <EnumName>
               |                   |
               v                   v
-    build/fhir_bindings.yaml   scripts/enum_manifest.yaml
+    build/fhir_bindings.yaml   config/enum_manifest.yaml
       field path                 HAND-WRITTEN. Manual bindings only -
         -> value set URL         CDM-defined vocabularies, and cases
               |                  where the FHIR default is not what
@@ -319,7 +319,7 @@ Where a single coding survives, `is_source` is true on it.
 
 ## Resource conventions
 
-These are declared per resource in `scripts/config/resources/<Resource>.yaml`.
+These are declared per resource in `config/resources/<Resource>.yaml`.
 
 ### 7. The whitelist
 

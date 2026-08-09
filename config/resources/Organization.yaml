@@ -1,0 +1,99 @@
+# Organization - the whitelist of FHIR paths that become fields.
+#
+# Grain: one row per Organization resource. Dimension table - the provider
+# and practice lookup the rest of the model points at.
+#
+# Scope: enough to resolve an organisation reference to something a human
+# recognises and an analyst can group by. This table exists mainly so that
+# organisation references elsewhere in the CDM stop being dangling FKs.
+#
+# A path not named below is not in the model (CONVENTIONS.md §7).
+
+resource: Organization
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Organization
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Identity -----------------------------------------------------------
+
+  # string. ODS organisation code - the national identifier every external
+  # reference dataset keys on, promoted out of the UK Core slice.
+  Organization.identifier:odsOrganisationCode.value:
+
+  # string. ODS site code, where the organisation is a site within a trust.
+  # A trust has one org code and many site codes; activity is often reported
+  # by site.
+  Organization.identifier:odsSiteCode.value:
+
+  # Variant: [{system, value}]. Every identifier, for organisations carrying
+  # local codes alongside the ODS ones.
+  Organization.identifier:
+    key: [system, value]
+    exclude:
+      Organization.identifier.assigner: >
+        self-referential to Organization; `system` already namespaces the
+        issuer
+      Organization.identifier.period: >
+        identifier validity windows are not populated in practice
+      Organization.identifier.type: >
+        redundant with `system`
+      Organization.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Description --------------------------------------------------------
+
+  # string. The human-readable name - what turns an ODS code in a report
+  # into something a clinician recognises.
+  Organization.name:
+
+  # {system, code, display, is_source} from type[0].coding[0]. Trust vs
+  # practice vs department.
+  #
+  # Unbound: UK Core binds `extensible`, but the value set unions the
+  # Genomics and core organisation-type codesets, so it does not expand
+  # offline. ODS codes carry provider identity; `type` is descriptive.
+  Organization.type.coding[0]:
+
+  # boolean.
+  Organization.active:
+
+  # --- Hierarchy ----------------------------------------------------------
+
+  # string, FK id. Parent organisation - a site within a trust, a practice
+  # within a PCN.
+  Organization.partOf:
+    fk: Organization
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Contact details ----------------------------------------------------
+  Organization.telecom: >
+    switchboard numbers and addresses for correspondence; operational, and
+    better sourced from ODS reference data than from a clinical feed
+  Organization.contact: >
+    named contact people at the organisation; operational, and identifying
+  Organization.endpoint: >
+    technical FHIR endpoints for message routing; infrastructure, not data
+
+  # --- Address ------------------------------------------------------------
+  Organization.address: >
+    organisation addresses are reference data maintained nationally in ODS;
+    carrying a per-feed copy invites disagreement with the authoritative
+    source. Join to ODS on the org code instead
+
+  # --- Other --------------------------------------------------------------
+  Organization.alias: >
+    0..* previous and alternative names; useful for matching, but matching
+    happens upstream in the linkage layer
+  Organization.type: >
+    NOT whitelisted whole - `type.coding[0]` is named instead, so a second
+    organisation type is dropped rather than becoming a variant
+  Organization.extension:mainLocation: >
+    Location not modelled; would be a dangling FK
+  Organization.extension:organizationPeriod: >
+    when the organisation was operational; ODS reference data is the
+    authority on organisational lifecycle

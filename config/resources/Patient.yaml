@@ -1,0 +1,190 @@
+# Patient - the whitelist of FHIR paths that become fields.
+#
+# Grain: one row per Patient resource. Dimension table, OMOP `person`
+# analogue.
+#
+# Scope: the join key, the demographics that stratify a cohort, and death.
+# Contact details and third parties are out - operational, and the most
+# identifying content in the resource.
+
+resource: Patient
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Patient
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Identity -----------------------------------------------------------
+
+  # string. NHS number promoted out of the identifier slice - the join key
+  # for the whole model.
+  Patient.identifier:nhsNumber.value:
+
+  # Variant: [{system, value}]. Every identifier - NHS number plus one local
+  # MRN per contributing trust.
+  Patient.identifier:
+    key: [system, value]
+    exclude:
+      Patient.identifier.assigner: >
+        Organization not modelled; `system` already namespaces the issuer
+      Patient.identifier.period: >
+        identifier validity windows are not populated in practice
+      Patient.identifier.type: >
+        redundant with `system`, which already distinguishes an NHS number
+        from a local MRN
+      Patient.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Name ---------------------------------------------------------------
+  # Carried for linkage QA and clinical validation: a model that cannot show
+  # who a row refers to cannot be audited.
+
+  # string, string. Current name, from name[0]; given[0] is the first
+  # forename.
+  Patient.name.family:
+  Patient.name.given[0]:
+
+  # Variant: [{use, family, given[]}].
+  # use distinguishes different names (e.g. maiden)
+  Patient.name:
+    key: [use, family]
+    bindings:
+      Patient.name.use: default
+    exclude:
+      Patient.name.prefix: >
+        title (Dr, Mrs); not analytical
+      Patient.name.suffix: >
+        post-nominals; not analytical
+      Patient.name.text: >
+        rendered full name; not needed
+      Patient.name.period: >
+        name validity windows are not reliably populated
+
+  # --- Demographics -------------------------------------------------------
+
+  # AdministrativeGenderEnum: male | female | other | unknown.
+  Patient.gender:
+    bindings:
+      Patient.gender: default
+
+  # date.
+  Patient.birthDate:
+
+  # boolean, datetime. Both forms of deceased[x] are kept.
+  Patient.deceasedBoolean:
+  Patient.deceasedDateTime:
+
+  # {coding[]} of {system, code, display, is_source}. England codeset, not
+  # the UK-wide value set UK Core binds.
+  Patient.maritalStatus:
+    bindings:
+      Patient.maritalStatus.coding.code: MaritalStatusEnum
+    exclude:
+      Patient.maritalStatus.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Geography ----------------------------------------------------------
+
+  # string. Postcode of the current address, from address[0]. Carries the
+  # deprivation signal; the identifying lines are not whitelisted.
+  Patient.address.postalCode:
+
+  # --- Organisations ------------------------------------------------------
+
+  # [string] of FK ids. Registered GP practices - 0..*, so this is an array
+  # rather than a scalar. The profile also allows Practitioner and
+  # PractitionerRole; a feed writing one of those fails the referential
+  # integrity test rather than resolving.
+  Patient.generalPractitioner:
+    fk: Organization
+
+  # string, FK id. The trust whose PAS the row came from.
+  Patient.managingOrganization:
+    fk: Organization
+
+  # --- Extension slices ---------------------------------------------------
+
+  # {coding[]} of {system, code, display, is_source}. Ethnicity, England
+  # codeset rather than the UK-wide value set UK Core binds.
+  Patient.extension:ethnicCategory:
+    bindings:
+      Patient.extension:ethnicCategory.coding.code: EthnicCategoryEnum
+    exclude:
+      Patient.extension:ethnicCategory.text: >
+        rendered term; the coding carries the meaning
+
+  # {coding[]} of {system, code, display, is_source}. Formal (2) / informal
+  # (1) / removed (U) - how far the deceased flag can be trusted.
+  Patient.extension:deathNotificationStatus.extension:deathNotificationStatus:
+    bindings:
+      Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.code: default
+    exclude:
+      Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.text: >
+        rendered term; the coding carries the meaning
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Direct identifiers -------------------------------------------------
+  Patient.telecom: >
+    contact route - operational, and directly identifying
+  Patient.contact: >
+    next-of-kin block; directly identifying third-party data with no
+    analytical use
+  Patient.name.prefix: >
+    title (Dr, Mrs); not analytical, and it invites inferring status or
+    gender from a courtesy title
+  Patient.name.suffix: post-nominals; not analytical
+
+  # --- Address ------------------------------------------------------------
+  Patient.address: >
+    NOT whitelisted whole - only `address.postalCode` is named, so address
+    history and the identifying lines are unreachable. Revisit only if a use
+    case needs address as at a point in time
+  Patient.address.line: >
+    directly identifying; postcode alone carries the deprivation signal
+  Patient.address.city: superseded by postcode-based geography lookup
+  Patient.address.district: superseded by postcode-based geography lookup
+  Patient.address.country: effectively constant in a UK provider dataset
+  Patient.address.extension:addressKey: >
+    PAF/UPRN key - identifying, and redundant once postcode is kept
+
+  # --- Multiple birth -----------------------------------------------------
+  Patient.multipleBirthBoolean: >
+    twin/triplet status is neonatal-specific and not used in current cohort
+    definitions; revisit with a neonatal use case
+  Patient.multipleBirthInteger: as above
+
+  # --- Administrative -----------------------------------------------------
+  Patient.active: >
+    record-status flag about the row rather than the person; a deactivated
+    record still describes a real patient and filtering on it silently drops
+    cohort members
+
+  # --- Backbone elements --------------------------------------------------
+  Patient.communication: >
+    language and interpreter need are service-planning data
+  Patient.link: >
+    record-merge graph; belongs to the linkage layer, not the analytical
+    model
+
+  # --- Extension slices ---------------------------------------------------
+  Patient.extension:birthSex: >
+    overlaps `gender`; a second sex field invites two cohorts that disagree.
+    Revisit if a use case needs sex-at-birth distinctly from gender, which
+    is a real clinical need but needs deciding once, globally
+  Patient.extension:birthPlace: >
+    identifying, and country of birth is not used in current cohorts
+  Patient.extension:cadavericDonor: transplant-specific
+  Patient.extension:contactPreference: operational contact routing
+  Patient.extension:residentialStatus: care-funding/eligibility data
+  Patient.extension:patientInterpreterRequired: service-planning data
+  Patient.extension:nhsNumberUnavailableReason: >
+    data-quality flag about the source feed, not about the patient
+  Patient.extension:deathNotificationStatus.extension:systemEffectiveDate: >
+    when the notification reached the spine; an artefact of the feed rather
+    than of the death. `deceaseddatetime` is the clinical date
+  Patient.identifier:nhsNumber.extension:nhsNumberVerificationStatus: >
+    trace/verification status is a data-quality flag about the feed; revisit
+    if a use case needs to filter on unverified NHS numbers

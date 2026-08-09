@@ -1,0 +1,147 @@
+# Condition - the whitelist of FHIR paths that become fields.
+#
+# Grain: one row per Condition resource. Fact table, OMOP
+# `condition_occurrence` analogue.
+#
+# Scope: what the condition is, whose it is, when it started and stopped, and
+# how far it can be trusted. The code and the status pair are what every
+# cohort definition touches.
+#
+# A path not named below is not in the model (CONVENTIONS.md §7).
+
+resource: Condition
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Condition
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Who and when -------------------------------------------------------
+
+  # string, FK ids.
+  Condition.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+  Condition.encounter:
+    fk: Encounter
+
+  # datetime, datetime. Onset and abatement. Only the dateTime forms of the
+  # choice types are taken; Age, Period, Range and string are under
+  # `rejected`.
+  Condition.onsetDateTime:
+  Condition.abatementDateTime:
+
+  # datetime. When the condition was entered, as distinct from when it
+  # began. The gap between the two is a data-quality signal in its own right.
+  Condition.recordedDate:
+
+  # --- Status -------------------------------------------------------------
+  # Together these decide whether a coded condition counts towards a cohort:
+  # an entered-in-error or refuted row is not a diagnosis.
+
+  # {coding[]} of {system, code, display, is_source}, where code is
+  # ConditionClinicalEnum: active | recurrence | relapse | inactive |
+  # remission | resolved.
+  Condition.clinicalStatus:
+    bindings:
+      Condition.clinicalStatus.coding.code: default
+    exclude:
+      Condition.clinicalStatus.text: >
+        rendered term; the coding carries the meaning
+
+  # {coding[]} of {system, code, display, is_source}, where code is
+  # ConditionVerStatusEnum: unconfirmed | provisional | differential |
+  # confirmed | refuted | entered-in-error.
+  Condition.verificationStatus:
+    bindings:
+      Condition.verificationStatus.coding.code: default
+    exclude:
+      Condition.verificationStatus.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Category -----------------------------------------------------------
+
+  # {system, code, display, is_source} from category[0].coding[0], where
+  # code is ConditionCategoryEnum. Problem-list entry vs encounter diagnosis
+  # - a long-term condition vs a reason for one admission. A condition that
+  # is genuinely both arrives as two rows from two feeds.
+  Condition.category.coding[0]:
+    bindings:
+      Condition.category.coding.code: ConditionCategoryEnum
+
+  # --- The code that identifies the row -----------------------------------
+
+  # Variant: [{system, code, display, is_source}]. The source SNOMED coding
+  # plus any standard-vocabulary codings added downstream, so a cohort
+  # defined in one vocabulary still finds rows coded in another. `is_source`
+  # is true on the original (§6).
+  #
+  # Unbound: UK Core binds `preferred` to a SNOMED `is-a` subset, which needs
+  # a terminology server. The vocabulary lives in the mapping layer.
+  Condition.code.coding:
+    key: [system, code]
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Severity and site --------------------------------------------------
+  Condition.severity: >
+    bound `preferred` and sparsely populated in UK source data; a severity
+    column that is null for most rows invites cohorts that silently exclude
+    everyone unscored. Revisit when a feed populates it reliably
+  Condition.bodySite: >
+    0..* SNOMED body site; laterality and site need their own model, and a
+    first-entry scalar would be actively misleading on a bilateral condition
+
+  # --- Notes --------------------------------------------------------------
+  Condition.note: >
+    free-text clinical annotation; unstructured, frequently identifying, and
+    not analysable without NLP that belongs in its own pipeline
+
+  # --- Backbone elements --------------------------------------------------
+  Condition.stage: >
+    cancer staging needs proper staging-system context to be interpretable;
+    a staging model of its own
+  Condition.evidence: >
+    points at Observation/DiagnosticReport to justify the diagnosis; the
+    provenance chain is a graph problem, not a column
+
+  # --- References to unmodelled resources ---------------------------------
+  Condition.recorder: >
+    Practitioner not modelled; would be a dangling FK
+  Condition.asserter: >
+    Practitioner not modelled; would be a dangling FK
+
+  # --- Identity -----------------------------------------------------------
+  Condition.identifier: >
+    `id` already carries resource identity, and Condition identifiers are not
+    used to reconcile feeds the way Patient and Encounter ones are
+
+  # --- onset[x] / abatement[x] --------------------------------------------
+  # Stage 1 expands each choice into one element per permitted type. Only the
+  # dateTime forms are whitelisted; the rest are recorded here.
+  Condition.onsetAge: >
+    age-at-onset form not populated in practice, and derivable from
+    onsetdatetime and birthdate
+  Condition.onsetPeriod: >
+    ranged onset not populated in practice; onsetdatetime carries the signal
+  Condition.onsetRange: ranged onset not populated in practice
+  Condition.onsetString: >
+    free-text onset ("in his twenties") is not analysable
+  Condition.abatementAge: age-at-abatement form not populated in practice
+  Condition.abatementPeriod: ranged abatement not populated in practice
+  Condition.abatementRange: ranged abatement not populated in practice
+  Condition.abatementString: free-text abatement is not analysable
+
+  # --- Other --------------------------------------------------------------
+  Condition.code: >
+    NOT whitelisted whole - `code.coding` is named instead, so the variant is
+    the codings themselves rather than a {coding[], text} wrapper
+  Condition.code.text: >
+    rendered term; the coding variant carries the meaning
+  Condition.category: >
+    NOT whitelisted whole - `category.coding[0]` is named instead, so a
+    second category is dropped rather than becoming a variant
+  Condition.extension:conditionEpisode: >
+    0..* episodicity (first/review episode); belongs with episode-of-care,
+    which is not modelled
