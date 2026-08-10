@@ -1,0 +1,265 @@
+# MedicationRequest
+#
+# Grain: one row per MedicationRequest resource. Fact table, OMOP
+# `drug_exposure` analogue (the prescribing half). OMOP folds prescribing,
+# dispensing and administration into DRUG_EXPOSURE; this model keeps them
+# apart.
+#
+# Purpose: what a patient was prescribed. One row per prescription, holding
+# the drug, when it was written, how it was to be taken and how much was
+# authorised. What was actually given is MedicationAdministration; what the
+# patient reports taking is MedicationStatement.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: MedicationRequest
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationRequest
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status and intent --------------------------------------------------
+
+  # Scalar code.
+  # OMOP: no equivalent.
+  MedicationRequest.status:
+    bindings:
+      MedicationRequest.status: default
+
+  # Scalar code. Separates a proposal from an actual order.
+  # OMOP: no equivalent; roughly what drug_type_concept_id encodes.
+  MedicationRequest.intent:
+    bindings:
+      MedicationRequest.intent: default
+
+  # Scalar code.
+  # OMOP: no equivalent.
+  MedicationRequest.priority:
+    bindings:
+      MedicationRequest.priority: default
+
+  # Scalar boolean -> donotperform. An explicit instruction NOT to
+  # prescribe; a modifier, so ignoring it inverts the meaning of the row.
+  # OMOP: no equivalent.
+  MedicationRequest.doNotPerform:
+
+  # --- What was prescribed ------------------------------------------------
+
+  # Variant: [{system, code, display, is_source}] ->
+  # medicationcodeableconcept_coding. Source dm+d coding plus
+  # standard-vocabulary codings added downstream; `is_source` true on the
+  # original.
+  #
+  # Unbound: `preferred` to a dm+d `=` filter subset, which needs a
+  # terminology server. The vocabulary lives in the mapping layer.
+  #
+  # OMOP: subsumes drug_concept_id / drug_source_value /
+  # drug_source_concept_id - all three are rows here. OMOP allows one standard
+  # concept; this carries dm+d VMP, VTM and RxNorm at once, without the loss.
+  MedicationRequest.medicationCodeableConcept.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # Scalar string FK id -> subject_id.
+  # OMOP: drug_exposure.person_id.
+  MedicationRequest.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+  # Scalar string FK id -> encounter_id.
+  # OMOP: drug_exposure.visit_occurrence_id.
+  MedicationRequest.encounter:
+    fk: Encounter
+
+  # Scalar datetime -> authoredon. When the prescription was written.
+  # OMOP: drug_exposure.drug_exposure_start_datetime.
+  MedicationRequest.authoredOn:
+
+  # --- Course of therapy --------------------------------------------------
+
+  # Nested CodeableConcept: {coding[], text} of {system, code, display,
+  # is_source} -> courseoftherapytype. Acute vs repeat vs repeat-dispensing.
+  #
+  # Unbound: `extensible` across two code systems
+  # (UKCore-MedicationRequestCourseOfTherapy and the FHIR core one), so
+  # `default` cannot resolve it to a single vocabulary.
+  # OMOP: no equivalent.
+  MedicationRequest.courseOfTherapyType:
+    exclude:
+      MedicationRequest.courseOfTherapyType.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Dosage -------------------------------------------------------------
+
+  # Variant: [{sequence, text, route{coding[]}, doseandrate[]}] ->
+  # dosageinstruction. How the drug is to be taken. `text` is the
+  # human-readable dose; `sequence` orders multi-step regimens, so a first
+  # entry would take one step of a taper.
+  # OMOP: drug_exposure.sig / route_concept_id / dose_unit_source_value.
+  MedicationRequest.dosageInstruction:
+    key: [sequence, text]
+    bindings:
+      MedicationRequest.dosageInstruction.maxDosePerAdministration.comparator: default
+      # Manual: CDM subset of the SNOMED route hierarchy FHIR binds
+      # `preferred`, which needs a terminology server.
+      MedicationRequest.dosageInstruction.route.coding.code: MedicationRouteEnum
+    exclude:
+      MedicationRequest.dosageInstruction.additionalInstruction: >
+        limited analytical utility; supplementary advice text rather than dose
+      MedicationRequest.dosageInstruction.patientInstruction: >
+        limited analytical utility; duplicates `text` without adding
+        analysable content
+      MedicationRequest.dosageInstruction.timing: >
+        not in scope of typical source data; Timing is a deep recursive
+        structure (repeat.bounds[x], when, offset) that would nest arrays
+        inside the variant
+      MedicationRequest.dosageInstruction.asNeededBoolean: >
+        not in scope of typical source data
+      MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
+        not in scope of typical source data
+      MedicationRequest.dosageInstruction.site: >
+        limited analytical utility; body site is carried by
+        MedicationAdministration where it matters
+      MedicationRequest.dosageInstruction.method: >
+        limited analytical utility; route carries the analytical signal
+      MedicationRequest.dosageInstruction.maxDosePerPeriod: >
+        not in scope of typical source data; a Ratio nested inside a variant,
+        and a safety-checking concern rather than an exposure one
+      MedicationRequest.dosageInstruction.maxDosePerLifetime: >
+        not in scope of typical source data
+      MedicationRequest.dosageInstruction.route.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Dispense request ---------------------------------------------------
+
+  # Scalar decimal -> dispenserequest_quantity_value. Quantity prescribed,
+  # which with the dose gives days of supply.
+  # OMOP: drug_exposure.quantity.
+  MedicationRequest.dispenseRequest.quantity.value:
+
+  # Scalar string -> dispenserequest_quantity_unit. Unit of the prescribed
+  # quantity.
+  # OMOP: drug_exposure.dose_unit_source_value.
+  MedicationRequest.dispenseRequest.quantity.unit:
+
+  # Scalar unsignedInt -> dispenserequest_numberofrepeatsallowed. Repeats
+  # authorised.
+  # OMOP: drug_exposure.refills.
+  MedicationRequest.dispenseRequest.numberOfRepeatsAllowed:
+
+  # Scalar decimal -> dispenserequest_expectedsupplyduration_value, promoted
+  # from the Duration. Days of supply, which with authoredOn bounds the
+  # exposure period where no end date is recorded.
+  # OMOP: drug_exposure.days_supply.
+  MedicationRequest.dispenseRequest.expectedSupplyDuration.value:
+
+  # Nested Period: {start, end} -> dispenserequest_validityperiod.
+  # Prescription validity window.
+  # OMOP: drug_exposure.drug_exposure_start_date / drug_exposure_end_date.
+  MedicationRequest.dispenseRequest.validityPeriod:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Prescription number from the
+  # source system.
+  # OMOP: drug_exposure.drug_source_value.
+  MedicationRequest.identifier:
+    key: [system, value]
+    exclude:
+      MedicationRequest.identifier.assigner: >
+        Organization not modelled; `system` already namespaces the issuer
+      MedicationRequest.identifier.period: >
+        identifier validity windows are not populated in practice
+      MedicationRequest.identifier.type: >
+        redundant with `system`
+      MedicationRequest.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
+  # frequently identifying; author and timestamp are not taken.
+  # OMOP: no equivalent.
+  MedicationRequest.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- medication[x] ------------------------------------------------------
+  MedicationRequest.medicationReference: >
+    Medication not modelled, by decision: this CDM takes dm+d inline via
+    medicationCodeableConcept. A feed writing the reference form loses the
+    drug code - a known and accepted limitation
+  MedicationRequest.medicationCodeableConcept.text: >
+    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
+    the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Classification -----------------------------------------------------
+  MedicationRequest.category: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it, and the encounter carries the setting
+  MedicationRequest.statusReason: >
+    not in scope of typical source data; populated only on rows `status`
+    already excludes
+
+  # --- Reported vs primary record -----------------------------------------
+  MedicationRequest.reportedBoolean: >
+    limited analytical utility; a provenance flag about the feed, and
+    MedicationStatement is where patient-reported medication belongs
+  MedicationRequest.reportedReference: as above, by reference
+
+  # --- Substitution -------------------------------------------------------
+  MedicationRequest.substitution: >
+    not in scope of typical source data; dispensing policy rather than
+    clinical fact
+
+  # --- Dispense request detail --------------------------------------------
+  MedicationRequest.dispenseRequest.initialFill: >
+    not in scope of typical source data; a US pharmacy-benefit concept
+  MedicationRequest.dispenseRequest.dispenseInterval: >
+    not in scope of typical source data
+  MedicationRequest.dispenseRequest.expectedSupplyDuration: >
+    NOT whitelisted whole - `expectedSupplyDuration.value` is named instead;
+    the UCUM unit/system/code are fixed to days in practice
+  MedicationRequest.dispenseRequest.performer: >
+    Organization IS modelled, but the nominated pharmacy is operational
+    dispensing routing rather than a clinical fact
+
+  # --- Care team ----------------------------------------------------------
+  MedicationRequest.requester: Practitioner not modelled; would be a dangling FK
+  MedicationRequest.performer: Practitioner not modelled; would be a dangling FK
+  MedicationRequest.performerType: not in scope of typical source data
+  MedicationRequest.recorder: Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  MedicationRequest.basedOn: >
+    limited analytical utility; the prescribing chain is a graph, not a column
+  MedicationRequest.priorPrescription: >
+    limited analytical utility; a self-referencing chain, reconstructable from
+    authoredOn and the drug code
+  MedicationRequest.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationRequest.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationRequest.supportingInformation: >
+    unconstrained pointer across resource types; no FK target is correct
+  MedicationRequest.insurance: billing/finance, out of scope for a clinical CDM
+  MedicationRequest.detectedIssue: DetectedIssue not modelled; would be a dangling FK
+  MedicationRequest.eventHistory: Provenance not modelled; would be a dangling FK
+
+  # --- Grouping and protocol ----------------------------------------------
+  MedicationRequest.groupIdentifier: >
+    not in scope of typical source data; authoredOn groups prescriptions
+    adequately
+  MedicationRequest.instantiatesCanonical: >
+    PlanDefinition not modelled; protocol conformance is out of scope
+  MedicationRequest.instantiatesUri: as above, by URI
+
+  # --- Notes and extensions -----------------------------------------------
+  MedicationRequest.extension:medicationRepeatInformation: >
+    limited analytical utility; courseOfTherapyType and
+    numberOfRepeatsAllowed carry the repeat signal

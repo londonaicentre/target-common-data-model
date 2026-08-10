@@ -1,0 +1,169 @@
+# Procedure
+#
+# Grain: one row per Procedure resource. Fact table, OMOP
+# `procedure_occurrence` analogue.
+#
+# Purpose: what was done to a patient. One row per intervention - an
+# operation, a diagnostic procedure, a therapy - holding what it was, when
+# it happened and whether it happened at all.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Procedure
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Procedure
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Scalar code.
+  # OMOP: no equivalent.
+  Procedure.status:
+    bindings:
+      Procedure.status: default
+
+  # --- Who and when -------------------------------------------------------
+
+  # Scalar string FK id -> subject_id.
+  # OMOP: procedure_occurrence.person_id.
+  Procedure.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+  # Scalar string FK id -> encounter_id.
+  # OMOP: procedure_occurrence.visit_occurrence_id.
+  Procedure.encounter:
+    fk: Encounter
+
+  # Scalar datetime -> performeddatetime. When the procedure was performed.
+  # OMOP: procedure_occurrence.procedure_datetime.
+  Procedure.performedDateTime:
+
+  # Nested Period: {start, end} -> performedperiod. For a procedure that
+  # spans time; both forms of performed[x] are kept.
+  # OMOP: procedure_occurrence.procedure_datetime / procedure_end_datetime.
+  Procedure.performedPeriod:
+
+  # --- The code that identifies the row -----------------------------------
+
+  # Variant: [{system, code, display, is_source}] -> code_coding. Source
+  # OPCS-4 or SNOMED coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  #
+  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
+  # terminology server. The vocabulary lives in the mapping layer.
+  #
+  # OMOP: subsumes procedure_occurrence.procedure_concept_id /
+  # procedure_source_value / procedure_source_concept_id - the variant holds
+  # every mapped vocabulary as rows, not just one standard concept.
+  Procedure.code.coding:
+    key: [system, code]
+
+  # --- Body site ----------------------------------------------------------
+
+  # Variant: [{coding[]}] of {system, code, display, is_source} -> bodysite.
+  # 0..*, kept as a variant rather than a first-entry scalar because a
+  # scalar would report one side of a bilateral procedure.
+  #
+  # Unbound: `preferred` to a SNOMED `is-a` subset, which needs a
+  # terminology server.
+  # OMOP: no equivalent; modifier_concept_id is not a body site.
+  Procedure.bodySite:
+    key: [coding]
+    exclude:
+      Procedure.bodySite.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Theatre system procedure
+  # number, local episode id.
+  # OMOP: procedure_occurrence.procedure_source_value.
+  Procedure.identifier:
+    key: [system, value]
+    exclude:
+      Procedure.identifier.assigner: >
+        Organization not modelled; `system` already namespaces the issuer
+      Procedure.identifier.period: >
+        identifier validity windows are not populated in practice
+      Procedure.identifier.type: >
+        redundant with `system`
+      Procedure.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
+  # frequently identifying; author and timestamp are not taken.
+  # OMOP: no equivalent.
+  Procedure.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- performed[x] other forms -------------------------------------------
+  # Only dateTime and Period are whitelisted.
+  Procedure.performedString: limited analytical utility; free text
+  Procedure.performedAge: >
+    not in scope of typical source data; derivable from performeddatetime and
+    birthdate
+  Procedure.performedRange: not in scope of typical source data
+
+  # --- Classification -----------------------------------------------------
+  Procedure.category: >
+    not in scope of typical source data; the OPCS-4/SNOMED code carries the
+    procedure's nature
+  Procedure.outcome: >
+    not in scope of typical source data; 3 concepts, too coarse to analyse
+  Procedure.statusReason: >
+    not in scope of typical source data; populated only on not-done rows,
+    which `status` already excludes
+
+  # --- Complications and follow-up ----------------------------------------
+  Procedure.complication: >
+    limited analytical utility; a complication is a Condition in its own
+    right and is modelled there
+  Procedure.complicationDetail: >
+    limited analytical utility; the same duplication, by reference
+  Procedure.followUp: >
+    limited analytical utility; follow-up intent is an Appointment or
+    ServiceRequest
+
+  # --- Care team ----------------------------------------------------------
+  Procedure.performer: Practitioner not modelled; would be a dangling FK
+  Procedure.recorder: Practitioner not modelled; would be a dangling FK
+  Procedure.asserter: Practitioner not modelled; would be a dangling FK
+  Procedure.location: >
+    Location IS modelled, but this is the site rather than the theatre and is
+    sparsely populated; the encounter carries the provider
+
+  # --- Devices ------------------------------------------------------------
+  Procedure.focalDevice: Device not modelled; would be a dangling FK
+  Procedure.usedReference: Device not modelled; would be a dangling FK
+  Procedure.usedCode: >
+    not in scope of typical source data; theatre stock usage is a
+    supply-chain concern
+
+  # --- References to other resources --------------------------------------
+  Procedure.basedOn: >
+    ServiceRequest IS modelled, but the order-to-procedure link is not
+    reliably populated
+  Procedure.partOf: >
+    limited analytical utility; nesting a step within a larger procedure is a
+    graph, not a column
+  Procedure.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  Procedure.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  Procedure.report: >
+    DiagnosticReport IS modelled and carries its own subject and encounter,
+    so the join is reachable without this column
+
+  # --- Notes and provenance -----------------------------------------------
+  Procedure.instantiatesCanonical: >
+    PlanDefinition not modelled; protocol conformance is out of scope
+  Procedure.instantiatesUri: as above, by URI

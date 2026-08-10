@@ -116,6 +116,57 @@ enums:
         description: Not applicable
       '99':
         description: Source of admission not known
+  AppointmentCancellationReasonEnum:
+    description: CDM-defined cancellation reason. Attributes a cancellation to the patient or the provider
+      - the DNA-vs-cancellation breakdown. The FHIR CodeSystem is marked incomplete, so this cannot be
+      derived.
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      pat:
+        description: Patient cancelled
+      pat-crs:
+        description: 'Patient: canceled via received schedule'
+      pat-cpp:
+        description: 'Patient: change in patient priority'
+      pat-dec:
+        description: 'Patient: deceased'
+      pat-mv:
+        description: 'Patient: moved'
+      prov:
+        description: Provider cancelled
+      prov-pat-dec:
+        description: 'Provider: patient deceased'
+      prov-esc:
+        description: 'Provider: escalation of care'
+      maint:
+        description: Equipment maintenance or repair
+      meds-inc:
+        description: Prep or meds incomplete
+      other:
+        description: Other
+  AppointmentTypeEnum:
+    description: Appointment type - the v2-0276 general codes plus the UK Core urgent-follow-up supplement.
+      This is the union UKCore-AppointmentReasonCode binds; the value set spans two code systems so it
+      cannot be expanded offline, and UKCore-AppointmentReasonCode alone is a one-code supplement rather
+      than a usable list.
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      ROUTINE:
+        description: Routine appointment - default if not valued
+      WALKIN:
+        description: A previously unscheduled walk-in visit
+      CHECKUP:
+        description: A routine check-up, such as an annual physical
+      FOLLOWUP:
+        description: A follow up visit from a previous appointment
+      EMERGENCY:
+        description: Emergency appointment
+      urgent-follow-up:
+        description: Urgent follow-up (UK Core)
   ConditionCategoryEnum:
     description: Condition category (UKCore-ConditionCategory + FHIR core condition-category).
     annotations:
@@ -150,6 +201,58 @@ enums:
         description: Post-op diagnosis
       billing:
         description: Billing
+  DiagnosticServiceSectionEnum:
+    description: 'Diagnostic service section - the axis separating a microbiology culture from a chemistry
+      panel from a radiology report. A CDM-chosen SUBSET of HL7 v2-0074 (http://terminology.hl7.org/CodeSystem/v2-0074),
+      which FHIR binds `example` and which `default` therefore cannot reach. Codes and displays are taken
+      from that code system; this list is deliberately INCOMPLETE, covering the services seen in UK LIMS
+      and RIS feeds. A report using a section outside this list fails its accepted_values test rather
+      than resolving - widen the list when that happens.
+
+      The imaging modalities in v2-0074 (CT, NMR, NMS, RUS, CUS, OUS, XRC, IMG, RX) are collapsed into
+      RAD. Modality is a property of the study rather than of the reporting service, and it is carried
+      by DiagnosticReport.code; splitting the service axis by modality would make a plain radiology report
+      and a CT report look like different services when they come from the same department.'
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      CH:
+        description: Chemistry
+      HM:
+        description: Hematology
+      MB:
+        description: Microbiology
+      BLB:
+        description: Blood Bank
+      SR:
+        description: Serology
+      VR:
+        description: Virology
+      MYC:
+        description: Mycology
+      PAR:
+        description: Parasitology
+      IMM:
+        description: Immunology
+      SP:
+        description: Surgical Pathology
+      PAT:
+        description: Pathology (gross & histopath, not surgical)
+      CP:
+        description: Cytopathology
+      GE:
+        description: Genetics
+      RAD:
+        description: Radiology
+      BG:
+        description: Blood Gases
+      URN:
+        description: Urinalysis
+      TX:
+        description: Toxicology
+      OTH:
+        description: Other
   DischargeDestinationEnum:
     description: NHS England discharge destination codes (UKCore-DischargeDestinationEngland).
     annotations:
@@ -319,28 +422,106 @@ enums:
         description: Not stated
       '99':
         description: Not known
-  MaritalStatusEnum:
-    description: NHS England person marital status codes (UKCore-PersonMaritalStatusEngland).
+  LocationPhysicalTypeEnum:
+    description: 'Physical form of a location - which level of the partOf hierarchy a row sits at (site
+      > building > wing > ward > room > bed). The complete FHIR R4 location-physical-type list (http://terminology.hl7.org/CodeSystem/location-physical-type),
+      which FHIR binds `example` and which `default` therefore cannot reach. Taken whole rather than subsetted:
+      at 14 codes a subset saves nothing and would make a conformant value fail.'
     annotations:
       binding_source: manual
-      origin: https://fhir.hl7.org.uk/CodeSystem/UKCore-PersonMaritalStatusEngland
+      origin: enum_manifest.yaml
     permissible_values:
-      S:
-        description: Single
-      M:
-        description: Married/Civil Partner
-      D:
-        description: Divorced/Person whose Civil Partnership has been dissolved
-      W:
-        description: Widowed/Surviving Civil Partner
-      P:
-        description: Separated
-      N:
-        description: Not disclosed
-      '8':
-        description: Not applicable
-      '9':
-        description: Not known
+      si:
+        description: Site
+      bu:
+        description: Building
+      wi:
+        description: Wing
+      wa:
+        description: Ward
+      lvl:
+        description: Level
+      co:
+        description: Corridor
+      ro:
+        description: Room
+      bd:
+        description: Bed
+      ve:
+        description: Vehicle
+      ho:
+        description: House
+      ca:
+        description: Cabinet
+      rd:
+        description: Road
+      area:
+        description: Area
+      jdn:
+        description: Jurisdiction
+  MedicationRouteEnum:
+    description: Route of administration. A CDM-chosen SUBSET of the SNOMED CT route hierarchy as bound
+      by UKCore-SubstanceOrProductAdministrationRoute (http://snomed.info/sct), which FHIR binds `preferred`
+      and which `default` therefore cannot reach. Codes and displays are SNOMED concept IDs taken from
+      that value set; this list is deliberately INCOMPLETE, covering the routes seen in hospital EHR prescribing
+      and administration data. A conformant record using a route outside this list fails its accepted_values
+      test rather than resolving - widen the list when that happens.
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      '26643006':
+        description: Oral
+      '47625008':
+        description: Intravenous
+      '78421000':
+        description: Intramuscular
+      '34206005':
+        description: Subcutaneous
+      '6064005':
+        description: Topical
+      '18679011000001101':
+        description: Inhalation
+      '37161004':
+        description: Rectal
+      '16857009':
+        description: Vaginal
+      '37839007':
+        description: Sublingual
+      '54471007':
+        description: Buccal
+      '46713006':
+        description: Nasal
+      '54485002':
+        description: Ophthalmic route
+      '10547007':
+        description: Otic
+      '45890007':
+        description: Transdermal
+      '72607000':
+        description: Intrathecal
+      '404820008':
+        description: Epidural
+      '58100008':
+        description: Intraarterial
+      '12130007':
+        description: Intraarticular
+      '417255000':
+        description: Intraosseous
+      '38239002':
+        description: Intraperitoneal
+      '127492001':
+        description: Nasogastric route
+      '127490009':
+        description: Gastrostomy route
+      '90028008':
+        description: Urethral
+      '372464004':
+        description: Intradermal
+      '372468001':
+        description: Intraocular
+      '3594011000001102':
+        description: Route of administration not applicable
   ObservationCategoryEnum:
     description: Observation category (HL7 FHIR observation-category).
     annotations:
@@ -436,6 +617,33 @@ enums:
         description: Other
       unknown:
         description: Unknown
+  AppointmentstatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/appointmentstatus (compose of 10 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/appointmentstatus
+      binding_strength: required
+    permissible_values:
+      proposed:
+        description: Proposed
+      pending:
+        description: Pending
+      booked:
+        description: Booked
+      arrived:
+        description: Arrived
+      fulfilled:
+        description: Fulfilled
+      cancelled:
+        description: Cancelled
+      noshow:
+        description: No Show
+      entered-in-error:
+        description: Entered in error
+      checked-in:
+        description: Checked In
+      waitlist:
+        description: Waitlisted
   ConditionClinicalEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/condition-clinical (compose of 6 concepts).
     annotations:
@@ -511,6 +719,33 @@ enums:
         description: Not Performed
       not-permitted:
         description: Not Permitted
+  DiagnosticReportStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/diagnostic-report-status (compose of 10 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/diagnostic-report-status
+      binding_strength: required
+    permissible_values:
+      registered:
+        description: Registered
+      partial:
+        description: Partial
+      preliminary:
+        description: Preliminary
+      final:
+        description: Final
+      amended:
+        description: Amended
+      corrected:
+        description: Corrected
+      appended:
+        description: Appended
+      cancelled:
+        description: Cancelled
+      entered-in-error:
+        description: Entered in Error
+      unknown:
+        description: Unknown
   EncounterStatusEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/encounter-status (compose of 9 concepts).
     annotations:
@@ -534,6 +769,164 @@ enums:
         description: Cancelled
       entered-in-error:
         description: Entered in Error
+      unknown:
+        description: Unknown
+  EpisodeOfCareStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/episode-of-care-status (compose of 7 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/episode-of-care-status
+      binding_strength: required
+    permissible_values:
+      planned:
+        description: Planned
+      waitlist:
+        description: Waitlist
+      active:
+        description: Active
+      onhold:
+        description: On Hold
+      finished:
+        description: Finished
+      cancelled:
+        description: Cancelled
+      entered-in-error:
+        description: Entered in Error
+  EventStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/event-status (compose of 8 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/event-status
+      binding_strength: required
+    permissible_values:
+      preparation:
+        description: Preparation
+      in-progress:
+        description: In Progress
+      not-done:
+        description: Not Done
+      on-hold:
+        description: On Hold
+      stopped:
+        description: Stopped
+      completed:
+        description: Completed
+      entered-in-error:
+        description: Entered in Error
+      unknown:
+        description: Unknown
+  LocationModeEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/location-mode (compose of 2 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/location-mode
+      binding_strength: required
+    permissible_values:
+      instance:
+        description: Instance
+      kind:
+        description: Kind
+  LocationStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/location-status (compose of 3 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/location-status
+      binding_strength: required
+    permissible_values:
+      active:
+        description: Active
+      suspended:
+        description: Suspended
+      inactive:
+        description: Inactive
+  MedicationAdminStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/medication-admin-status (compose of 7 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/medication-admin-status
+      binding_strength: required
+    permissible_values:
+      in-progress:
+        description: In Progress
+      not-done:
+        description: Not Done
+      on-hold:
+        description: On Hold
+      completed:
+        description: Completed
+      entered-in-error:
+        description: Entered in Error
+      stopped:
+        description: Stopped
+      unknown:
+        description: Unknown
+  MedicationStatementStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/medication-statement-status (compose of 8 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/medication-statement-status
+      binding_strength: required
+    permissible_values:
+      active:
+        description: Active
+      completed:
+        description: Completed
+      entered-in-error:
+        description: Entered in Error
+      intended:
+        description: Intended
+      stopped:
+        description: Stopped
+      on-hold:
+        description: On Hold
+      unknown:
+        description: Unknown
+      not-taken:
+        description: Not Taken
+  MedicationrequestIntentEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/medicationrequest-intent (compose of 8 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/medicationrequest-intent
+      binding_strength: required
+    permissible_values:
+      proposal:
+        description: Proposal
+      plan:
+        description: Plan
+      order:
+        description: Order
+      original-order:
+        description: Original Order
+      reflex-order:
+        description: Reflex Order
+      filler-order:
+        description: Filler Order
+      instance-order:
+        description: Instance Order
+      option:
+        description: Option
+  MedicationrequestStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/medicationrequest-status (compose of 8 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/medicationrequest-status
+      binding_strength: required
+    permissible_values:
+      active:
+        description: Active
+      on-hold:
+        description: On Hold
+      cancelled:
+        description: Cancelled
+      completed:
+        description: Completed
+      entered-in-error:
+        description: Entered in Error
+      stopped:
+        description: Stopped
+      draft:
+        description: Draft
       unknown:
         description: Unknown
   NameUseEnum:
@@ -580,6 +973,34 @@ enums:
         description: Entered in Error
       unknown:
         description: Unknown
+  ParticipantrequiredEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/participantrequired (compose of 3 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/participantrequired
+      binding_strength: required
+    permissible_values:
+      required:
+        description: Required
+      optional:
+        description: Optional
+      information-only:
+        description: Information Only
+  ParticipationstatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/participationstatus (compose of 4 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/participationstatus
+      binding_strength: required
+    permissible_values:
+      accepted:
+        description: Accepted
+      declined:
+        description: Declined
+      tentative:
+        description: Tentative
+      needs-action:
+        description: Needs Action
   QuantityComparatorEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/quantity-comparator (compose of 4 concepts).
     annotations:
@@ -595,6 +1016,82 @@ enums:
         description: Greater or Equal to
       '>':
         description: Greater than
+  RequestIntentEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/request-intent (compose of 9 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/request-intent
+      binding_strength: required
+    permissible_values:
+      proposal:
+        description: Proposal
+      plan:
+        description: Plan
+      directive:
+        description: Directive
+      order:
+        description: Order
+      original-order:
+        description: Original Order
+      reflex-order:
+        description: Reflex Order
+      filler-order:
+        description: Filler Order
+      instance-order:
+        description: Instance Order
+      option:
+        description: Option
+  RequestPriorityEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/request-priority (compose of 4 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/request-priority
+      binding_strength: required
+    permissible_values:
+      routine:
+        description: Routine
+      urgent:
+        description: Urgent
+      asap:
+        description: ASAP
+      stat:
+        description: STAT
+  RequestStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/request-status (compose of 7 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/request-status
+      binding_strength: required
+    permissible_values:
+      draft:
+        description: Draft
+      active:
+        description: Active
+      on-hold:
+        description: On Hold
+      revoked:
+        description: Revoked
+      completed:
+        description: Completed
+      entered-in-error:
+        description: Entered in Error
+      unknown:
+        description: Unknown
+  SpecimenStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/specimen-status (compose of 4 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/specimen-status
+      binding_strength: required
+    permissible_values:
+      available:
+        description: Available
+      unavailable:
+        description: Unavailable
+      unsatisfactory:
+        description: Unsatisfactory
+      entered-in-error:
+        description: Entered in Error
   UKCoreDeathNotificationStatusEnum:
     description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-DeathNotificationStatus (expansion
       of 3 concepts).
@@ -610,3 +1107,210 @@ enums:
           as GP or Trust
       U:
         description: Removed
+  UKCoreDeliveryChannelEnum:
+    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-DeliveryChannel (expansion of 3
+      concepts).
+    annotations:
+      binding_source: fhir
+      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-DeliveryChannel
+      binding_strength: extensible
+    permissible_values:
+      In-person:
+        description: In-person
+      Telephone:
+        description: Telephone
+      Video:
+        description: Video
+  UKCorePracticeSettingCodeEnum:
+    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-PracticeSettingCode (expansion of
+      87 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-PracticeSettingCode
+      binding_strength: extensible
+    permissible_values:
+      '100':
+        description: General Surgery
+      '101':
+        description: Urology
+      '107':
+        description: Vascular Surgery
+      '110':
+        description: Trauma and Orthopaedics
+      '120':
+        description: Ear Nose and Throat
+      '130':
+        description: Ophthalmology
+      '140':
+        description: Oral Surgery
+      '141':
+        description: Restorative Dentistry
+      '142':
+        description: Paediatric Dentistry
+      '143':
+        description: Orthodontics
+      '145':
+        description: Oral and Maxillofacial Surgery
+      '146':
+        description: Endodontics
+      '147':
+        description: Periodontics
+      '148':
+        description: Prosthodontics
+      '149':
+        description: Surgical Dentistry
+      '150':
+        description: Neurosurgery
+      '160':
+        description: Plastic Surgery
+      '170':
+        description: Cardiothoracic Surgery
+      '171':
+        description: Paediatric Surgery
+      '180':
+        description: Emergency Medicine
+      '190':
+        description: Anaesthetics
+      '192':
+        description: Intensive Care Medicine
+      '200':
+        description: Aviation and Space Medicine
+      '300':
+        description: General Internal Medicine
+      '301':
+        description: Gastroenterology
+      '302':
+        description: Endocrinology and Diabetes
+      '303':
+        description: Clinical Haematology
+      '304':
+        description: Clinical Physiology
+      '305':
+        description: Clinical Pharmacology
+      '310':
+        description: Audio Vestibular Medicine
+      '311':
+        description: Clinical Genetics
+      '313':
+        description: Clinical Immunology
+      '314':
+        description: Rehabilitation Medicine
+      '315':
+        description: Palliative Medicine
+      '317':
+        description: Allergy
+      '320':
+        description: Cardiology
+      '321':
+        description: Paediatric Cardiology
+      '325':
+        description: Sport and Exercise Medicine
+      '326':
+        description: Acute Internal Medicine
+      '330':
+        description: Dermatology
+      '340':
+        description: Respiratory Medicine
+      '350':
+        description: Infectious Diseases
+      '352':
+        description: Tropical Medicine
+      '360':
+        description: Genitourinary Medicine
+      '361':
+        description: Renal Medicine
+      '370':
+        description: Medical Oncology
+      '371':
+        description: Nuclear Medicine
+      '400':
+        description: Neurology
+      '401':
+        description: Clinical Neurophysiology
+      '410':
+        description: Rheumatology
+      '420':
+        description: Paediatrics
+      '421':
+        description: Paediatric Neurology
+      '430':
+        description: Geriatric Medicine
+      '450':
+        description: Dental Medicine
+      '451':
+        description: Special Care Dentistry
+      '460':
+        description: Medical Ophthalmology
+      '500':
+        description: Obstetrics and Gynaecology
+      '501':
+        description: Obstetrics
+      '502':
+        description: Gynaecology
+      '504':
+        description: Community Sexual and Reproductive Health
+      '560':
+        description: Midwifery
+      '600':
+        description: General Medical Practice
+      '601':
+        description: General Dental Practice
+      '700':
+        description: Learning Disability
+      '710':
+        description: Adult Mental Illness
+      '711':
+        description: Child and Adolescent Psychiatry
+      '712':
+        description: Forensic Psychiatry
+      '713':
+        description: Medical Psychotherapy
+      '715':
+        description: Old Age Psychiatry
+      '800':
+        description: Clinical Oncology
+      '810':
+        description: Radiology
+      '820':
+        description: General Pathology
+      '821':
+        description: Blood Transfusion
+      '822':
+        description: Chemical Pathology
+      '823':
+        description: Haematology
+      '824':
+        description: Histopathology
+      '830':
+        description: Immunopathology
+      '831':
+        description: Medical Microbiology and Virology
+      '833':
+        description: Medical Microbiology
+      '834':
+        description: Medical Virology
+      '900':
+        description: Community Medicine
+      '901':
+        description: Occupational Medicine
+      '902':
+        description: Community Health Services Dental
+      '903':
+        description: Public Health Medicine
+      '904':
+        description: Public Health Dental
+      '950':
+        description: Nursing
+      '960':
+        description: Allied Health Professional
+  UKCoreSampleCategoryEnum:
+    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-SampleCategory (expansion of 2 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SampleCategory
+      binding_strength: extensible
+    permissible_values:
+      tumour:
+        description: Tumour
+      germline:
+        description: Germline

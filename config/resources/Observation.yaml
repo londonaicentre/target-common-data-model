@@ -1,13 +1,15 @@
-# Observation - the whitelist of FHIR paths that become fields.
+# Observation
 #
 # Grain: one row per Observation resource. Fact table, OMOP `measurement` /
 # `observation` analogue.
 #
-# Scope: what was measured, on whom, when, and what the answer was. The value
-# shape is the design problem - FHIR offers eleven value[x] types and this
-# model takes two, plus the component array multi-part results need.
+# Purpose: what was measured or observed, and what the answer was. One row
+# per result - a lab test, a vital sign, a recorded finding. Of the eleven
+# value[x] types this model takes Quantity and CodeableConcept, plus the
+# component array for multi-part results.
 #
-# A path not named below is not in the model (CONVENTIONS.md §7).
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
 
 resource: Observation
 profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Observation
@@ -17,74 +19,86 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # ObservationStatusEnum: registered | preliminary | final | amended |
-  # corrected | cancelled | entered-in-error. Decides whether a result is
-  # safe to analyse; a corrected potassium is not the same fact as the
-  # original.
+  # Scalar code.
+  # OMOP: no equivalent.
   Observation.status:
     bindings:
       Observation.status: default
 
   # --- Category -----------------------------------------------------------
 
-  # {system, code, display, is_source} from category[0].coding[0], where
-  # code is ObservationCategoryEnum: laboratory | vital-signs | imaging ...
-  # The coarse axis separating a blood test from a blood pressure. Bound
-  # `preferred` in FHIR, which `default` never reaches, so a manifest entry
-  # is what makes it an enum (§12).
+  # Nested Coding from category[0].coding[0]: {system, code, display,
+  # is_source} -> category_coding. The coarse axis separating a blood test
+  # from a vital sign.
+  # OMOP: measurement.measurement_type_concept_id /
+  # observation.observation_type_concept_id.
   Observation.category.coding[0]:
     bindings:
+      # Manual: promotes the FHIR `preferred` observation-category list.
       Observation.category.coding.code: ObservationCategoryEnum
 
   # --- What was measured --------------------------------------------------
 
-  # Variant: [{system, code, display, is_source}]. The source code plus any
-  # mapped LOINC/SNOMED equivalents, so a cohort defined in one vocabulary
-  # still finds results coded in another. The most important field here.
+  # Variant: [{system, code, display, is_source}] -> code_coding. Source
+  # code plus mapped equivalents added downstream; `is_source` true on the
+  # original.
   #
-  # Unbound, as Condition.code.coding: a SNOMED `is-a` subset bound
-  # `preferred`, carried by the mapping layer rather than an enum.
+  # Unbound: `preferred` to a SNOMED `is-a` subset, which needs a terminology
+  # server. The vocabulary lives in the mapping layer.
+  #
+  # OMOP: subsumes measurement.measurement_concept_id / measurement_source_value
+  # / measurement_source_concept_id (lab and vitals; observation.* otherwise) -
+  # the variant holds every mapped vocabulary as rows, not one standard concept.
   Observation.code.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # string, FK ids.
+  # Scalar string FK id -> subject_id.
+  # OMOP: measurement.person_id / observation.person_id.
   Observation.subject:
     fk: Patient                 # profile allows [Patient, Group, Device,
                                 # Location]
+  # Scalar string FK id -> encounter_id.
+  # OMOP: measurement.visit_occurrence_id / observation.visit_occurrence_id.
   Observation.encounter:
     fk: Encounter
 
-  # datetime. When the specimen was taken or the observation made. This, not
-  # `issued`, is the time analysis uses.
+  # Scalar datetime -> effectivedatetime. When the specimen was taken or the
+  # observation made.
+  # OMOP: measurement.measurement_datetime / observation.observation_datetime.
   Observation.effectiveDateTime:
 
   # --- The result ---------------------------------------------------------
 
-  # {value, comparator, unit, system, code}, where comparator is
-  # QuantityComparatorEnum. Covers essentially all lab chemistry and vital
-  # signs. `unit` is the human string and `code` the UCUM unit; both are
-  # kept, because unit mismatches are a leading source of silent error and
-  # UCUM is what detects them.
-  #
-  # `comparator` is load bearing: a result of "<0.5" is not the number 0.5,
-  # and ignoring the operator treats censored results as exact.
+  # Nested Quantity: {value, comparator, unit, system, code} ->
+  # valuequantity. `unit` is the human string and `code` the UCUM unit; both
+  # are kept. `comparator` is load bearing - "<0.5" is not the number 0.5.
+  # OMOP: measurement.value_as_number / unit_concept_id / operator_concept_id.
   Observation.valueQuantity:
     bindings:
       Observation.valueQuantity.comparator: default
 
-  # {coding[]} of {system, code, display, is_source}. Coded results -
-  # organism identified, blood group, positive/negative.
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> valuecodeableconcept. Coded results - organism identified, blood
+  # group, positive/negative.
+  # OMOP: measurement.value_as_concept_id / observation.value_as_concept_id.
   Observation.valueCodeableConcept:
     exclude:
       Observation.valueCodeableConcept.text: >
         rendered term; the coding carries the meaning
 
-  # {coding[]} of {system, code, display, is_source}, where code is
-  # DataAbsentReasonEnum. Why a value is missing - separates "not tested"
-  # from "result pending" from "specimen unusable", all a null value column
-  # with different meanings.
+  # Scalar decimals -> referencerange_low_value, referencerange_high_value,
+  # promoted from referenceRange[0]. The lab's own normal range; age and
+  # population qualifiers are dropped.
+  # OMOP: measurement.range_low / measurement.range_high.
+  Observation.referenceRange.low.value:
+  Observation.referenceRange.high.value:
+
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> dataabsentreason. Why a value is missing - separates "not tested"
+  # from "result pending" from "specimen unusable".
+  # OMOP: no equivalent.
   Observation.dataAbsentReason:
     bindings:
       Observation.dataAbsentReason.coding.code: default
@@ -94,59 +108,60 @@ include:
 
   # --- Interpretation -----------------------------------------------------
 
-  # {system, code, display, is_source} from interpretation[0].coding[0],
-  # where code is ObservationInterpretationEnum: H / L / N / critical. The
-  # lab's own abnormality flag, and the cheap route to abnormality without
-  # carrying reference ranges.
-  #
-  # The manifest entry is 19 curated codes. The FHIR value set is 57, and
-  # includes v3 abstract parents (_ObservationInterpretationNormality) that
-  # no result is ever coded with - so this narrows rather than duplicates.
+  # Nested Coding from interpretation[0].coding[0]: {system, code, display,
+  # is_source} -> interpretation_coding. The lab's own abnormality flag.
+  # OMOP: no equivalent, which is why range_low / range_high are kept.
   Observation.interpretation.coding[0]:
     bindings:
+      # Manual: CDM subset dropping the v3 abstract parents no result is
+      # ever coded with.
       Observation.interpretation.coding.code: ObservationInterpretationEnum
 
   # --- Variants -----------------------------------------------------------
 
   # Variant: [{code{coding[]}, valuequantity{...}, valuecodeableconcept
-  # {coding[]}}]. Multi-part results - blood pressure is the canonical case:
-  # systolic and diastolic are two components of one observation, and a
-  # first entry would leave a BP reading with one number and no way to tell
-  # which.
+  # {coding[]}}] -> component. Multi-part results - systolic and diastolic
+  # are two components of one blood pressure, and a first entry would leave
+  # a BP reading with one number and no way to tell which.
   #
-  # `code` identifies a component and is the key. `key` names fields of the
-  # object (§9), so it is the CodeableConcept itself - no path beneath a
-  # variant can promote a scalar out of it.
+  # `key` names fields of the object (§9), so it is the CodeableConcept
+  # itself - no path beneath a variant can promote a scalar out of it.
+  # OMOP: needs one measurement row per component, linked by
+  # measurement_event_id / meas_event_field_concept_id.
   Observation.component:
     key: [code]
     bindings:
       Observation.component.valueQuantity.comparator: default
     exclude:
       Observation.component.dataAbsentReason: >
-        component-level absence is rare and the row-level dataabsentreason
-        carries the signal for the cases that occur
+        the row-level dataabsentreason carries the signal
       Observation.component.interpretation: >
-        row-level interpretation is the one labs populate; per-component
-        flags are not reliably present
+        the row-level interpretation is the one labs populate
       Observation.component.valueString: >
-        free text inside a variant; the quantity and coded forms carry the
-        analysable content
-      Observation.component.valueBoolean: not populated in practice
+        limited analytical utility; free text inside a variant
+      Observation.component.valueBoolean: not in scope of typical source data
       Observation.component.valueInteger: >
-        integer results arrive as valueQuantity in practice
-      Observation.component.valueRange: >
-        ranged component values are not populated in practice
-      Observation.component.valueRatio: >
-        ratio component values are not populated in practice
+        not in scope of typical source data; integer results arrive as
+        valueQuantity
+      Observation.component.valueRange: not in scope of typical source data
+      Observation.component.valueRatio: not in scope of typical source data
       Observation.component.valueSampledData: >
-        waveform data; belongs in a signal store, not a warehouse column
-      Observation.component.valueTime: not populated in practice
-      Observation.component.valueDateTime: not populated in practice
-      Observation.component.valuePeriod: not populated in practice
+        not in scope of typical source data; waveform data belongs in a
+        signal store
+      Observation.component.valueTime: not in scope of typical source data
+      Observation.component.valueDateTime: not in scope of typical source data
+      Observation.component.valuePeriod: not in scope of typical source data
       Observation.component.code.text: >
         rendered term; the coding carries the meaning
       Observation.component.valueCodeableConcept.text: >
         rendered term; the coding carries the meaning
+
+  # --- Free text ----------------------------------------------------------
+
+  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
+  # frequently identifying; author and timestamp are not taken.
+  # OMOP: no equivalent.
+  Observation.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
@@ -155,78 +170,78 @@ rejected:
 
   # --- Reference ranges ---------------------------------------------------
   Observation.referenceRange: >
-    0..* low/high with age and population qualifiers; interpreting it needs
-    the qualifier logic, and `interpretation` already carries the lab's own
-    abnormality verdict. Revisit if a use case needs to re-derive
-    abnormality rather than trust the flag
+    NOT whitelisted whole - `referenceRange.low.value` and `.high.value` are
+    named instead, so the age and population qualifiers do not become a
+    variant
+  Observation.referenceRange.type: not in scope of typical source data
+  Observation.referenceRange.appliesTo: not in scope of typical source data
+  Observation.referenceRange.age: not in scope of typical source data
+  Observation.referenceRange.text: limited analytical utility; free text
 
   # --- Other value[x] forms -----------------------------------------------
-  # Stage 1 expands value[x] into one element per permitted type. Only
-  # Quantity and CodeableConcept are whitelisted.
-  Observation.valueString: >
-    free-text results are not analysable without NLP
+  # Only Quantity and CodeableConcept are whitelisted.
+  Observation.valueString: limited analytical utility; free text
   Observation.valueBoolean: >
-    boolean results arrive as a coded concept in practice
+    not in scope of typical source data; boolean results arrive as a coded
+    concept
   Observation.valueInteger: >
-    integer results arrive as valueQuantity with a unit in practice
-  Observation.valueRange: ranged results not populated in practice
-  Observation.valueRatio: >
-    titres and similar; rare, and not used in current cohorts
+    not in scope of typical source data; integer results arrive as
+    valueQuantity with a unit
+  Observation.valueRange: not in scope of typical source data
+  Observation.valueRatio: not in scope of typical source data
   Observation.valueSampledData: >
-    waveform data; belongs in a signal store rather than a warehouse column
-  Observation.valueTime: not populated in practice
-  Observation.valueDateTime: not populated in practice
-  Observation.valuePeriod: not populated in practice
+    not in scope of typical source data; waveform data belongs in a signal
+    store
+  Observation.valueTime: not in scope of typical source data
+  Observation.valueDateTime: not in scope of typical source data
+  Observation.valuePeriod: not in scope of typical source data
 
   # --- Timing -------------------------------------------------------------
-  Observation.effectivePeriod: >
-    ranged effective time not populated in practice; effectivedatetime
-    carries the signal
+  Observation.effectivePeriod: not in scope of typical source data
   Observation.effectiveTiming: >
-    scheduled-timing form belongs to orders, not results
-  Observation.effectiveInstant: >
-    sub-second precision form; effectivedatetime carries the signal
+    not in scope of typical source data; scheduled timing belongs to orders,
+    not results
+  Observation.effectiveInstant: not in scope of typical source data
   Observation.issued: >
-    when the result was released by the lab, an operational timestamp.
-    Analysis uses the effective time. Revisit for turnaround-time work,
-    where this becomes the point of the analysis
+    limited analytical utility; an operational timestamp, where analysis uses
+    the effective time. DiagnosticReport.issued carries turnaround
 
   # --- Specimen and method ------------------------------------------------
-  Observation.specimen: Specimen not modelled; would be a dangling FK
+  Observation.specimen: >
+    Specimen IS modelled, but the link is not reliably populated; the
+    accession identifier carries it
   Observation.device: Device not modelled; would be a dangling FK
   Observation.bodySite: >
-    0..* SNOMED body site; laterality and site need their own model
-  Observation.method: >
-    assay method; matters for cross-lab comparability but is inconsistently
-    populated. Revisit if results are pooled across labs
+    limited analytical utility; laterality and site need their own model
+  Observation.method: not in scope of typical source data
 
   # --- Care team and provenance -------------------------------------------
-  Observation.performer: >
-    Practitioner/Organization not modelled; would be a dangling FK
-  Observation.basedOn: ServiceRequest not modelled
+  Observation.performer: Practitioner not modelled; would be a dangling FK
+  Observation.basedOn: >
+    ServiceRequest IS modelled, but the link is not reliably populated in UK
+    lab feeds
   Observation.partOf: >
-    points at Procedure/MedicationAdministration, none modelled
+    limited analytical utility; nesting within a larger event is a graph, not
+    a column
   Observation.focus: >
-    observations about someone other than the subject (a foetus, a donor);
-    rare, and needs its own subject-resolution rule to be safe
+    not in scope of typical source data; needs its own subject-resolution
+    rule to be safe
 
   # --- Result grouping ----------------------------------------------------
   Observation.hasMember: >
-    panel membership - points at other Observations. A lab panel is a graph
-    rather than a column; the panel structure is recoverable from code and
-    effective time where it is needed
+    limited analytical utility; a lab panel is a graph, and the structure is
+    recoverable from code and effective time
   Observation.derivedFrom: >
-    provenance chain to source observations; as above
+    limited analytical utility; the provenance chain is a graph, not a column
 
   # --- Notes and identity -------------------------------------------------
-  Observation.note: >
-    free-text annotation; unstructured and frequently identifying
   Observation.identifier: >
-    `id` already carries resource identity; Observation identifiers are not
-    used to reconcile feeds
+    limited analytical utility; `id` carries resource identity and
+    Observation identifiers are not used to reconcile feeds
 
   # --- Extensions ---------------------------------------------------------
   Observation.extension:triggeredByR5: >
-    R5 back-port describing reflex testing; the trigger graph is out of scope
+    limited analytical utility; the reflex-testing trigger graph is out of
+    scope
   Observation.extension:bodyStructureR5: >
-    R5 back-port pointing at BodyStructure, which is not modelled
+    BodyStructure not modelled; would be a dangling FK

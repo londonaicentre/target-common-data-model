@@ -66,52 +66,6 @@ classes:
         annotations:
           fhir_path: Patient.name.given
           fhir_type: string
-  PatientMaritalStatusCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Patient.maritalStatus.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Patient.maritalStatus.coding.system
-          fhir_type: uri
-      code:
-        range: MaritalStatusEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Patient.maritalStatus.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-PersonMaritalStatusCode
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Patient.maritalStatus.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Patient.maritalStatus.coding.is_source
-          fhir_type: boolean
-  PatientMaritalStatus:
-    description: Marital (civil) status of a patient
-    annotations:
-      fhir_path: Patient.maritalStatus
-    attributes:
-      coding:
-        range: PatientMaritalStatusCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Patient.maritalStatus.coding
-          fhir_type: Coding
   PatientExtensionEthnicCategoryCoding:
     description: Code defined by a terminology system
     annotations:
@@ -291,34 +245,12 @@ classes:
         annotations:
           fhir_path: Patient.deceasedDateTime
           fhir_type: dateTime
-      maritalstatus:
-        range: PatientMaritalStatus
-        description: Marital (civil) status of a patient
-        annotations:
-          fhir_path: Patient.maritalStatus
-          fhir_type: CodeableConcept
       address_postalcode:
         range: string
         description: Postal code for area
         annotations:
           fhir_path: Patient.address.postalCode
           fhir_type: string
-      generalpractitioner_id:
-        range: string
-        multivalued: true
-        inlined_as_list: true
-        description: Patient's nominated primary care provider
-        annotations:
-          fhir_path: Patient.generalPractitioner
-          fhir_type: Reference
-          fk_target: Organization
-      managingorganization_id:
-        range: string
-        description: Organization that is the custodian of the patient record
-        annotations:
-          fhir_path: Patient.managingOrganization
-          fhir_type: Reference
-          fk_target: Organization
       extension_ethniccategory:
         range: PatientExtensionEthnicCategory
         required: true

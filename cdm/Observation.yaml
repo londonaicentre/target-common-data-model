@@ -473,6 +473,18 @@ classes:
         annotations:
           fhir_path: Observation.valueCodeableConcept
           fhir_type: CodeableConcept
+      referencerange_low_value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: Observation.referenceRange.low.value
+          fhir_type: decimal
+      referencerange_high_value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: Observation.referenceRange.high.value
+          fhir_type: decimal
       dataabsentreason:
         range: ObservationDataAbsentReason
         description: Why the result is missing
@@ -493,3 +505,9 @@ classes:
         annotations:
           fhir_path: Observation.component
           fhir_type: BackboneElement
+      note_text:
+        range: string
+        description: The annotation  - text content (as markdown)
+        annotations:
+          fhir_path: Observation.note.text
+          fhir_type: markdown

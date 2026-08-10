@@ -1,0 +1,196 @@
+# MedicationAdministration
+#
+# Grain: one row per MedicationAdministration resource. Fact table, OMOP
+# `drug_exposure` analogue (the administration half). OMOP folds
+# prescribing, dispensing and administration into DRUG_EXPOSURE; this model
+# keeps them apart.
+#
+# Purpose: what a patient was actually given. One row per dose, holding the
+# drug, when it was administered, how much and by what route. For anything
+# asking whether a patient received a drug, this table answers - not
+# MedicationRequest, which is only what was prescribed.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: MedicationAdministration
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationAdministration
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Scalar code. `not-done` is a recorded omission, not the same as an
+  # absent row.
+  # OMOP: no equivalent.
+  MedicationAdministration.status:
+    bindings:
+      MedicationAdministration.status: default
+
+  # --- What was given -----------------------------------------------------
+
+  # Variant: [{system, code, display, is_source}] ->
+  # medicationcodeableconcept_coding. Source dm+d coding plus
+  # standard-vocabulary codings added downstream; `is_source` true on the
+  # original.
+  #
+  # Unbound: `preferred` to a dm+d `=` filter subset, which needs a
+  # terminology server. The vocabulary lives in the mapping layer.
+  #
+  # OMOP: subsumes drug_concept_id / drug_source_value /
+  # drug_source_concept_id - all three are rows here. OMOP allows one standard
+  # concept; this carries dm+d VMP, VTM and RxNorm at once, without the loss.
+  MedicationAdministration.medicationCodeableConcept.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # Scalar string FK id -> subject_id.
+  # OMOP: drug_exposure.person_id.
+  MedicationAdministration.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+  # Scalar string FK id -> context_id. FHIR names the encounter `context`
+  # here, so the field follows the element name (§4).
+  # OMOP: drug_exposure.visit_occurrence_id.
+  MedicationAdministration.context:
+    fk: Encounter               # profile allows [Encounter, EpisodeOfCare]
+
+  # Scalar datetime -> effectivedatetime. When the drug was given.
+  # OMOP: drug_exposure.drug_exposure_start_datetime.
+  MedicationAdministration.effectiveDateTime:
+
+  # Nested Period: {start, end} -> effectiveperiod. For an administration
+  # that spans time, such as an infusion; both forms of effective[x] are
+  # kept.
+  # OMOP: drug_exposure.drug_exposure_start_datetime /
+  # drug_exposure_end_datetime.
+  MedicationAdministration.effectivePeriod:
+
+  # --- Dose and route -----------------------------------------------------
+  # `dosage` is 0..1 here (unlike the 0..* dosageInstruction on a request),
+  # so its children promote to scalars rather than forming a variant.
+
+  # Scalar decimal and string -> dosage_dose_value, dosage_dose_unit. The
+  # dose actually given, and its unit.
+  # OMOP: drug_exposure.quantity / drug_exposure.dose_unit_source_value.
+  MedicationAdministration.dosage.dose.value:
+  MedicationAdministration.dosage.dose.unit:
+
+  # Scalar code -> dosage_dose_code. UCUM unit code - what detects a unit
+  # mismatch the human string hides.
+  # OMOP: no equivalent; only the source unit string is kept.
+  MedicationAdministration.dosage.dose.code:
+
+  # Scalar code -> dosage_dose_comparator. A dose recorded as "<5 mg" is not
+  # the number 5.
+  # OMOP: no equivalent.
+  MedicationAdministration.dosage.dose.comparator:
+    bindings:
+      MedicationAdministration.dosage.dose.comparator: default
+
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> dosage_route. Oral vs IV changes the exposure entirely.
+  #
+  # Deliberately incomplete: a route outside the subset fails
+  # accepted_values.
+  # OMOP: drug_exposure.route_concept_id / route_source_value.
+  MedicationAdministration.dosage.route:
+    bindings:
+      # Manual: CDM subset of the SNOMED route hierarchy FHIR binds
+      # `preferred`, which needs a terminology server.
+      MedicationAdministration.dosage.route.coding.code: MedicationRouteEnum
+    exclude:
+      MedicationAdministration.dosage.route.text: >
+        rendered term; the coding carries the meaning
+
+  # Scalar string -> dosage_text. Free-text dose instruction as given; UK
+  # inpatient feeds populate this more reliably than the structured dose.
+  # OMOP: drug_exposure.sig.
+  MedicationAdministration.dosage.text:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Administration record id from
+  # the source system.
+  # OMOP: drug_exposure.drug_source_value.
+  MedicationAdministration.identifier:
+    key: [system, value]
+    exclude:
+      MedicationAdministration.identifier.assigner: >
+        Organization not modelled; `system` already namespaces the issuer
+      MedicationAdministration.identifier.period: >
+        identifier validity windows are not populated in practice
+      MedicationAdministration.identifier.type: >
+        redundant with `system`
+      MedicationAdministration.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
+  # frequently identifying; author and timestamp are not taken.
+  # OMOP: no equivalent.
+  MedicationAdministration.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- medication[x] ------------------------------------------------------
+  MedicationAdministration.medicationReference: >
+    Medication not modelled, by decision: this CDM takes dm+d inline via
+    medicationCodeableConcept. A feed writing the reference form loses the
+    drug code - a known and accepted limitation
+  MedicationAdministration.medicationCodeableConcept.text: >
+    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
+    the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Status reason ------------------------------------------------------
+  MedicationAdministration.statusReason: >
+    not in scope of typical source data; `example` to a SNOMED `is-a` subset
+    that needs a terminology server
+
+  # --- Classification -----------------------------------------------------
+  MedicationAdministration.category: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it, and the encounter carries the setting
+
+  # --- Dose detail --------------------------------------------------------
+  MedicationAdministration.dosage.rateRatio: >
+    not in scope of typical source data; infusion rate needs its own model
+  MedicationAdministration.dosage.rateQuantity: >
+    not in scope of typical source data; infusion rate needs its own model
+  MedicationAdministration.dosage.site: >
+    limited analytical utility; route carries the analytical signal
+  MedicationAdministration.dosage.method: >
+    limited analytical utility; route carries the analytical signal
+
+  # --- Care team ----------------------------------------------------------
+  MedicationAdministration.performer: >
+    Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  MedicationAdministration.request: >
+    MedicationRequest IS modelled, but the link is not reliably populated in
+    UK feeds and a mostly-null FK invites joins that silently drop
+    administrations
+  MedicationAdministration.partOf: >
+    limited analytical utility; nesting a dose within a larger event is a
+    graph, not a column
+  MedicationAdministration.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationAdministration.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationAdministration.supportingInformation: >
+    unconstrained pointer across resource types; no FK target is correct
+  MedicationAdministration.device: Device not modelled; would be a dangling FK
+  MedicationAdministration.eventHistory: >
+    Provenance not modelled; would be a dangling FK
+
+  # --- Notes and protocol -------------------------------------------------
+  MedicationAdministration.instantiates: >
+    protocol conformance is out of scope

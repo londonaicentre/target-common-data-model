@@ -1,13 +1,15 @@
-# Organization - the whitelist of FHIR paths that become fields.
+# Organization
 #
-# Grain: one row per Organization resource. Dimension table - the provider
-# and practice lookup the rest of the model points at.
+# Grain: one row per Organization resource. Dimension table, OMOP `care_site`
+# analogue alongside Location.
 #
-# Scope: enough to resolve an organisation reference to something a human
-# recognises and an analyst can group by. This table exists mainly so that
-# organisation references elsewhere in the CDM stop being dangling FKs.
+# Purpose: who provides care. One row per trust, practice or department,
+# holding the ODS codes other systems key on, the name, and its place in the
+# organisational hierarchy. This is what stops organisation references
+# elsewhere in the model being dangling ids.
 #
-# A path not named below is not in the model (CONVENTIONS.md §7).
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
 
 resource: Organization
 profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Organization
@@ -17,17 +19,19 @@ include:
 
   # --- Identity -----------------------------------------------------------
 
-  # string. ODS organisation code - the national identifier every external
-  # reference dataset keys on, promoted out of the UK Core slice.
+  # Scalar string -> identifier_odsorganisationcode_value, promoted from the
+  # ODS organisation code slice.
+  # OMOP: care_site.care_site_source_value.
   Organization.identifier:odsOrganisationCode.value:
 
-  # string. ODS site code, where the organisation is a site within a trust.
-  # A trust has one org code and many site codes; activity is often reported
-  # by site.
+  # Scalar string -> identifier_odssitecode_value, promoted from the ODS
+  # site code slice. A trust has one org code and many site codes.
+  # OMOP: care_site.care_site_source_value.
   Organization.identifier:odsSiteCode.value:
 
-  # Variant: [{system, value}]. Every identifier, for organisations carrying
-  # local codes alongside the ODS ones.
+  # Variant: [{system, value}] -> identifier. Every identifier, ODS and
+  # local.
+  # OMOP: care_site.care_site_source_value.
   Organization.identifier:
     key: [system, value]
     exclude:
@@ -43,25 +47,28 @@ include:
 
   # --- Description --------------------------------------------------------
 
-  # string. The human-readable name - what turns an ODS code in a report
-  # into something a clinician recognises.
+  # Scalar string -> name. The human-readable organisation name.
+  # OMOP: care_site.care_site_name.
   Organization.name:
 
-  # {system, code, display, is_source} from type[0].coding[0]. Trust vs
-  # practice vs department.
+  # Nested Coding from type[0].coding[0]: {system, code, display, is_source}
+  # -> type_coding. Trust vs practice vs department.
   #
-  # Unbound: UK Core binds `extensible`, but the value set unions the
-  # Genomics and core organisation-type codesets, so it does not expand
-  # offline. ODS codes carry provider identity; `type` is descriptive.
+  # Unbound: `extensible` to a value set unioning the Genomics and core
+  # organisation-type codesets, so it does not expand offline.
+  #
+  # OMOP: care_site.place_of_service_concept_id / place_of_service_source_value.
   Organization.type.coding[0]:
 
-  # boolean.
+  # Scalar boolean -> active.
+  # OMOP: no equivalent.
   Organization.active:
 
   # --- Hierarchy ----------------------------------------------------------
 
-  # string, FK id. Parent organisation - a site within a trust, a practice
-  # within a PCN.
+  # Scalar string FK id -> partof_id. Parent organisation - a site within a
+  # trust, a practice within a PCN.
+  # OMOP: no equivalent; trust/site/PCN structure is lost.
   Organization.partOf:
     fk: Organization
 
@@ -71,29 +78,27 @@ include:
 rejected:
 
   # --- Contact details ----------------------------------------------------
-  Organization.telecom: >
-    switchboard numbers and addresses for correspondence; operational, and
-    better sourced from ODS reference data than from a clinical feed
+  Organization.telecom: limited analytical utility; operational contact route
   Organization.contact: >
-    named contact people at the organisation; operational, and identifying
+    limited analytical utility; named contacts are operational and identifying
   Organization.endpoint: >
-    technical FHIR endpoints for message routing; infrastructure, not data
+    limited analytical utility; message-routing infrastructure
 
   # --- Address ------------------------------------------------------------
   Organization.address: >
-    organisation addresses are reference data maintained nationally in ODS;
-    carrying a per-feed copy invites disagreement with the authoritative
-    source. Join to ODS on the org code instead
+    superseded by ODS reference data, which is the authority; join on the org
+    code instead
 
   # --- Other --------------------------------------------------------------
   Organization.alias: >
-    0..* previous and alternative names; useful for matching, but matching
-    happens upstream in the linkage layer
+    limited analytical utility; name matching belongs to the linkage layer
   Organization.type: >
     NOT whitelisted whole - `type.coding[0]` is named instead, so a second
     organisation type is dropped rather than becoming a variant
   Organization.extension:mainLocation: >
-    Location not modelled; would be a dangling FK
+    Location IS modelled, but the reference is sparsely populated and
+    Location.managingOrganization carries the link in the direction feeds
+    populate it
   Organization.extension:organizationPeriod: >
-    when the organisation was operational; ODS reference data is the
-    authority on organisational lifecycle
+    superseded by ODS reference data, the authority on organisational
+    lifecycle

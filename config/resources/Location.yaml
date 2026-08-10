@@ -1,0 +1,152 @@
+# Location
+#
+# Grain: one row per Location resource. Dimension table, OMOP `care_site`
+# analogue alongside Organization. OMOP's LOCATION table is a postal address
+# record rather than a physical place.
+#
+# Purpose: where care is delivered. One row per physical place - a site, a
+# building, a ward, a bed - holding what kind of place it is, which
+# organisation runs it and where it sits in the site hierarchy.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Location
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Location
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Scalar code.
+  # OMOP: no equivalent.
+  Location.status:
+    bindings:
+      Location.status: default
+
+  # Scalar code. Separates a specific place from a class of place; only
+  # `instance` rows are real places.
+  # OMOP: no equivalent.
+  Location.mode:
+    bindings:
+      Location.mode: default
+
+  # --- Identity -----------------------------------------------------------
+
+  # Scalar string -> identifier_odssitecode_value, promoted from the ODS
+  # site code slice.
+  # OMOP: care_site.care_site_source_value.
+  Location.identifier:odsSiteCode.value:
+
+  # Scalar string -> name. The location name - "Ward 12", "Radiology Dept".
+  # OMOP: care_site.care_site_name.
+  Location.name:
+
+  # --- Classification -----------------------------------------------------
+
+  # Variant: [{coding[]}] of {system, code, display, is_source} -> type.
+  # Ward, clinic, theatre, ICU; 0..* as a location can carry more than one
+  # type.
+  #
+  # Unbound: `extensible` to a SNOMED `is-a` subset, which needs a terminology
+  # server.
+  #
+  # OMOP: care_site.place_of_service_concept_id / place_of_service_source_value.
+  Location.type:
+    key: [coding]
+    exclude:
+      Location.type.text: >
+        rendered term; the coding carries the meaning
+
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> physicaltype. Says which level of the `partof` hierarchy a row sits
+  # at.
+  # OMOP: no equivalent.
+  Location.physicalType:
+    bindings:
+      # Manual: promotes the FHIR `example` location-physical-type list.
+      Location.physicalType.coding.code: LocationPhysicalTypeEnum
+    exclude:
+      Location.physicalType.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Hierarchy and ownership --------------------------------------------
+
+  # Scalar string FK id -> partof_id. The parent location - a bed within a
+  # ward, a ward within a building.
+  # OMOP: no equivalent; CARE_SITE has no hierarchy.
+  Location.partOf:
+    fk: Location
+
+  # Scalar string FK id -> managingorganization_id. The organisation that
+  # runs this location.
+  # OMOP: no equivalent; the owning trust is another care_site row, unlinked.
+  Location.managingOrganization:
+    fk: Organization
+
+  # --- Geography ----------------------------------------------------------
+
+  # Scalar string -> address_postalcode, from address[0]. Site postcode, not
+  # a patient address.
+  # OMOP: location.zip, via care_site.location_id.
+  Location.address.postalCode:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Every identifier, ODS site
+  # code and local.
+  # OMOP: care_site.care_site_source_value.
+  Location.identifier:
+    key: [system, value]
+    exclude:
+      Location.identifier.assigner: >
+        Organization not modelled as the issuer; `system` already namespaces
+        it
+      Location.identifier.period: >
+        identifier validity windows are not populated in practice
+      Location.identifier.type: >
+        redundant with `system`, which already distinguishes an ODS site code
+        from a local id
+      Location.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Address ------------------------------------------------------------
+  Location.address: >
+    NOT whitelisted whole - only `address.postalCode` is named, so the full
+    address does not become an object
+  Location.address.line: superseded by the ODS site code lookup
+  Location.address.city: superseded by postcode-based geography lookup
+  Location.address.district: superseded by postcode-based geography lookup
+  Location.address.country: effectively constant in a UK provider dataset
+
+  # --- Operational status -------------------------------------------------
+  Location.operationalStatus: >
+    not in scope of typical source data; a point-in-time bed state belongs to
+    a live capacity feed rather than a dimension table
+
+  # --- Contact and availability -------------------------------------------
+  Location.telecom: limited analytical utility; operational contact route
+  Location.hoursOfOperation: not in scope of typical source data
+  Location.availabilityExceptions: limited analytical utility; free text
+
+  # --- Description and aliases --------------------------------------------
+  Location.description: >
+    limited analytical utility; free text, and `name` and `type` carry the
+    identity and classification
+  Location.alias: >
+    limited analytical utility; name matching belongs to the linkage layer
+
+  # --- Position -----------------------------------------------------------
+  Location.position: >
+    superseded by ODS reference data for geocoding; postcode carries the
+    catchment signal
+
+  # --- References to unmodelled resources ---------------------------------
+  Location.endpoint: >
+    limited analytical utility; message-routing infrastructure

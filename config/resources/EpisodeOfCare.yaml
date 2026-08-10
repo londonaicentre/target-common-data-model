@@ -1,0 +1,112 @@
+# EpisodeOfCare
+#
+# Grain: one row per EpisodeOfCare resource. Fact table, OMOP
+# `observation_period` analogue - the window a patient was under a
+# provider's care.
+#
+# Purpose: which organisation was responsible for a patient, and when. One
+# row per registration or care episode, holding the practice or trust and
+# the window it covered. This is where GP registration lives: a registration
+# is a period with an organisation, not a Patient attribute, so
+# `Patient.generalPractitioner` is rejected in favour of rows here.
+#
+# Base FHIR R4 - UK Core STU2 ships no EpisodeOfCare profile, so the
+# StructureDefinition resolves from hl7.fhir.r4.core.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: EpisodeOfCare
+profile: http://hl7.org/fhir/StructureDefinition/EpisodeOfCare
+package: hl7.fhir.r4.core
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Scalar code. `active` is the current registration.
+  # OMOP: no equivalent.
+  EpisodeOfCare.status:
+    bindings:
+      EpisodeOfCare.status: default
+
+  # --- Who and where ------------------------------------------------------
+
+  # Scalar string FK id -> patient_id.
+  # OMOP: observation_period.person_id.
+  EpisodeOfCare.patient:
+    fk: Patient
+
+  # Scalar string FK id -> managingorganization_id. The practice or trust
+  # the patient is registered with - the GP practice for a registration
+  # episode.
+  # OMOP: no equivalent.
+  EpisodeOfCare.managingOrganization:
+    fk: Organization
+
+  # --- When ---------------------------------------------------------------
+
+  # Nested Period: {start, end} -> period. Registration start and end; an
+  # open registration has no end.
+  # OMOP: observation_period.observation_period_start_date /
+  # observation_period_end_date.
+  EpisodeOfCare.period:
+
+  # --- Classification -----------------------------------------------------
+
+  # Variant: [{coding[]}] of {system, code, display, is_source} -> type.
+  # What kind of episode - GP registration vs a specialist care episode.
+  # 0..* as an episode can carry more than one type.
+  #
+  # Unbound: `example` to a 5-concept HL7 list that does not carry the NHS
+  # registration types, so `default` cannot reach it and no manifest entry
+  # would match source data.
+  # OMOP: no equivalent.
+  EpisodeOfCare.type:
+    key: [coding]
+    exclude:
+      EpisodeOfCare.type.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Registration number from the
+  # source system.
+  # OMOP: no equivalent.
+  EpisodeOfCare.identifier:
+    key: [system, value]
+    exclude:
+      EpisodeOfCare.identifier.assigner: >
+        Organization already carried by managingOrganization; `system`
+        namespaces the issuer
+      EpisodeOfCare.identifier.period: >
+        identifier validity windows are not populated in practice
+      EpisodeOfCare.identifier.type: >
+        redundant with `system`
+      EpisodeOfCare.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Audit trails -------------------------------------------------------
+  EpisodeOfCare.statusHistory: >
+    limited analytical utility; the current status is what analysis uses and
+    transitions belong to an event model
+
+  # --- Clinical content ---------------------------------------------------
+  EpisodeOfCare.diagnosis: >
+    limited analytical utility; Condition carries the diagnosis with onset
+    and verification status, and Encounter.diagnosis carries the CDS grid
+
+  # --- Care team ----------------------------------------------------------
+  EpisodeOfCare.careManager: Practitioner not modelled; would be a dangling FK
+  EpisodeOfCare.team: CareTeam not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  EpisodeOfCare.referralRequest: >
+    ServiceRequest IS modelled, but the field is 0..* and the referral-to-
+    episode link is not reliably populated
+  EpisodeOfCare.account: billing/finance, out of scope for a clinical CDM

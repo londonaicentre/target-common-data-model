@@ -1,0 +1,159 @@
+# DiagnosticReport
+#
+# Grain: one row per DiagnosticReport resource. Fact table. No OMOP analogue
+# - OMOP holds the individual measurements and discards the report header.
+#
+# Purpose: the report that groups a set of results. One row per report - a
+# biochemistry panel, a radiology report, a microbiology culture - holding
+# what was reported, when, and what the reporter concluded. The individual
+# results are Observations; the join is subject + effective time + category.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: DiagnosticReport
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-DiagnosticReport
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Scalar code.
+  # OMOP: no equivalent.
+  DiagnosticReport.status:
+    bindings:
+      DiagnosticReport.status: default
+
+  # --- What kind of report ------------------------------------------------
+
+  # Variant: [{system, code, display, is_source}] -> code_coding. The panel
+  # or study code. Source coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  #
+  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
+  # terminology server. The vocabulary lives in the mapping layer.
+  # OMOP: no equivalent.
+  DiagnosticReport.code.coding:
+    key: [system, code]
+
+  # Variant: [{coding[]}] of {system, code, display, is_source} -> category.
+  # Biochemistry, haematology, microbiology, radiology; 0..* as a report can
+  # belong to more than one service.
+  #
+  # Deliberately incomplete: a section outside the subset fails
+  # accepted_values rather than resolving.
+  # OMOP: no equivalent.
+  DiagnosticReport.category:
+    key: [coding]
+    bindings:
+      # Manual: CDM subset of HL7 v2-0074, which FHIR binds `example`.
+      DiagnosticReport.category.coding.code: DiagnosticServiceSectionEnum
+    exclude:
+      DiagnosticReport.category.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Who and when -------------------------------------------------------
+
+  # Scalar string FK id -> subject_id.
+  # OMOP: no equivalent.
+  DiagnosticReport.subject:
+    fk: Patient                 # profile allows [Patient, Group, Device,
+                                # Location]
+  # Scalar string FK id -> encounter_id.
+  DiagnosticReport.encounter:
+    fk: Encounter
+
+  # Scalar datetime -> effectivedatetime. When the specimen was taken or the
+  # study performed.
+  # OMOP: no equivalent.
+  DiagnosticReport.effectiveDateTime:
+
+  # Nested Period: {start, end} -> effectiveperiod. Ranged effective time;
+  # both forms of effective[x] are kept.
+  # OMOP: no equivalent.
+  DiagnosticReport.effectivePeriod:
+
+  # Scalar instant -> issued. When the report was released; with
+  # effectiveDateTime this gives the lab turnaround time.
+  # OMOP: no equivalent.
+  DiagnosticReport.issued:
+
+  # --- The conclusion -----------------------------------------------------
+
+  # Scalar string -> conclusion. The reporter's conclusion - the radiology
+  # report body, the microbiologist's comment. Unstructured and frequently
+  # identifying; kept because for imaging and microbiology it carries the
+  # finding.
+  # OMOP: no equivalent.
+  DiagnosticReport.conclusion:
+
+  # Variant: [{coding[]}] of {system, code, display, is_source} ->
+  # conclusioncode. The coded conclusion, where the reporter coded it.
+  #
+  # Unbound: `preferred` to a SNOMED `is-a` subset, which needs a terminology
+  # server.
+  # OMOP: no equivalent.
+  DiagnosticReport.conclusionCode:
+    key: [coding]
+    exclude:
+      DiagnosticReport.conclusionCode.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Variant: [{system, value}] -> identifier. Lab accession or report
+  # number.
+  # OMOP: no equivalent.
+  DiagnosticReport.identifier:
+    key: [system, value]
+    exclude:
+      DiagnosticReport.identifier.assigner: >
+        Organization not modelled; `system` already namespaces the issuer
+      DiagnosticReport.identifier.period: >
+        identifier validity windows are not populated in practice
+      DiagnosticReport.identifier.type: >
+        redundant with `system`
+      DiagnosticReport.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Result linkage -----------------------------------------------------
+  DiagnosticReport.result: >
+    Observation IS modelled, but the field is 0..* and would become a variant
+    of bare ids; the grouping is recoverable from subject, effective time and
+    category
+  DiagnosticReport.specimen: >
+    Specimen IS modelled, but the field is 0..* and would become a variant of
+    bare ids; the accession identifier carries the link
+  DiagnosticReport.imagingStudy: ImagingStudy not modelled; would be a dangling FK
+
+  # --- Attachments and media ----------------------------------------------
+  DiagnosticReport.presentedForm: >
+    Attachment is globally excluded (§1) as a binary payload; `conclusion`
+    carries the text
+  DiagnosticReport.media: Media not modelled; binary payloads
+
+  # --- Care team ----------------------------------------------------------
+  DiagnosticReport.performer: >
+    Practitioner not modelled, and the reference is unconstrained across
+    resource types so no single FK target is correct
+  DiagnosticReport.resultsInterpreter: >
+    Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  DiagnosticReport.basedOn: >
+    ServiceRequest IS modelled, but the field is 0..* and the link is not
+    reliably populated in UK lab feeds
+
+  # --- Extension slices ---------------------------------------------------
+  DiagnosticReport.extension:compositionReferenceR5: >
+    Composition not modelled; would be a dangling FK
+  DiagnosticReport.extension:noteR5: >
+    limited analytical utility; `conclusion` carries the report text
+  DiagnosticReport.extension:supportingInfoR5: >
+    limited analytical utility; a graph rather than a column

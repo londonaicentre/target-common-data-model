@@ -259,3 +259,9 @@ classes:
         annotations:
           fhir_path: Condition.code.coding
           fhir_type: Coding
+      note_text:
+        range: string
+        description: The annotation  - text content (as markdown)
+        annotations:
+          fhir_path: Condition.note.text
+          fhir_type: markdown

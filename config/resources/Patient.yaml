@@ -1,11 +1,14 @@
-# Patient - the whitelist of FHIR paths that become fields.
+# Patient
 #
 # Grain: one row per Patient resource. Dimension table, OMOP `person`
 # analogue.
 #
-# Scope: the join key, the demographics that stratify a cohort, and death.
-# Contact details and third parties are out - operational, and the most
-# identifying content in the resource.
+# Purpose: who the patient is. One row per person, holding the identifiers
+# other tables join on, their name, core demographics and where they live.
+# The record is canonical across contributing systems.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
 
 resource: Patient
 profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Patient
@@ -15,12 +18,12 @@ include:
 
   # --- Identity -----------------------------------------------------------
 
-  # string. NHS number promoted out of the identifier slice - the join key
-  # for the whole model.
+  # Scalar string -> identifier_nhsnumber_value. NHS number promoted out of
+  # the identifier slice.
   Patient.identifier:nhsNumber.value:
 
-  # Variant: [{system, value}]. Every identifier - NHS number plus one local
-  # MRN per contributing trust.
+  # Variant: [{system, value}].
+  # E.g. NHS number plus MRN per contributing system.
   Patient.identifier:
     key: [system, value]
     exclude:
@@ -35,16 +38,12 @@ include:
         not reliably populated across source systems
 
   # --- Name ---------------------------------------------------------------
-  # Carried for linkage QA and clinical validation: a model that cannot show
-  # who a row refers to cannot be audited.
-
-  # string, string. Current name, from name[0]; given[0] is the first
-  # forename.
+  # Scalar strings -> name_family, name_given. Current name, from name[0].
   Patient.name.family:
   Patient.name.given[0]:
 
   # Variant: [{use, family, given[]}].
-  # use distinguishes different names (e.g. maiden)
+  # use distinguishes different names (e.g. maiden)
   Patient.name:
     key: [use, family]
     bindings:
@@ -61,59 +60,43 @@ include:
 
   # --- Demographics -------------------------------------------------------
 
-  # AdministrativeGenderEnum: male | female | other | unknown.
+  # OMOP: person.gender_concept_id / gender_source_value.
   Patient.gender:
     bindings:
       Patient.gender: default
 
   # date.
+  # OMOP: person.birth_datetime
   Patient.birthDate:
 
   # boolean, datetime. Both forms of deceased[x] are kept.
+  # OMOP: death.death_date
   Patient.deceasedBoolean:
   Patient.deceasedDateTime:
 
-  # {coding[]} of {system, code, display, is_source}. England codeset, not
-  # the UK-wide value set UK Core binds.
-  Patient.maritalStatus:
-    bindings:
-      Patient.maritalStatus.coding.code: MaritalStatusEnum
-    exclude:
-      Patient.maritalStatus.text: >
-        rendered term; the coding carries the meaning
-
   # --- Geography ----------------------------------------------------------
 
-  # string. Postcode of the current address, from address[0]. Carries the
-  # deprivation signal; the identifying lines are not whitelisted.
+  # Scalar string -> address_postalcode. Postcode of the current address,
+  # from address[0].
+  # OMOP: location.zip, reached via person.location_id.
   Patient.address.postalCode:
-
-  # --- Organisations ------------------------------------------------------
-
-  # [string] of FK ids. Registered GP practices - 0..*, so this is an array
-  # rather than a scalar. The profile also allows Practitioner and
-  # PractitionerRole; a feed writing one of those fails the referential
-  # integrity test rather than resolving.
-  Patient.generalPractitioner:
-    fk: Organization
-
-  # string, FK id. The trust whose PAS the row came from.
-  Patient.managingOrganization:
-    fk: Organization
 
   # --- Extension slices ---------------------------------------------------
 
-  # {coding[]} of {system, code, display, is_source}. Ethnicity, England
-  # codeset rather than the UK-wide value set UK Core binds.
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> extension_ethniccategory.
+  # OMOP: person.ethnicity_concept_id / ethnicity_source_value.
   Patient.extension:ethnicCategory:
     bindings:
+      # Manual: England codeset; FHIR binds the UK-wide union.
       Patient.extension:ethnicCategory.coding.code: EthnicCategoryEnum
     exclude:
       Patient.extension:ethnicCategory.text: >
         rendered term; the coding carries the meaning
 
-  # {coding[]} of {system, code, display, is_source}. Formal (2) / informal
-  # (1) / removed (U) - how far the deceased flag can be trusted.
+  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
+  # -> extension_deathnotificationstatus_extension_deathnotificationstatus.
+  # OMOP: nearest is death.death_type_concept_id
   Patient.extension:deathNotificationStatus.extension:deathNotificationStatus:
     bindings:
       Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.code: default
@@ -149,6 +132,19 @@ rejected:
   Patient.address.country: effectively constant in a UK provider dataset
   Patient.address.extension:addressKey: >
     PAF/UPRN key - identifying, and redundant once postcode is kept
+
+  # --- Organisations ------------------------------------------------------
+  Patient.generalPractitioner: >
+    GP registration is a period, not a patient attribute; it lives on the
+    EpisodeOfCare table
+  Patient.managingOrganization: >
+    the patient record is canonical across contributing systems, so a single
+    owning organisation is not meaningful
+
+  # --- Demographics -------------------------------------------------------
+  Patient.maritalStatus: >
+    not in scope of typical source data; OMOP carries it as an observation
+    row rather than a person attribute
 
   # --- Multiple birth -----------------------------------------------------
   Patient.multipleBirthBoolean: >
