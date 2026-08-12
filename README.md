@@ -55,7 +55,11 @@ In the current repo, dbt model contracts and seed lookups are generated from the
 
 The contract generator reads `cdm/` through the LinkML `SchemaView` API rather than parsing the YAML.
 
-Generated files carry a "do not edit" banner. To change them, edit the config and regenerate. New resources are picked up automatically.
+## ERD
+
+`scripts/generate_erd.py` renders the model as an entity-relationship diagram, for reviewing the shape of the CDM while iterating on configs. It reads `cdm/` through `SchemaView`, the same as the contract generator, and emits `docs/erd.dbml`.
+
+Paste that file into [dbdiagram.io](https://dbdiagram.io) to render it. It is [DBML](https://dbml.dbdiagram.io/docs/), which carries every column with its `fhir_path`, `fhir_type` and `value_set` as a note, and the enums from `cdm/enums.yaml` as first-class objects, so a bound column links through to its permissible values.
 
 ## How to...
 
@@ -69,6 +73,7 @@ uv run scripts/expand_fhir.py        # stage 1 -> build/
 uv run scripts/generate_linkml.py    # stage 2 -> cdm/
 uv run scripts/generate_dbt_seeds.py # -> dbt_metadata/seeds/mapping/
 uv run scripts/generate_dbt_yaml.py  # -> dbt_metadata/models/gold/
+uv run scripts/generate_erd.py       # -> docs/
 ```
 
 ### Add a new resource
@@ -96,4 +101,4 @@ uvx --with linkml linkml lint cdm --all --ignore-warnings
 
 ### Regenerate everything
 
-Run the four commands under [Getting started](#getting-started) in order.
+Run the five commands under [Getting started](#getting-started) in order.

@@ -23,6 +23,7 @@ jobs:
           uv run scripts/generate_linkml.py
           uv run scripts/generate_dbt_seeds.py
           uv run scripts/generate_dbt_yaml.py
+          uv run scripts/generate_erd.py
 
       - name: Lint the generated schemas
         run: uvx --with linkml linkml lint cdm --all --ignore-warnings
