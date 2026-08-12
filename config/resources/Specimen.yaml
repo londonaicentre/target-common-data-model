@@ -76,6 +76,9 @@ include:
     exclude:
       Specimen.collection.bodySite.text: >
         rendered term; the coding carries the meaning
+      Specimen.collection.bodySite.extension:bodySiteReference: >
+        Reference to BodyStructure, which the CDM does not model; the coding
+        carries the site
 
   # --- Variants -----------------------------------------------------------
 

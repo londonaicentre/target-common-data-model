@@ -102,14 +102,6 @@ classes:
     annotations:
       fhir_path: Specimen.collection.bodySite
     attributes:
-      extension_bodysitereference_id:
-        range: string
-        required: true
-        description: Reference to BodyStructure
-        annotations:
-          fhir_path: Specimen.collection.bodySite.extension:bodySiteReference
-          fhir_type: Reference
-          fk_target: BodyStructure
       coding:
         range: SpecimenCollectionBodySiteCoding
         multivalued: true
