@@ -1,3 +1,9 @@
+## TO DO
+# 1. Add Encounters with FK references (as list)
+# 2. ?FK to organisation via booking organisation
+# 3. Remove minutesduration
+# 4. Remove extension_deliverychannel
+#
 # Appointment
 #
 # Grain: one row per Appointment resource. Fact table. No OMOP analogue -

@@ -1,4 +1,8 @@
-# MedicationStatement
+## TO DO
+# 1. Remove extension medication statement last issue date
+# 2. Drop sequence from dosage
+#
+# # MedicationStatement
 #
 # Grain: one row per MedicationStatement resource. Fact table, OMOP
 # `drug_exposure` analogue (the asserted half). OMOP folds prescribing,

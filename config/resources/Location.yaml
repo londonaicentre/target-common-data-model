@@ -1,4 +1,10 @@
-# Location
+## TO DO
+# 1. Remove conclusioncode
+# 2. Remove effectiveperiod
+# 3. Remove code_coding
+# 4. Add FK to imagingstudy and observation
+#
+# # Location
 #
 # Grain: one row per Location resource. Dimension table, OMOP `care_site`
 # analogue alongside Organization. OMOP's LOCATION table is a postal address

@@ -1,4 +1,7 @@
-# EpisodeOfCare
+## TO DO
+# All good!!
+#
+# # EpisodeOfCare
 #
 # Grain: one row per EpisodeOfCare resource. Fact table, OMOP
 # `observation_period` analogue - the window a patient was under a

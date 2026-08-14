@@ -1,3 +1,9 @@
+## TO DO
+# 1. Remove conclusioncode
+# 2. Remove effectiveperiod
+# 3. Remove code_coding
+# 4. Add FK to imagingstudy and observation
+#
 # DiagnosticReport
 #
 # Grain: one row per DiagnosticReport resource. Fact table. No OMOP analogue

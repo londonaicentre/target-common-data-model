@@ -1,4 +1,12 @@
-# MedicationRequest
+## TO DO
+# 1. Remove intent
+# 2. Remove priority
+# 3. Remove do not perform
+# 4. Remove MedicationRequest.courseOfTherapyType
+# 5. Remove validity period
+# 6. Remove number of repeats allowed
+#
+# # MedicationRequest
 #
 # Grain: one row per MedicationRequest resource. Fact table, OMOP
 # `drug_exposure` analogue (the prescribing half). OMOP folds prescribing,

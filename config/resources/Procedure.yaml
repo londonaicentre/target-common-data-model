@@ -1,4 +1,5 @@
 # Procedure
+# All good
 #
 # Grain: one row per Procedure resource. Fact table, OMOP
 # `procedure_occurrence` analogue.

@@ -1,3 +1,9 @@
+## TO DO
+# 1. Remove dataabsentreason
+# 2. Remove interpretation_coding
+# 3. Add Specimen FK
+# 3. Keep component for now, but unlikely to be using in short term...
+#
 # Observation
 #
 # Grain: one row per Observation resource. Fact table, OMOP `measurement` /

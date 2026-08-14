@@ -1,4 +1,8 @@
-# Encounter
+## TO DO
+# 1. Add Appointments with FK references (as list)
+# 2. Add Location with FK references (as list)
+#
+# # Encounter
 #
 # Grain: one row per Encounter resource. Fact table, OMOP `visit_occurrence`
 # analogue.

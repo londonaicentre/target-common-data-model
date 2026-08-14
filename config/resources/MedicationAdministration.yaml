@@ -1,4 +1,9 @@
-# MedicationAdministration
+## TO DO
+# 1. INCLUDE dosage rate quantity and dosage rate ratio, keep as variants
+# 2. INCLUDE partof to future proof
+#
+#
+# Prescirbing AND administration
 #
 # Grain: one row per MedicationAdministration resource. Fact table, OMOP
 # `drug_exposure` analogue (the administration half). OMOP folds

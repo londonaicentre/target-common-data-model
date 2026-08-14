@@ -1,3 +1,9 @@
+## TO DO
+# 1. include address as variant with use, line, city, postal code,
+# # country, period {start, end}, key {variant - uprns mainly}
+# 2. keep address_postalcode
+# 3. remove deathnotification status
+#
 # Patient
 #
 # Grain: one row per Patient resource. Dimension table, OMOP `person`

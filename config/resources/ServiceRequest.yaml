@@ -1,4 +1,9 @@
-# ServiceRequest
+## TO DO
+# 1. Remove intent
+# 2. Remove priority
+# 3. Remove donotperform
+#
+#  ServiceRequest
 #
 # Grain: one row per ServiceRequest resource. Fact table. No OMOP analogue -
 # OMOP models what happened rather than what was asked for.
