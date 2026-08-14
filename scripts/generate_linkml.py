@@ -77,6 +77,12 @@ ENUMS_PATH = OUTPUT_DIR / "enums.yaml"
 
 SCHEMA_BASE_URI = "https://cdm.aicentre.co.uk"
 
+# `linkml:types` is a CURIE, so the `linkml` prefix has to be declared for the
+# schema to resolve outside SchemaView (which tolerates the omission, while the
+# generators and validator do not). `default_prefix` names the schema's own
+# element URIs.
+SCHEMA_PREFIXES = {"linkml": "https://w3id.org/linkml/", "cdm": f"{SCHEMA_BASE_URI}/"}
+
 # The literal a config writes to take the FHIR binding recorded for a field.
 DEFAULT_BINDING = "default"
 
@@ -525,6 +531,7 @@ class Slot:
     binding: BindingInfo | None = None
     fk_target: str | None = None
     inlined_class: str | None = None
+    identifier: bool = False
 
 
 @dataclass
@@ -755,7 +762,9 @@ class ClassBuilder:
             cls.slots.append(
                 Slot(
                     name=f"{cname}_id",
-                    range="string",
+                    range=(
+                        target if target in self._resolver.modelled else "string"
+                    ),
                     fhir_path=cpath,
                     fhir_type="Reference",
                     required=bool(child.get("min")),
@@ -829,12 +838,17 @@ class Resolver:
         bindings: BindingResolver,
         *,
         strict: bool = True,
+        modelled: frozenset[str] = frozenset(),
     ):
         self.tree = tree
         self.cfg = cfg
         self.bindings = bindings
         self.resource = tree.resource
         self.strict = strict
+        # Resources the CDM models, i.e. those with a config. A Reference to
+        # one of these gets that class as its range (§10); a Reference to
+        # anything else stays a bare string, as there is no class to point at.
+        self.modelled = modelled
         self.warnings: list[str] = []
         self.classes = ClassBuilder(self)
 
@@ -868,8 +882,8 @@ class Resolver:
                 range="string",
                 fhir_path=f"{self.resource}.id",
                 fhir_type="id",
-                required=True,
-                description="Logical id of this resource. Primary key.",
+                identifier=True,
+                description="Logical id of this resource.",
             )
         )
         schema.slots.append(
@@ -948,12 +962,14 @@ class Resolver:
         fhir_type = el["fhir_type"]
         required = bool(el.get("min")) and not self.tree.repeating_ancestors(path)
 
-        # §2. A Reference is a scalar `_id` foreign key.
+        # §2. A Reference is a scalar `_id` foreign key. Where the target is
+        # known and modelled, the range IS the target class - LinkML's native
+        # reference, serialised as the target's identifier (§10).
         if fhir_type == "Reference":
             target = spec.fk_for(path) or self._sole_target(el)
             slot = Slot(
                 name=f"{name}_id",
-                range="string",
+                range=target if target in self.modelled else "string",
                 fhir_path=path,
                 fhir_type="Reference",
                 required=required,
@@ -1037,7 +1053,7 @@ class Resolver:
             schema.slots.append(
                 Slot(
                     name=f"{name}_id",
-                    range="string",
+                    range=target if target in self.modelled else "string",
                     fhir_path=path,
                     fhir_type="Reference",
                     multivalued=True,
@@ -1100,11 +1116,21 @@ class Resolver:
 
 def render_slot(slot: Slot) -> dict[str, Any]:
     out: dict[str, Any] = {"range": slot.range}
-    if slot.required:
+    if slot.identifier:
+        # §3. `identifier` implies required and globally unique, so `required`
+        # is not written alongside it.
+        out["identifier"] = True
+    elif slot.required:
         out["required"] = True
     if slot.multivalued:
         out["multivalued"] = True
+    if slot.multivalued and slot.inlined_class:
+        # An array of objects is carried inline; an array of references is not.
         out["inlined_as_list"] = True
+    if slot.fk_target and slot.range == slot.fk_target:
+        # §10. The range is the target class, so the slot is a reference,
+        # serialised as that class's identifier rather than an inlined object.
+        out["inlined"] = False
     if slot.description:
         out["description"] = slot.description
 
@@ -1123,6 +1149,14 @@ def render_slot(slot: Slot) -> dict[str, Any]:
 
 def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
     resource = schema.resource
+    # Derived from the slots actually emitted rather than from the declared
+    # fk targets: only a reference whose range became the target class needs
+    # that class in scope, and a target the CDM does not model never does.
+    referenced = {
+        s.range
+        for s in schema.slots + [s for c in schema.classes for s in c.slots]
+        if s.fk_target and s.range == s.fk_target and s.range != resource
+    }
     doc: dict[str, Any] = {
         "id": f"{SCHEMA_BASE_URI}/{resource.lower()}",
         "name": resource.lower(),
@@ -1135,7 +1169,14 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
             "generated_from": schema.profile,
             "profile_version": schema.profile_version,
         },
-        "imports": ["linkml:types", "enums"],
+        "prefixes": dict(SCHEMA_PREFIXES),
+        "default_prefix": "cdm",
+        # §10. A reference slot's range is the target class, which has to be
+        # in scope, so each FK target's schema is imported. LinkML permits the
+        # mutual imports this produces (Encounter <-> Patient, and the
+        # self-import a self-reference such as Encounter.partOf would ask for,
+        # which is dropped as a schema cannot import itself).
+        "imports": ["linkml:types", "enums"] + sorted(t.lower() for t in referenced),
         "default_range": "string",
     }
 
@@ -1155,10 +1196,9 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
 
     main: dict[str, Any] = {
         "description": schema.description or f"One row per {resource} resource.",
-        "annotations": {
-            "fhir_path": resource,
-            "primary_key": "id",
-        },
+        # The PK is declared on the `id` slot itself as `identifier: true`
+        # (§3), so no annotation restates it here.
+        "annotations": {"fhir_path": resource},
         "attributes": {s.name: render_slot(s) for s in schema.slots},
     }
     classes[resource] = main
@@ -1248,6 +1288,8 @@ def render_enums(
             "manifest and the offline expansion of bound FHIR value sets; "
             "contains only the enums the resource schemas reference."
         ),
+        "prefixes": dict(SCHEMA_PREFIXES),
+        "default_prefix": "cdm",
         "imports": ["linkml:types"],
         "enums": enums,
     }
@@ -1348,6 +1390,11 @@ def main() -> None:
     exit_code = 0
     written: list[str] = []
 
+    # Every configured resource, regardless of --resource: a Reference target
+    # is modelled if a config exists for it, which does not depend on which
+    # resource is being generated in this run.
+    modelled = frozenset(n for n, _, _ in configured_resources(None))
+
     for name, cfg_path, cfg in configured_resources(args.resource):
         expanded_path = EXPANDED_DIR / f"{name}.yaml"
         if not expanded_path.exists():
@@ -1363,7 +1410,11 @@ def main() -> None:
         elements = prune(doc.get("elements") or [], name, rules)
         tree = ElementTree(name, elements)
         resolver = Resolver(
-            tree, cfg, resolver_bindings, strict=not args.keep_going
+            tree,
+            cfg,
+            resolver_bindings,
+            strict=not args.keep_going,
+            modelled=modelled,
         )
 
         try:

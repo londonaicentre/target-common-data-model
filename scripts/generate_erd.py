@@ -79,12 +79,16 @@ def nested_classes(sv: SchemaView, defined: list[str]) -> set[str]:
     `period {start, end}`, at any depth: a Coding sitting inside a variant is
     itself reached from that variant, so it is caught too. What remains is the
     resource table - the one class nothing points at.
+
+    A reference (§10) is excluded: its range is the target class, but it holds
+    that class's identifier rather than nesting it, so the target is a table in
+    its own right and not structure belonging to this one.
     """
     classes = set(sv.all_classes())
     out = set()
     for cn in defined:
         for slot in sv.class_induced_slots(cn):
-            if slot.range in classes:
+            if slot.range in classes and slot.inlined is not False:
                 out.add(slot.range)
     return out
 
@@ -113,10 +117,15 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
         slot = sv.induced_slot(slot_name, cls_name)
         rng = slot.range or "string"
         is_variant = slot.multivalued and (slot.inlined or slot.inlined_as_list) and rng in classes
+        # §10. A reference holds the target's id, so it is a scalar column
+        # here, not the target's structure inlined.
+        is_reference = rng in classes and slot.inlined is False
         fk_target = ann(slot, "fk_target")
 
         if is_variant:
             data_type = "variant"
+        elif is_reference:
+            data_type = "array" if slot.multivalued else "varchar"
         elif rng in enums:
             data_type = rng            # a DBML enum object, linked from the column
         elif rng in classes:
@@ -142,6 +151,8 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
             notes.append(one_line(slot.description))
         if is_variant:
             notes.append(variant_note(sv, rng))
+        elif is_reference:
+            pass                       # the Ref line carries the target
         elif rng in classes:
             fields = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
             notes.append(f"{rng} {{{', '.join(fields)}}}")
