@@ -1,18 +1,7 @@
-## TO DO
-# 1. Remove conclusioncode
-# 2. Remove effectiveperiod
-# 3. Remove code_coding
-# 4. Add FK to imagingstudy and observation
+# Location
 #
-# # Location
-#
-# Grain: one row per Location resource. Dimension table, OMOP `care_site`
-# analogue alongside Organization. OMOP's LOCATION table is a postal address
-# record rather than a physical place.
-#
-# Purpose: where care is delivered. One row per physical place - a site, a
-# building, a ward, a bed - holding what kind of place it is, which
-# organisation runs it and where it sits in the site hierarchy.
+# Purpose: where care is delivered. One row per physical place.
+# Could be a site, a building, a ward, a bed
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -25,53 +14,41 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Whether the location is still in use.
+  # status  string (enum LocationStatusEnum)
   Location.status:
     bindings:
       Location.status: default
 
-  # Scalar code. Separates a specific place from a class of place; only
-  # `instance` rows are real places.
-  # OMOP: no equivalent.
-  Location.mode:
-    bindings:
-      Location.mode: default
-
   # --- Identity -----------------------------------------------------------
 
-  # Scalar string -> identifier_odssitecode_value, promoted from the ODS
-  # site code slice.
-  # OMOP: care_site.care_site_source_value.
+  # The ODS site code, promoted out of the identifier slice.
+  # identifier_odssitecode_value  string
   Location.identifier:odsSiteCode.value:
 
-  # Scalar string -> name. The location name - "Ward 12", "Radiology Dept".
-  # OMOP: care_site.care_site_name.
+  # The location name - "Ward 12", "Radiology Dept".
+  # name  string
   Location.name:
 
   # --- Classification -----------------------------------------------------
 
-  # Variant: [{coding[]}] of {system, code, display, is_source} -> type.
-  # Ward, clinic, theatre, ICU; 0..* as a location can carry more than one
+  # E.g. inpatient ward, theatre, ICU; 0..* as a can carry more than one
   # type.
-  #
-  # Unbound: `extensible` to a SNOMED `is-a` subset, which needs a terminology
-  # server.
-  #
-  # OMOP: care_site.place_of_service_concept_id / place_of_service_source_value.
+  # type  array [ { coding: [ {system: string, code: string,
+  #                            display: string, is_source: boolean} ] } ]
   Location.type:
     key: [coding]
     exclude:
       Location.type.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> physicaltype. Says which level of the `partof` hierarchy a row sits
-  # at.
-  # OMOP: no equivalent.
+  # Which level of hierarchy the location sits at (e.g. ward, site)
+  # physicaltype  struct { coding: [ {system: string, code: string
+  #                                   (enum LocationPhysicalTypeEnum),
+  #                                   display: string,
+  #                                   is_source: boolean} ] }
   Location.physicalType:
     bindings:
-      # Manual: promotes the FHIR `example` location-physical-type list.
       Location.physicalType.coding.code: LocationPhysicalTypeEnum
     exclude:
       Location.physicalType.text: >
@@ -79,30 +56,20 @@ include:
 
   # --- Hierarchy and ownership --------------------------------------------
 
-  # Scalar string FK id -> partof_id. The parent location - a bed within a
-  # ward, a ward within a building.
-  # OMOP: no equivalent; CARE_SITE has no hierarchy.
+  # The parent location - a bed within a ward, a ward within a building.
+  # partof_id  string (FK -> Location.id)
   Location.partOf:
     fk: Location
 
-  # Scalar string FK id -> managingorganization_id. The organisation that
-  # runs this location.
-  # OMOP: no equivalent; the owning trust is another care_site row, unlinked.
+  # The organisation that runs this location.
+  # managingorganization_id  string (FK -> Organization.id)
   Location.managingOrganization:
     fk: Organization
 
-  # --- Geography ----------------------------------------------------------
-
-  # Scalar string -> address_postalcode, from address[0]. Site postcode, not
-  # a patient address.
-  # OMOP: location.zip, via care_site.location_id.
-  Location.address.postalCode:
-
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Every identifier, ODS site
-  # code and local.
-  # OMOP: care_site.care_site_source_value.
+  # Every identifier, ODS site code and local.
+  # identifier  array [ {system: string, value: string} ]
   Location.identifier:
     key: [system, value]
     exclude:
@@ -122,10 +89,20 @@ include:
 # ===========================================================================
 rejected:
 
+  # --- Status -------------------------------------------------------------
+  Location.mode: >
+    limited analytical utility; separates a specific place from a class of
+    place, and a provider feed carries `instance` rows almost exclusively,
+    so the field is near-constant
+
   # --- Address ------------------------------------------------------------
   Location.address: >
-    NOT whitelisted whole - only `address.postalCode` is named, so the full
-    address does not become an object
+    superseded by the ODS site code lookup - `identifier_odssitecode_value`
+    keys into ODS reference data, which carries the site address and its
+    derived geography
+  Location.address.postalCode: >
+    superseded by the ODS site code lookup, as above; a site postcode held
+    here would duplicate reference data and drift from it
   Location.address.line: superseded by the ODS site code lookup
   Location.address.city: superseded by postcode-based geography lookup
   Location.address.district: superseded by postcode-based geography lookup

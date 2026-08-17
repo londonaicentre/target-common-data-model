@@ -1,10 +1,4 @@
-## TO DO
-# All good!
-#
 # Condition
-#
-# Grain: one row per Condition resource. Fact table, OMOP
-# `condition_occurrence` analogue.
 #
 # Purpose: what a patient has been diagnosed with. One row per recorded
 # diagnosis or problem, holding the code, when it started and stopped, and
@@ -21,34 +15,33 @@ include:
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: condition_occurrence.person_id.
+  # The Patient the condition belongs to.
+  # subject_id  string (FK -> Patient.id)
   Condition.subject:
     fk: Patient                 # profile allows [Patient, Group]
-  # Scalar string FK id -> encounter_id.
-  # OMOP: condition_occurrence.visit_occurrence_id.
+
+  # The Encounter the condition was recorded during.
+  # encounter_id  string (FK -> Encounter.id)
   Condition.encounter:
     fk: Encounter
 
-  # Scalar datetimes -> onsetdatetime, abatementdatetime. Only the dateTime
-  # forms of the choice types are taken.
-  # OMOP: condition_occurrence.condition_start_datetime.
+  # When the condition began, and when it resolved.
+  # onsetdatetime      timestamp
+  # abatementdatetime  timestamp
   Condition.onsetDateTime:
-  # OMOP: condition_occurrence.condition_end_datetime.
   Condition.abatementDateTime:
 
-  # Scalar datetime -> recordeddate. When the condition was entered, as
-  # distinct from when it began.
-  # OMOP: no equivalent - no record date distinct from onset.
+  # When the condition was entered, may be distinct from when it began.
+  # recordeddate  timestamp
   Condition.recordedDate:
 
   # --- Status -------------------------------------------------------------
-  # Together these decide whether a coded condition counts towards a cohort:
-  # an entered-in-error or refuted row is not a diagnosis.
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> clinicalstatus.
-  # OMOP: no equivalent.
+  # Whether the condition is active or resolved.
+  # clinicalstatus  struct { coding: [ {system: string, code: string
+  #                                     (enum ConditionClinicalEnum),
+  #                                     display: string,
+  #                                     is_source: boolean} ] }
   Condition.clinicalStatus:
     bindings:
       Condition.clinicalStatus.coding.code: default
@@ -56,9 +49,11 @@ include:
       Condition.clinicalStatus.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> verificationstatus.
-  # OMOP: condition_occurrence.condition_status_concept_id.
+  # How far the diagnosis can be trusted.
+  # verificationstatus  struct { coding: [ {system: string, code: string
+  #                                         (enum ConditionVerStatusEnum),
+  #                                         display: string,
+  #                                         is_source: boolean} ] }
   Condition.verificationStatus:
     bindings:
       Condition.verificationStatus.coding.code: default
@@ -68,34 +63,28 @@ include:
 
   # --- Category -----------------------------------------------------------
 
-  # Nested Coding from category[0].coding[0]: {system, code, display,
-  # is_source} -> category_coding. Problem-list entry vs encounter diagnosis.
-  # OMOP: condition_occurrence.condition_type_concept_id (record provenance).
+  # Category, e.g. problem-list entry vs encounter diagnosis.
+  # category_coding  struct {system: string, code: string
+  #                          (enum ConditionCategoryEnum), display: string,
+  #                          is_source: boolean}
   Condition.category.coding[0]:
     bindings:
       # Manual: unions UK Core and FHIR core, so it spans two code systems.
       Condition.category.coding.code: ConditionCategoryEnum
 
-  # --- The code that identifies the row -----------------------------------
+  # --- The fact -----------------------------------
 
-  # Variant: [{system, code, display, is_source}] -> code_coding. Source
-  # SNOMED coding plus standard-vocabulary codings added downstream;
-  # `is_source` true on the original.
-  #
-  # Unbound: UK Core binds `preferred` to a SNOMED `is-a` subset, which needs
-  # a terminology server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes condition_occurrence.condition_concept_id /
-  # condition_source_value / condition_source_concept_id - the variant holds
-  # every mapped vocabulary as rows, not just one standard concept.
+  # What the condition is. Source coding plus other mappings
+  # added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
   Condition.code.coding:
     key: [system, code]
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   Condition.note[0].text:
 
 # ===========================================================================

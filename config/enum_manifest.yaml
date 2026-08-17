@@ -53,17 +53,17 @@ enums:
     description: "v3 ActEncounterCode - encounter class."
     source: manual
     values:
-      - { code: AMB, display: "Ambulatory" }
-      - { code: EMER, display: "Emergency" }
-      - { code: FLD, display: "Field" }
-      - { code: HH, display: "Home health" }
-      - { code: IMP, display: "Inpatient encounter" }
-      - { code: ACUTE, display: "Inpatient acute" }
-      - { code: NONAC, display: "Inpatient non-acute" }
-      - { code: OBSENC, display: "Observation encounter" }
-      - { code: PRENC, display: "Pre-admission" }
-      - { code: SS, display: "Short stay" }
-      - { code: VR, display: "Virtual" }
+      - { code: AMB, display: "ambulatory" }
+      - { code: EMER, display: "emergency" }
+      - { code: FLD, display: "field" }
+      - { code: HH, display: "home health" }
+      - { code: IMP, display: "inpatient encounter" }
+      - { code: ACUTE, display: "inpatient acute" }
+      - { code: NONAC, display: "inpatient non-acute" }
+      - { code: OBSENC, display: "observation encounter" }
+      - { code: PRENC, display: "pre-admission" }
+      - { code: SS, display: "short stay" }
+      - { code: VR, display: "virtual" }
 
   AdmissionMethodEnum:
     description: "NHS England admission method codes (UKCore-AdmissionMethodEngland)."
@@ -102,9 +102,9 @@ enums:
       - { code: AD, display: "Admission diagnosis" }
       - { code: DD, display: "Discharge diagnosis" }
       - { code: CC, display: "Chief complaint" }
-      - { code: CM, display: "Co-morbidity diagnosis" }
-      - { code: pre-op, display: "Pre-op diagnosis" }
-      - { code: post-op, display: "Post-op diagnosis" }
+      - { code: CM, display: "Comorbidity diagnosis" }
+      - { code: pre-op, display: "pre-op diagnosis" }
+      - { code: post-op, display: "post-op diagnosis" }
       - { code: billing, display: "Billing" }
 
   # ---------------------------------------------------------------------------
@@ -112,20 +112,26 @@ enums:
   # ---------------------------------------------------------------------------
 
   ConditionCategoryEnum:
-    description: "Condition category (UKCore-ConditionCategory + FHIR core condition-category)."
+    description: >-
+      Condition category. A UNION across two code systems, which is why it
+      cannot be derived: `problem-list-item` and `encounter-diagnosis` come
+      from http://terminology.hl7.org/CodeSystem/condition-category, and
+      `presenting-complaint` and `co-morbidity` from
+      https://fhir.hl7.org.uk/CodeSystem/UKCore-ConditionCategory. Codes and
+      displays are verbatim from those systems.
     source: manual
     values:
-      - { code: problem-list-item, display: "Problem list item" }
-      - { code: encounter-diagnosis, display: "Encounter diagnosis" }
-      - { code: presenting-complaint, display: "Presenting complaint" }
+      - { code: problem-list-item, display: "Problem List Item" }
+      - { code: encounter-diagnosis, display: "Encounter Diagnosis" }
+      - { code: presenting-complaint, display: "Presenting Complaint" }
       - { code: co-morbidity, display: "Co-morbidity" }
 
   ObservationCategoryEnum:
     description: "Observation category (HL7 FHIR observation-category)."
     source: manual
     values:
-      - { code: social-history, display: "Social history" }
-      - { code: vital-signs, display: "Vital signs" }
+      - { code: social-history, display: "Social History" }
+      - { code: vital-signs, display: "Vital Signs" }
       - { code: imaging, display: "Imaging" }
       - { code: laboratory, display: "Laboratory" }
       - { code: procedure, display: "Procedure" }
@@ -191,23 +197,49 @@ enums:
       - { code: CHECKUP, display: "A routine check-up, such as an annual physical" }
       - { code: FOLLOWUP, display: "A follow up visit from a previous appointment" }
       - { code: EMERGENCY, display: "Emergency appointment" }
-      - { code: urgent-follow-up, display: "Urgent follow-up (UK Core)" }
+      # From UKCore-AppointmentReasonCode; the other five are v2-0276.
+      - { code: urgent-follow-up, display: "Urgent follow-up" }
 
   AppointmentCancellationReasonEnum:
-    description: "CDM-defined cancellation reason. Attributes a cancellation to the patient or the provider - the DNA-vs-cancellation breakdown. The FHIR CodeSystem is marked incomplete, so this cannot be derived."
+    description: >-
+      Cancellation reason - the axis that separates a patient DNA from a
+      provider-side cancellation. A CDM-chosen SUBSET of
+      http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason,
+      which FHIR binds `example` and which `default` therefore cannot reach.
+
+      Codes and displays are taken VERBATIM from that code system. It is
+      marked `content: example` but ships all 32 concepts, so the subset is a
+      modelling choice rather than a gap in the packages - the parent codes
+      (pat, prov, other) plus the child reasons that UK PAS systems actually
+      populate. Deliberately INCOMPLETE: a cancellation using a reason outside
+      this list fails its accepted_values test rather than resolving.
+
+      The 21 omitted children are mostly US-centric (oth-cms CMS therapy cap,
+      pat-mt member terminated, prov-mri MRI screening form) or too granular
+      for a UK feed; widen the list if a source populates them.
     source: manual
     values:
-      - { code: pat, display: "Patient cancelled" }
-      - { code: pat-crs, display: "Patient: canceled via received schedule" }
-      - { code: pat-cpp, display: "Patient: change in patient priority" }
-      - { code: pat-dec, display: "Patient: deceased" }
-      - { code: pat-mv, display: "Patient: moved" }
-      - { code: prov, display: "Provider cancelled" }
-      - { code: prov-pat-dec, display: "Provider: patient deceased" }
-      - { code: prov-esc, display: "Provider: escalation of care" }
-      - { code: maint, display: "Equipment maintenance or repair" }
-      - { code: meds-inc, display: "Prep or meds incomplete" }
+      # --- Patient-side ---------------------------------------------------
+      - { code: pat, display: "Patient" }
+      - { code: pat-crs, display: "Patient: Canceled via automated reminder system" }
+      - { code: pat-cpp, display: "Patient: Canceled via Patient Portal" }
+      - { code: pat-dec, display: "Patient: Deceased" }
+      - { code: pat-fb, display: "Patient: Feeling Better" }
+      - { code: pat-lt, display: "Patient: Lack of Transportation" }
+      - { code: pat-mv, display: "Patient: Moved" }
+      - { code: pat-ucp, display: "Patient: Unhappy/Changed Provider" }
+      # --- Provider-side --------------------------------------------------
+      - { code: prov, display: "Provider" }
+      - { code: prov-dch, display: "Provider: Discharged" }
+      - { code: prov-hosp, display: "Provider: Hospitalized" }
+      - { code: prov-pers, display: "Provider: Personal" }
+      # --- Service-side ---------------------------------------------------
+      - { code: maint, display: "Equipment Maintenance/Repair" }
+      - { code: meds-inc, display: "Prep/Med Incomplete" }
       - { code: other, display: "Other" }
+      - { code: oth-err, display: "Other: Error" }
+      - { code: oth-room, display: "Other: Room/Resource Maintenance" }
+      - { code: oth-weath, display: "Other: Weather" }
 
   # ---------------------------------------------------------------------------
   # DiagnosticReport
@@ -253,6 +285,89 @@ enums:
       - { code: OTH, display: "Other" }
 
   # ---------------------------------------------------------------------------
+  # ImagingStudy
+  # ---------------------------------------------------------------------------
+
+  ImagingModalityEnum:
+    description: >-
+      DICOM acquisition modality - the primary analyst axis of an imaging
+      study (a CT is not an MRI is not a plain film). FHIR binds
+      ImagingStudy.modality and ImagingStudy.series.modality `extensible` to
+      DICOM CID 29
+      (http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html),
+      which is a DICOM publication rather than a FHIR ValueSet and ships in no
+      package, so `default` cannot reach it and the list has to be
+      hand-written.
+
+      Codes and displays are DICOM Defined Terms taken VERBATIM from the DCM
+      ontology as it ships in hl7.fhir.r4.core
+      (CodeSystem-dicom-dcim.json, http://dicom.nema.org/resources/ontology/DCM,
+      3156 concepts, content: complete). They are hand-listed rather than
+      derived with `source: codesystem` because DCM is a mixed ontology - the
+      same code system holds equipment codes (WSD workstation, PRINT server),
+      derived-object codes (PR, SEG, KO) and even patient sex codes (F, M, H).
+      Only the acquisition modalities belong on this column, and there is no
+      subset mechanism on a `codesystem` entry.
+
+      Deliberately INCOMPLETE - a study using a modality outside this list
+      fails its accepted_values test rather than resolving; widen the list
+      when that happens. Scope is UK NHS acute radiology, cardiology and
+      endoscopy. Notable omissions by choice: the ophthalmology cluster (OPT,
+      OPV, OPM, OPR, AR, KER, LEN, VA, FA, FS, SRF, OAM) and the legacy
+      pre-PACS terms (CD, DD, CF, DF, VF, DS, AS, LP, CS, CP, BI, DG, LS) -
+      add the relevant block if you ingest eye services or a historical
+      archive.
+    source: manual
+    values:
+      # --- Radiology: plain film and cross-sectional ---------------------
+      - { code: CR, display: "Computed Radiography" }
+      - { code: DX, display: "Digital Radiography" }
+      - { code: RG, display: "Radiographic imaging" }
+      - { code: CT, display: "Computed Tomography" }
+      - { code: MR, display: "Magnetic Resonance" }
+      - { code: MA, display: "Magnetic resonance angiography" }
+      - { code: MG, display: "Mammography" }
+      - { code: US, display: "Ultrasound" }
+      - { code: RF, display: "Radiofluoroscopy" }
+      - { code: XA, display: "X-Ray Angiography" }
+      - { code: BMD, display: "Bone Mineral Densitometry" }
+      # --- Nuclear medicine ---------------------------------------------
+      - { code: NM, display: "Nuclear Medicine" }
+      - { code: PT, display: "Positron emission tomography" }
+      - { code: ST, display: "Single-photon emission computed tomography" }
+      # --- Cardiology ----------------------------------------------------
+      - { code: EC, display: "Echocardiography" }
+      - { code: ECG, display: "Electrocardiography" }
+      - { code: IVUS, display: "Intravascular Ultrasound" }
+      - { code: HD, display: "Hemodynamic Waveform" }
+      - { code: EPS, display: "Cardiac Electrophysiology" }
+      # --- Endoscopy, photography and other departments ------------------
+      - { code: ES, display: "Endoscopy" }
+      - { code: XC, display: "External-camera Photography" }
+      - { code: OP, display: "Ophthalmic photography" }
+      - { code: OCT, display: "Optical Coherence Tomography" }
+      - { code: SM, display: "Slide Microscopy" }
+      - { code: RT, display: "Radiation Therapy Device" }
+      # --- Dental --------------------------------------------------------
+      - { code: IO, display: "Intra-oral Radiography" }
+      - { code: PX, display: "Panoramic X-Ray" }
+      # --- Non-image objects that still arrive as a study ----------------
+      - { code: SR, display: "Structured Report Document" }
+      - { code: OT, display: "Other Modality" }
+
+  ImagingLateralityEnum:
+    description: >-
+      Laterality of the body site a series was acquired from. The complete
+      FHIR R4 bodysite-laterality value set (SNOMED CT), which FHIR binds
+      `example` and which `default` therefore cannot reach. Taken whole - at
+      three codes a subset saves nothing.
+    source: manual
+    values:
+      - { code: "419161000", display: "Unilateral left" }
+      - { code: "419465000", display: "Unilateral right" }
+      - { code: "51440002", display: "Bilateral" }
+
+  # ---------------------------------------------------------------------------
   # Location
   # ---------------------------------------------------------------------------
 
@@ -281,27 +396,3 @@ enums:
       - { code: rd, display: "Road" }
       - { code: area, display: "Area" }
       - { code: jdn, display: "Jurisdiction" }
-
-  ObservationInterpretationEnum:
-    description: "Clinical interpretation of an observation result (HL7 FHIR observation-interpretation)."
-    source: manual
-    values:
-      - { code: L, display: "Low" }
-      - { code: H, display: "High" }
-      - { code: LL, display: "Critical Low" }
-      - { code: HH, display: "Critical High" }
-      - { code: N, display: "Normal" }
-      - { code: A, display: "Abnormal" }
-      - { code: AA, display: "Critical Abnormal" }
-      - { code: U, display: "Significant Change Up" }
-      - { code: D, display: "Significant Change Down" }
-      - { code: B, display: "Better" }
-      - { code: W, display: "Worse" }
-      - { code: R, display: "Resistant" }
-      - { code: S, display: "Susceptible" }
-      - { code: I, display: "Intermediate" }
-      - { code: MS, display: "Moderately Susceptible" }
-      - { code: VS, display: "Very Susceptible" }
-      - { code: IE, display: "Insufficient Evidence" }
-      - { code: SYN-R, display: "Synergy - Resistant" }
-      - { code: SYN-S, display: "Synergy - Susceptible" }

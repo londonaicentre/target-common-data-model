@@ -1,14 +1,6 @@
-## TO DO
-# 1. Remove sample category
+# Specimen
 #
-## Specimen
-#
-# Grain: one row per Specimen resource. Dimension table, OMOP `specimen`
-# analogue.
-#
-# Purpose: what sample was taken from a patient. One row per specimen,
-# holding what it was, when it was collected and received, and from where on
-# the body. This is what makes a microbiology result interpretable.
+# Purpose: what sample was taken from a patient.
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -21,60 +13,45 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Whether the specimen is usable.
+  # status  string (enum SpecimenStatusEnum)
   Specimen.status:
     bindings:
       Specimen.status: default
 
   # --- What was collected -------------------------------------------------
 
-  # Variant: [{system, code, display, is_source}] -> type_coding. Blood
-  # culture, urine, wound swab, CSF. Source coding plus standard-vocabulary
-  # codings added downstream; `is_source` true on the original.
-  #
-  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
-  # terminology server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes specimen.specimen_concept_id / specimen_source_value -
-  # the variant holds every mapped vocabulary as rows. Note
-  # specimen_type_concept_id is record provenance, not the kind of specimen.
+  # E.g. Blood culture, urine, wound swab, CSF. Source coding plus
+  # standard-vocabulary codings added downstream; `is_source` true on the
+  # original.
+  # type_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
   Specimen.type.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: specimen.person_id.
+  # The Patient the specimen was taken from.
+  # subject_id  string (FK -> Patient.id)
   Specimen.subject:
     fk: Patient                 # profile allows [Patient, Group, Device,
                                 # Substance, Location]
 
-  # Scalar datetime -> collection_collecteddatetime. When the specimen was
-  # collected.
-  # OMOP: specimen.specimen_datetime.
+  # When the specimen was collected.
+  # collection_collecteddatetime  timestamp
+  # collection_collectedperiod    struct {start: timestamp, end: timestamp}
   Specimen.collection.collectedDateTime:
-
-  # Nested Period: {start, end} -> collection_collectedperiod. Collection
-  # window for a timed collection; both forms of collected[x] are kept.
-  # OMOP: specimen.specimen_datetime; OMOP has no end.
   Specimen.collection.collectedPeriod:
 
-  # Scalar datetime -> receivedtime. When the lab received it; with
-  # collectedDateTime this gives the transport delay.
-  # OMOP: no equivalent.
+  # When the lab received it.
+  # receivedtime  timestamp
   Specimen.receivedTime:
 
   # --- Where from ---------------------------------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> collection_bodysite. Body site the specimen came from; 0..1, so not a
-  # variant.
-  #
-  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
-  # terminology server.
-  #
-  # OMOP: specimen.anatomic_site_concept_id / anatomic_site_source_value.
+  # Body site the specimen came from
+  # collection_bodysite  struct { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] }
   Specimen.collection.bodySite:
     exclude:
       Specimen.collection.bodySite.text: >
@@ -85,9 +62,8 @@ include:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Specimen number from the
-  # source system.
-  # OMOP: specimen.specimen_source_id.
+  # Specimen number from the source system.
+  # identifier  array [ {system: string, value: string} ]
   Specimen.identifier:
     key: [system, value]
     exclude:
@@ -100,35 +76,26 @@ include:
       Specimen.identifier.use: >
         not reliably populated across source systems
 
-  # Scalar string -> accessionidentifier_value, promoted from the Identifier
-  # struct. The lab accession number - the join from a specimen to its
-  # results.
-  # OMOP: specimen.specimen_source_value.
+  # The lab accession number
+  # accessionidentifier_value  string
   Specimen.accessionIdentifier.value:
-
-  # --- Extension slices ---------------------------------------------------
-
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_samplecategory. Patient sample vs control.
-  # OMOP: no equivalent; UK Core specific.
-  Specimen.extension:sampleCategory:
-    bindings:
-      Specimen.extension:sampleCategory.coding.code: default
-    exclude:
-      Specimen.extension:sampleCategory.text: >
-        rendered term; the coding carries the meaning
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   Specimen.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
 # ===========================================================================
 rejected:
+
+  # --- Extension slices ---------------------------------------------------
+  Specimen.extension:sampleCategory: >
+    not in scope of typical source data; the patient-sample vs control
+    distinction is a laboratory QC concern, and analytical feeds carry
+    patient samples only
 
   # --- Collection detail --------------------------------------------------
   Specimen.collection.method: not in scope of typical source data

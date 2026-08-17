@@ -1,18 +1,6 @@
-## TO DO
-# 1. Add Encounters with FK references (as list)
-# 2. ?FK to organisation via booking organisation
-# 3. Remove minutesduration
-# 4. Remove extension_deliverychannel
-#
 # Appointment
 #
-# Grain: one row per Appointment resource. Fact table. No OMOP analogue -
-# OMOP models what happened rather than what was planned.
-#
-# Purpose: what was booked, and what became of it. One row per appointment,
-# holding when it was scheduled, what kind it was, who it was with and
-# whether the patient attended. `status` carries the DNA/cancellation
-# distinction that access and waiting-time analysis reads.
+# Purpose: what was booked, and what became of it.
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -25,72 +13,79 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code. `noshow` is the DNA, distinct from `cancelled`.
-  # OMOP: no equivalent.
+  # What became of the booking`.
+  # status  string (enum AppointmentstatusEnum)
   Appointment.status:
     bindings:
       Appointment.status: default
 
+  # --- Who ----------------------------------------------------------------
+
+  # The Patient the appointment is for. `actor` is the only route to the
+  # patient as Appointment has no `subject`.
+  # participant_actor_id  string (FK -> Patient.id)
+  Appointment.participant[0].actor:
+    fk: Patient                 # profile allows [Patient, Practitioner,
+                                # PractitionerRole, RelatedPerson, Device,
+                                # HealthcareService, Location]
+
   # --- When ---------------------------------------------------------------
 
-  # Scalar instants -> start, end. Scheduled start and end.
-  # OMOP: no equivalent.
+  # Scheduled start of the appointment.
+  # start  timestamp
   Appointment.start:
+
+  # Scheduled end of the appointment.
+  # end  timestamp
   Appointment.end:
 
-  # Scalar positiveInt -> minutesduration. Booked slot length, which is not
-  # always end minus start.
-  # OMOP: no equivalent.
-  Appointment.minutesDuration:
-
-  # Scalar datetime -> created. When the appointment was booked; with
-  # `start` this gives the wait.
-  # OMOP: no equivalent.
+  # When the appointment was booked.
+  # created  timestamp
   Appointment.created:
 
   # --- What kind ----------------------------------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> appointmenttype.
-  # OMOP: no equivalent.
+  # The kind of appointment booked.
+  # appointmenttype  struct { coding: [ {system: string, code: string
+  #                                      (enum AppointmentTypeEnum),
+  #                                      display: string,
+  #                                      is_source: boolean} ] }
   Appointment.appointmentType:
     bindings:
-      # Manual: `extensible` across two code systems (v2-0276 plus the UK
-      # Core supplement), so it cannot be expanded offline.
       Appointment.appointmentType.coding.code: AppointmentTypeEnum
     exclude:
       Appointment.appointmentType.text: >
-        rendered term; the coding carries the meaning
+        coding used to carry meaning
 
-  # Variant: [{coding[]}] of {system, code, display, is_source} ->
-  # specialty. Treatment function - the outpatient stratifier.
-  # OMOP: no equivalent.
+  # Treatment function / outpatient setting.
+  # specialty  array [ { coding: [ {system: string, code: string
+  #                                 (enum UKCorePracticeSettingCodeEnum),
+  #                                 display: string,
+  #                                 is_source: boolean} ] } ]
   Appointment.specialty:
     key: [coding]
     bindings:
       Appointment.specialty.coding.code: default
     exclude:
       Appointment.specialty.text: >
-        rendered term; the coding carries the meaning
+        coding used to carry meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> cancelationreason. Who cancelled and why - separates a
-  # patient-cancelled slot from a provider-cancelled one.
-  # OMOP: no equivalent.
+  # Who cancelled and why
+  # cancelationreason  struct { coding: [ {system: string, code: string
+  #                              (enum AppointmentCancellationReasonEnum),
+  #                              display: string,
+  #                              is_source: boolean} ] }
   Appointment.cancelationReason:
     bindings:
-      # Manual: the FHIR CodeSystem is marked incomplete, so it cannot be
-      # expanded offline.
       Appointment.cancelationReason.coding.code: AppointmentCancellationReasonEnum
     exclude:
       Appointment.cancelationReason.text: >
-        rendered term; the coding carries the meaning
+        coding used to carry meaning
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Booking reference from the
-  # source system - the e-Referral appointment id, the PAS booking number.
-  # OMOP: no equivalent.
+  # Booking reference from the source system
+  # identifier  array [ {system: string, value: string} ]
   Appointment.identifier:
     key: [system, value]
     exclude:
@@ -103,36 +98,12 @@ include:
       Appointment.identifier.use: >
         not reliably populated across source systems
 
-  # Variant: [{actor_id, required, status, period{start, end}}] ->
-  # participant. Who the appointment is with. `actor` is the only route to
-  # the patient - Appointment has no `subject` - so without this the table
-  # cannot be joined to a patient.
-  #
-  # `actor` is unconstrained across Patient/Practitioner/Location/
-  # HealthcareService, so no `fk` target is declared. `participant.status`
-  # is per-participant attendance, distinct from the row-level `status`.
-  # OMOP: no equivalent.
-  Appointment.participant:
-    key: [actor_id, status]
-    bindings:
-      Appointment.participant.status: default
-      Appointment.participant.required: default
-    exclude:
-      Appointment.participant.type: >
-        the participant's role, bound `extensible` to a SNOMED `is-a` subset
-        that needs a terminology server; `actor_id` identifies who they are
-
   # --- Extension slices ---------------------------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_deliverychannel. In-person, telephone or video.
-  # OMOP: no equivalent.
-  Appointment.extension:deliveryChannel:
-    bindings:
-      Appointment.extension:deliveryChannel.coding.code: default
-    exclude:
-      Appointment.extension:deliveryChannel.text: >
-        rendered term; the coding carries the meaning
+  # The organisation that booked the appointment.
+  # extension_bookingorganization_id  string (FK -> Organization.id)
+  Appointment.extension:bookingOrganization:
+    fk: Organization
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
@@ -163,6 +134,24 @@ rejected:
   Appointment.comment: limited analytical utility; free text
   Appointment.patientInstruction: limited analytical utility; free text
 
+  # --- Participant --------------------------------------------------------
+  Appointment.participant: >
+    NOT whitelisted whole - `participant[0].actor` is named instead, so the
+    patient promotes to a single canonical FK rather than the table carrying
+    a variant of every actor
+  Appointment.participant.required: >
+    not in scope of typical source data; a booking-negotiation flag, and the
+    CDM takes the patient participant only
+  Appointment.participant.status: >
+    per-participant attendance; the row-level `status` carries the
+    DNA/cancellation distinction that analysis reads
+  Appointment.participant.period: >
+    limited analytical utility; the appointment `start` and `end` carry the
+    window
+  Appointment.participant.type: >
+    the participant's role, bound `extensible` to a SNOMED `is-a` subset that
+    needs a terminology server; the CDM takes the patient actor only
+
   # --- Scheduling ---------------------------------------------------------
   Appointment.slot: Slot not modelled; would be a dangling FK
   Appointment.requestedPeriod: >
@@ -176,6 +165,10 @@ rejected:
     unconstrained pointer across resource types; no FK target is correct
 
   # --- Extension slices ---------------------------------------------------
-  Appointment.extension:bookingOrganization: >
-    Organization IS modelled, but this is the booking organisation rather
-    than the one delivering care, and it is sparsely populated
+  Appointment.extension:deliveryChannel: >
+    not in scope of typical source data; in-person vs telephone vs video is
+    not reliably populated, and `appointmentType` carries the contact axis
+
+  # --- When ---------------------------------------------------------------
+  Appointment.minutesDuration: >
+    derivable from `start` and `end`; storing it invites the two disagreeing

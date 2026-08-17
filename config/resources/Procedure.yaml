@@ -1,12 +1,7 @@
 # Procedure
-# All good
 #
-# Grain: one row per Procedure resource. Fact table, OMOP
-# `procedure_occurrence` analogue.
-#
-# Purpose: what was done to a patient. One row per intervention - an
-# operation, a diagnostic procedure, a therapy - holding what it was, when
-# it happened and whether it happened at all.
+# Purpose: what intervention was done to a patient.
+# Could be an operation, a diagnostic procedure, a therapy
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -19,56 +14,44 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Whether the procedure happened at all.
+  # status  string (enum EventStatusEnum)
   Procedure.status:
     bindings:
       Procedure.status: default
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: procedure_occurrence.person_id.
+  # The Patient the procedure was performed on.
+  # subject_id  string (FK -> Patient.id)
   Procedure.subject:
     fk: Patient                 # profile allows [Patient, Group]
-  # Scalar string FK id -> encounter_id.
-  # OMOP: procedure_occurrence.visit_occurrence_id.
+
+  # The Encounter the procedure was performed during.
+  # encounter_id  string (FK -> Encounter.id)
   Procedure.encounter:
     fk: Encounter
 
-  # Scalar datetime -> performeddatetime. When the procedure was performed.
-  # OMOP: procedure_occurrence.procedure_datetime.
+  # When the procedure was performed.
+  # performeddatetime  timestamp
+  # performedperiod    struct {start: timestamp, end: timestamp}
   Procedure.performedDateTime:
-
-  # Nested Period: {start, end} -> performedperiod. For a procedure that
-  # spans time; both forms of performed[x] are kept.
-  # OMOP: procedure_occurrence.procedure_datetime / procedure_end_datetime.
   Procedure.performedPeriod:
 
   # --- The code that identifies the row -----------------------------------
 
-  # Variant: [{system, code, display, is_source}] -> code_coding. Source
-  # OPCS-4 or SNOMED coding plus standard-vocabulary codings added
-  # downstream; `is_source` true on the original.
-  #
-  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
-  # terminology server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes procedure_occurrence.procedure_concept_id /
-  # procedure_source_value / procedure_source_concept_id - the variant holds
-  # every mapped vocabulary as rows, not just one standard concept.
+  # What was done. Source OPCS-4 or SNOMED coding plus standard-vocabulary
+  # codings added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
   Procedure.code.coding:
     key: [system, code]
 
   # --- Body site ----------------------------------------------------------
 
-  # Variant: [{coding[]}] of {system, code, display, is_source} -> bodysite.
-  # 0..*, kept as a variant rather than a first-entry scalar because a
-  # scalar would report one side of a bilateral procedure.
-  #
-  # Unbound: `preferred` to a SNOMED `is-a` subset, which needs a
-  # terminology server.
-  # OMOP: no equivalent; modifier_concept_id is not a body site.
+  # Where on the body - multiple locations capturable.
+  # bodysite  array [ { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] } ]
   Procedure.bodySite:
     key: [coding]
     exclude:
@@ -77,9 +60,8 @@ include:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Theatre system procedure
-  # number, local episode id.
-  # OMOP: procedure_occurrence.procedure_source_value.
+  # Theatre system procedure number, local episode id.
+  # identifier  array [ {system: string, value: string} ]
   Procedure.identifier:
     key: [system, value]
     exclude:
@@ -94,9 +76,8 @@ include:
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   Procedure.note[0].text:
 
 # ===========================================================================

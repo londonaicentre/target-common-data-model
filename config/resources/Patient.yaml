@@ -1,20 +1,12 @@
-## TO DO
-# 1. include address as variant with use, line, city, postal code,
-# # country, period {start, end}, key {variant - uprns mainly}
-# 2. keep address_postalcode
-# 3. remove deathnotification status
-#
 # Patient
 #
-# Grain: one row per Patient resource. Dimension table, OMOP `person`
-# analogue.
-#
-# Purpose: who the patient is. One row per person, holding the identifiers
+# Purpose: who the patient is. One row per person, holding all identifiers
 # other tables join on, their name, core demographics and where they live.
-# The record is canonical across contributing systems.
+# This is the canonical master record across contributing systems.
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
-# and are not listed below.
+# and are not listed below. Note that `id` as PK becomes the canonical
+# identifier for a person after a disambiguation step
 
 resource: Patient
 profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Patient
@@ -24,12 +16,12 @@ include:
 
   # --- Identity -----------------------------------------------------------
 
-  # Scalar string -> identifier_nhsnumber_value. NHS number promoted out of
-  # the identifier slice.
+  # NHS number, promoted out of the identifier slice.
+  # identifier_nhsnumber_value  string
   Patient.identifier:nhsNumber.value:
 
-  # Variant: [{system, value}].
-  # E.g. NHS number plus MRN per contributing system.
+  # Every identifier - NHS number plus MRN per contributing system.
+  # identifier  array [ {system: string, value: string} ]
   Patient.identifier:
     key: [system, value]
     exclude:
@@ -44,12 +36,16 @@ include:
         not reliably populated across source systems
 
   # --- Name ---------------------------------------------------------------
-  # Scalar strings -> name_family, name_given. Current name, from name[0].
+
+  # Current name, from name[0].
+  # name_family  string
+  # name_given   string
   Patient.name.family:
   Patient.name.given[0]:
 
-  # Variant: [{use, family, given[]}].
-  # use distinguishes different names (e.g. maiden)
+  # Name history; `use` distinguishes different names (e.g. maiden).
+  # name  array [ {use: string (enum NameUseEnum), family: string,
+  #                given: [ string ]} ]
   Patient.name:
     key: [use, family]
     bindings:
@@ -66,49 +62,74 @@ include:
 
   # --- Demographics -------------------------------------------------------
 
-  # OMOP: person.gender_concept_id / gender_source_value.
+  # Administrative gender.
+  # gender  string (enum AdministrativeGenderEnum)
   Patient.gender:
     bindings:
       Patient.gender: default
 
-  # date.
-  # OMOP: person.birth_datetime
+  # Date of birth.
+  # birthdate  date
   Patient.birthDate:
 
-  # boolean, datetime. Both forms of deceased[x] are kept.
-  # OMOP: death.death_date
+  # Death. Both forms of deceased[x] are kept.
+  # deceasedboolean   boolean
+  # deceaseddatetime  timestamp
   Patient.deceasedBoolean:
   Patient.deceasedDateTime:
 
   # --- Geography ----------------------------------------------------------
 
-  # Scalar string -> address_postalcode. Postcode of the current address,
-  # from address[0].
-  # OMOP: location.zip, reached via person.location_id.
+  # Postcode of the current address, from address[0]. Kept alongside the
+  # variant below as the promoted single value.
+  # address_postalcode  string
   Patient.address.postalCode:
+
+  # Address history: one object per address the patient has held, with the
+  # window it covers and its PAF/UPRN keys under `extension_addresskey`.
+  # address  array [ {use: string (enum AddressUseEnum), line: [ string ],
+  #                   city: string, postalcode: string, country: string,
+  #                   period: {start: timestamp, end: timestamp},
+  #                   extension_addresskey: [
+  #                     {extension_type: { coding: [ {system: string,
+  #                                        code: string
+  #                                        (enum UKCoreAddressKeyTypeEnum),
+  #                                        display: string,
+  #                                        is_source: boolean} ],
+  #                                        text: string},
+  #                      extension_value: string} ]} ]
+  Patient.address:
+    key: [period, postalcode]
+    bindings:
+      Patient.address.use: default
+      Patient.address.extension:addressKey.extension:type.coding.code: default
+    exclude:
+      Patient.address.type: >
+        postal vs physical vs both; a delivery distinction rather than an
+        analytical one
+      Patient.address.text: >
+        rendered address; the parts carry the meaning
+      Patient.address.district: >
+        superseded by postcode-based geography lookup
+      Patient.address.state: >
+        not populated in a UK provider dataset
 
   # --- Extension slices ---------------------------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_ethniccategory.
-  # OMOP: person.ethnicity_concept_id / ethnicity_source_value.
+  # Ethnic category.
+  # extension_ethniccategory  struct { coding: [ {system: string,
+  #                                     code: string
+  #                                     (enum EthnicCategoryEnum),
+  #                                     display: string,
+  #                                     is_source: boolean} ] }
   Patient.extension:ethnicCategory:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
+      # Manual: England codeset
       Patient.extension:ethnicCategory.coding.code: EthnicCategoryEnum
     exclude:
       Patient.extension:ethnicCategory.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_deathnotificationstatus_extension_deathnotificationstatus.
-  # OMOP: nearest is death.death_type_concept_id
-  Patient.extension:deathNotificationStatus.extension:deathNotificationStatus:
-    bindings:
-      Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.code: default
-    exclude:
-      Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.text: >
-        rendered term; the coding carries the meaning
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
@@ -127,17 +148,12 @@ rejected:
   Patient.name.suffix: post-nominals; not analytical
 
   # --- Address ------------------------------------------------------------
-  Patient.address: >
-    NOT whitelisted whole - only `address.postalCode` is named, so address
-    history and the identifying lines are unreachable. Revisit only if a use
-    case needs address as at a point in time
-  Patient.address.line: >
-    directly identifying; postcode alone carries the deprivation signal
-  Patient.address.city: superseded by postcode-based geography lookup
-  Patient.address.district: superseded by postcode-based geography lookup
-  Patient.address.country: effectively constant in a UK provider dataset
-  Patient.address.extension:addressKey: >
-    PAF/UPRN key - identifying, and redundant once postcode is kept
+  Patient.address.district: >
+    superseded by postcode-based geography lookup
+  Patient.address.state: not populated in a UK provider dataset
+  Patient.address.type: >
+    postal vs physical vs both; a delivery distinction rather than an
+    analytical one
 
   # --- Organisations ------------------------------------------------------
   Patient.generalPractitioner: >
@@ -184,6 +200,10 @@ rejected:
   Patient.extension:patientInterpreterRequired: service-planning data
   Patient.extension:nhsNumberUnavailableReason: >
     data-quality flag about the source feed, not about the patient
+  Patient.extension:deathNotificationStatus: >
+    a spine notification-state flag (informal/formal/removed) about the feed
+    rather than about the patient; `deceasedboolean` and `deceaseddatetime`
+    carry the clinical fact of death
   Patient.extension:deathNotificationStatus.extension:systemEffectiveDate: >
     when the notification reached the spine; an artefact of the feed rather
     than of the death. `deceaseddatetime` is the clinical date

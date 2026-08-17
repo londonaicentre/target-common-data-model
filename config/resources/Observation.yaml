@@ -1,18 +1,7 @@
-## TO DO
-# 1. Remove dataabsentreason
-# 2. Remove interpretation_coding
-# 3. Add Specimen FK
-# 3. Keep component for now, but unlikely to be using in short term...
-#
 # Observation
 #
-# Grain: one row per Observation resource. Fact table, OMOP `measurement` /
-# `observation` analogue.
-#
-# Purpose: what was measured or observed, and what the answer was. One row
-# per result - a lab test, a vital sign, a recorded finding. Of the eleven
-# value[x] types this model takes Quantity and CodeableConcept, plus the
-# component array for multi-part results.
+# Purpose: what was measured or observed, and what the answer was.
+# Lab test, vital sign, recorded finding etc
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -25,124 +14,101 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Where the result has got to - registered, preliminary, final.
+  # status  string (enum ObservationStatusEnum)
   Observation.status:
     bindings:
       Observation.status: default
 
   # --- Category -----------------------------------------------------------
 
-  # Nested Coding from category[0].coding[0]: {system, code, display,
-  # is_source} -> category_coding. The coarse axis separating a blood test
-  # from a vital sign.
-  # OMOP: measurement.measurement_type_concept_id /
-  # observation.observation_type_concept_id.
+  # The coarse axis, e.g. blood test vs vital sign.
+  # category_coding  struct {system: string, code: string
+  #                          (enum ObservationCategoryEnum), display: string,
+  #                          is_source: boolean}
   Observation.category.coding[0]:
     bindings:
-      # Manual: promotes the FHIR `preferred` observation-category list.
       Observation.category.coding.code: ObservationCategoryEnum
 
   # --- What was measured --------------------------------------------------
 
-  # Variant: [{system, code, display, is_source}] -> code_coding. Source
-  # code plus mapped equivalents added downstream; `is_source` true on the
-  # original.
-  #
-  # Unbound: `preferred` to a SNOMED `is-a` subset, which needs a terminology
-  # server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes measurement.measurement_concept_id / measurement_source_value
-  # / measurement_source_concept_id (lab and vitals; observation.* otherwise) -
-  # the variant holds every mapped vocabulary as rows, not one standard concept.
+  # What was measured. Source code plus mapped equivalents added downstream;
+  # `is_source` true on the original
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
   Observation.code.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: measurement.person_id / observation.person_id.
+  # The Patient the result is for.
+  # subject_id  string (FK -> Patient.id)
   Observation.subject:
     fk: Patient                 # profile allows [Patient, Group, Device,
                                 # Location]
-  # Scalar string FK id -> encounter_id.
-  # OMOP: measurement.visit_occurrence_id / observation.visit_occurrence_id.
+
+  # The Encounter the result was recorded during.
+  # encounter_id  string (FK -> Encounter.id)
   Observation.encounter:
     fk: Encounter
 
-  # Scalar datetime -> effectivedatetime. When the specimen was taken or the
-  # observation made.
-  # OMOP: measurement.measurement_datetime / observation.observation_datetime.
+  # What the result was measured on
+  # specimen_id  string (FK -> Specimen.id)
+  Observation.specimen:
+    fk: Specimen
+
+  # When the specimen was taken or the observation made.
+  # effectivedatetime  timestamp
   Observation.effectiveDateTime:
 
   # --- The result ---------------------------------------------------------
 
-  # Nested Quantity: {value, comparator, unit, system, code} ->
-  # valuequantity. `unit` is the human string and `code` the UCUM unit; both
-  # are kept. `comparator` is load bearing - "<0.5" is not the number 0.5.
-  # OMOP: measurement.value_as_number / unit_concept_id / operator_concept_id.
+  # Numeric results. `unit` is the human string and `code` the UCUM unit;
+  # valuequantity  struct {value: float, comparator: string
+  #                        (enum QuantityComparatorEnum), unit: string,
+  #                        system: string, code: string}
   Observation.valueQuantity:
     bindings:
       Observation.valueQuantity.comparator: default
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> valuecodeableconcept. Coded results - organism identified, blood
-  # group, positive/negative.
-  # OMOP: measurement.value_as_concept_id / observation.value_as_concept_id.
+  # Categorical results.
+  # valuecodeableconcept  struct { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] }
   Observation.valueCodeableConcept:
     exclude:
       Observation.valueCodeableConcept.text: >
         rendered term; the coding carries the meaning
 
-  # Scalar decimals -> referencerange_low_value, referencerange_high_value,
-  # promoted from referenceRange[0]. The lab's own normal range; age and
-  # population qualifiers are dropped.
-  # OMOP: measurement.range_low / measurement.range_high.
+  # The lab's own normal range, from referenceRange[0]
+  # referencerange_low_value   float
+  # referencerange_high_value  float
   Observation.referenceRange.low.value:
   Observation.referenceRange.high.value:
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> dataabsentreason. Why a value is missing - separates "not tested"
-  # from "result pending" from "specimen unusable".
-  # OMOP: no equivalent.
-  Observation.dataAbsentReason:
-    bindings:
-      Observation.dataAbsentReason.coding.code: default
-    exclude:
-      Observation.dataAbsentReason.text: >
-        rendered term; the coding carries the meaning
-
-  # --- Interpretation -----------------------------------------------------
-
-  # Nested Coding from interpretation[0].coding[0]: {system, code, display,
-  # is_source} -> interpretation_coding. The lab's own abnormality flag.
-  # OMOP: no equivalent, which is why range_low / range_high are kept.
-  Observation.interpretation.coding[0]:
-    bindings:
-      # Manual: CDM subset dropping the v3 abstract parents no result is
-      # ever coded with.
-      Observation.interpretation.coding.code: ObservationInterpretationEnum
-
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{code{coding[]}, valuequantity{...}, valuecodeableconcept
-  # {coding[]}}] -> component. Multi-part results - systolic and diastolic
-  # are two components of one blood pressure, and a first entry would leave
-  # a BP reading with one number and no way to tell which.
-  #
-  # `key` names fields of the object (§9), so it is the CodeableConcept
-  # itself - no path beneath a variant can promote a scalar out of it.
-  # OMOP: needs one measurement row per component, linked by
-  # measurement_event_id / meas_event_field_concept_id.
+  # Multi-part results - systolic and diastolic are two components of one
+  # blood pressure. A 'blood pressure' observation would include a SBP and DBP
+  # reading in this array.
+  # component  array [ {code: { coding: [ {system: string, code: string,
+  #                              display: string, is_source: boolean} ] },
+  #                     valuequantity: {value: float, comparator: string
+  #                              (enum QuantityComparatorEnum), unit: string,
+  #                              system: string, code: string},
+  #                     valuecodeableconcept: { coding: [ {system: string,
+  #                              code: string, display: string,
+  #                              is_source: boolean} ] }} ]
   Observation.component:
     key: [code]
     bindings:
       Observation.component.valueQuantity.comparator: default
     exclude:
       Observation.component.dataAbsentReason: >
-        the row-level dataabsentreason carries the signal
+        not in scope of typical source data; absence is read from a null
+        value rather than a coded reason
       Observation.component.interpretation: >
-        the row-level interpretation is the one labs populate
+        not in scope of typical source data; abnormality is derived from the
+        value against referenceRange rather than taken from a lab flag
       Observation.component.valueString: >
         limited analytical utility; free text inside a variant
       Observation.component.valueBoolean: not in scope of typical source data
@@ -164,15 +130,23 @@ include:
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   Observation.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
 # ===========================================================================
 rejected:
+
+  # --- Absence and interpretation -----------------------------------------
+  Observation.dataAbsentReason: >
+    not in scope of typical source data; absence is read from a null value
+    rather than a coded reason, and the field is sparsely populated
+  Observation.interpretation: >
+    not in scope of typical source data; abnormality is derived from the
+    value against referenceRange rather than trusted from a lab flag, which
+    is not applied consistently across analysers
 
   # --- Reference ranges ---------------------------------------------------
   Observation.referenceRange: >
@@ -213,9 +187,6 @@ rejected:
     the effective time. DiagnosticReport.issued carries turnaround
 
   # --- Specimen and method ------------------------------------------------
-  Observation.specimen: >
-    Specimen IS modelled, but the link is not reliably populated; the
-    accession identifier carries it
   Observation.device: Device not modelled; would be a dangling FK
   Observation.bodySite: >
     limited analytical utility; laterality and site need their own model

@@ -1,17 +1,7 @@
-## TO DO
-# All good!!
+# EpisodeOfCare
 #
-# # EpisodeOfCare
-#
-# Grain: one row per EpisodeOfCare resource. Fact table, OMOP
-# `observation_period` analogue - the window a patient was under a
-# provider's care.
-#
-# Purpose: which organisation was responsible for a patient, and when. One
-# row per registration or care episode, holding the practice or trust and
-# the window it covered. This is where GP registration lives: a registration
-# is a period with an organisation, not a Patient attribute, so
-# `Patient.generalPractitioner` is rejected in favour of rows here.
+# Purpose: which organisation was responsible for a patient, and when. Used
+# for registration at a GP practice or trust department
 #
 # Base FHIR R4 - UK Core STU2 ships no EpisodeOfCare profile, so the
 # StructureDefinition resolves from hl7.fhir.r4.core.
@@ -27,44 +17,35 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code. `active` is the current registration.
-  # OMOP: no equivalent.
+  # Where the episode has got to. `active` is the current registration.
+  # status  string (enum EpisodeOfCareStatusEnum)
   EpisodeOfCare.status:
     bindings:
       EpisodeOfCare.status: default
 
   # --- Who and where ------------------------------------------------------
 
-  # Scalar string FK id -> patient_id.
-  # OMOP: observation_period.person_id.
+  # The Patient the episode is for.
+  # patient_id  string (FK -> Patient.id)
   EpisodeOfCare.patient:
     fk: Patient
 
-  # Scalar string FK id -> managingorganization_id. The practice or trust
-  # the patient is registered with - the GP practice for a registration
-  # episode.
-  # OMOP: no equivalent.
+  # The practice or trust the patient is registered with
+  # managingorganization_id  string (FK -> Organization.id)
   EpisodeOfCare.managingOrganization:
     fk: Organization
 
   # --- When ---------------------------------------------------------------
 
-  # Nested Period: {start, end} -> period. Registration start and end; an
-  # open registration has no end.
-  # OMOP: observation_period.observation_period_start_date /
-  # observation_period_end_date.
+  # Registration start and end; an open registration has no end.
+  # period  struct {start: timestamp, end: timestamp}
   EpisodeOfCare.period:
 
   # --- Classification -----------------------------------------------------
 
-  # Variant: [{coding[]}] of {system, code, display, is_source} -> type.
   # What kind of episode - GP registration vs a specialist care episode.
-  # 0..* as an episode can carry more than one type.
-  #
-  # Unbound: `example` to a 5-concept HL7 list that does not carry the NHS
-  # registration types, so `default` cannot reach it and no manifest entry
-  # would match source data.
-  # OMOP: no equivalent.
+  # type  array [ { coding: [ {system: string, code: string,
+  #                            display: string, is_source: boolean} ] } ]
   EpisodeOfCare.type:
     key: [coding]
     exclude:
@@ -73,9 +54,8 @@ include:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Registration number from the
-  # source system.
-  # OMOP: no equivalent.
+  # Registration number from the source system.
+  # identifier  array [ {system: string, value: string} ]
   EpisodeOfCare.identifier:
     key: [system, value]
     exclude:

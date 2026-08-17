@@ -1,15 +1,7 @@
-## TO DO
-# All good
-#
-# # Organization
-#
-# Grain: one row per Organization resource. Dimension table, OMOP `care_site`
-# analogue alongside Location.
+# Organization
 #
 # Purpose: who provides care. One row per trust, practice or department,
-# holding the ODS codes other systems key on, the name, and its place in the
-# organisational hierarchy. This is what stops organisation references
-# elsewhere in the model being dangling ids.
+# holding the ODS codes
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -22,19 +14,17 @@ include:
 
   # --- Identity -----------------------------------------------------------
 
-  # Scalar string -> identifier_odsorganisationcode_value, promoted from the
-  # ODS organisation code slice.
-  # OMOP: care_site.care_site_source_value.
+  # The ODS organisation code, promoted out of the identifier slice.
+  # identifier_odsorganisationcode_value  string
   Organization.identifier:odsOrganisationCode.value:
 
-  # Scalar string -> identifier_odssitecode_value, promoted from the ODS
-  # site code slice. A trust has one org code and many site codes.
-  # OMOP: care_site.care_site_source_value.
+  # The ODS site code, promoted out of the identifier slice. A trust has one
+  # org code and many site codes.
+  # identifier_odssitecode_value  string
   Organization.identifier:odsSiteCode.value:
 
-  # Variant: [{system, value}] -> identifier. Every identifier, ODS and
-  # local.
-  # OMOP: care_site.care_site_source_value.
+  # Every identifier, ODS and local.
+  # identifier  array [ {system: string, value: string} ]
   Organization.identifier:
     key: [system, value]
     exclude:
@@ -50,28 +40,23 @@ include:
 
   # --- Description --------------------------------------------------------
 
-  # Scalar string -> name. The human-readable organisation name.
-  # OMOP: care_site.care_site_name.
+  # The human-readable organisation name.
+  # name  string
   Organization.name:
 
-  # Nested Coding from type[0].coding[0]: {system, code, display, is_source}
-  # -> type_coding. Trust vs practice vs department.
-  #
-  # Unbound: `extensible` to a value set unioning the Genomics and core
-  # organisation-type codesets, so it does not expand offline.
-  #
-  # OMOP: care_site.place_of_service_concept_id / place_of_service_source_value.
+  # E.g. Trust vs practice vs department.
+  # type_coding  struct {system: string, code: string, display: string,
+  #                      is_source: boolean}
   Organization.type.coding[0]:
 
-  # Scalar boolean -> active.
-  # OMOP: no equivalent.
+  # Whether the organisation is still in use.
+  # active  boolean
   Organization.active:
 
   # --- Hierarchy ----------------------------------------------------------
 
-  # Scalar string FK id -> partof_id. Parent organisation - a site within a
-  # trust, a practice within a PCN.
-  # OMOP: no equivalent; trust/site/PCN structure is lost.
+  # Parent organisation - a site within a trust, a practice within a PCN.
+  # partof_id  string (FK -> Organization.id)
   Organization.partOf:
     fk: Organization
 

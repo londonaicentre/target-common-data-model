@@ -1,16 +1,6 @@
-## TO DO
-# 1. Remove intent
-# 2. Remove priority
-# 3. Remove donotperform
+# ServiceRequest
 #
-#  ServiceRequest
-#
-# Grain: one row per ServiceRequest resource. Fact table. No OMOP analogue -
-# OMOP models what happened rather than what was asked for.
-#
-# Purpose: what was asked for. One row per referral or order, holding what
-# was requested, for whom, when and how urgently. `intent` separates a
-# referral into a service from an order for a test.
+# Purpose: what was asked for. Used for referrals or orders
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -21,74 +11,50 @@ package: fhir.r4.ukcore.stu2
 
 include:
 
-  # --- Status and intent --------------------------------------------------
+  # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Where the request has got to - active, completed, revoked.
+  # status  string (enum RequestStatusEnum)
   ServiceRequest.status:
     bindings:
       ServiceRequest.status: default
 
-  # Scalar code. Separates a suggestion from an actual referral or order.
-  # OMOP: no equivalent.
-  ServiceRequest.intent:
-    bindings:
-      ServiceRequest.intent: default
-
-  # Scalar code.
-  # OMOP: no equivalent.
-  ServiceRequest.priority:
-    bindings:
-      ServiceRequest.priority: default
-
-  # Scalar boolean -> donotperform. An explicit instruction NOT to perform;
-  # a modifier, so ignoring it inverts the meaning of the row.
-  # OMOP: no equivalent.
-  ServiceRequest.doNotPerform:
-
   # --- What was requested -------------------------------------------------
 
-  # Variant: [{system, code, display, is_source}] -> code_coding. Source
-  # SNOMED coding plus standard-vocabulary codings added downstream;
-  # `is_source` true on the original.
-  #
-  # Unbound: `preferred` to a SNOMED `=` filter subset, which needs a
-  # terminology server. The vocabulary lives in the mapping layer.
-  # OMOP: no equivalent.
+  # What was asked for. Source SNOMED coding plus standard-vocabulary codings
+  # added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
   ServiceRequest.code.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: no equivalent.
+  # The Patient the request is for.
+  # subject_id  string (FK -> Patient.id)
   ServiceRequest.subject:
     fk: Patient                 # profile allows [Patient, Group, Location,
                                 # Device]
-  # Scalar string FK id -> encounter_id.
+
+  # The Encounter the request was raised during.
+  # encounter_id  string (FK -> Encounter.id)
   ServiceRequest.encounter:
     fk: Encounter
 
-  # Scalar datetime -> authoredon. When the request was made - the RTT clock
-  # start on a referral.
-  # OMOP: no equivalent.
+  # When the request was made (e.g. the RTT clock start on a referral).
+  # authoredon  timestamp
   ServiceRequest.authoredOn:
 
-  # Scalar datetime -> occurrencedatetime. When the requested service should
-  # occur.
-  # OMOP: no equivalent.
+  # When the requested service should occur.
+  # occurrencedatetime  timestamp
+  # occurrenceperiod    struct {start: timestamp, end: timestamp}
   ServiceRequest.occurrenceDateTime:
-
-  # Nested Period: {start, end} -> occurrenceperiod. The window the
-  # requested service should fall in; both forms of occurrence[x] are kept.
-  # OMOP: no equivalent.
   ServiceRequest.occurrencePeriod:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Referral or order number from
-  # the source system.
-  # OMOP: no equivalent.
+  # Referral or order number from the source system.
+  # identifier  array [ {system: string, value: string} ]
   ServiceRequest.identifier:
     key: [system, value]
     exclude:
@@ -103,13 +69,10 @@ include:
 
   # --- Extension slices ---------------------------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_sourceofservicerequest. Where the referral came from - GP,
-  # self-referral, consultant-to-consultant.
-  #
-  # Unbound: 57 SNOMED concepts bound `preferred`, which `default` cannot
-  # reach. The vocabulary lives in the mapping layer.
-  # OMOP: no equivalent.
+  # Where the referral came from - GP, self-referral, consultant-to-consultant.
+  # extension_sourceofservicerequest
+  #     struct { coding: [ {system: string, code: string, display: string,
+  #                         is_source: boolean} ] }
   ServiceRequest.extension:sourceOfServiceRequest:
     exclude:
       ServiceRequest.extension:sourceOfServiceRequest.text: >
@@ -117,15 +80,26 @@ include:
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   ServiceRequest.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
 # ===========================================================================
 rejected:
+
+  # --- Status and intent --------------------------------------------------
+  ServiceRequest.intent: >
+    limited analytical utility; the CDM takes every ServiceRequest row as a
+    request, and the proposal/plan/order distinction is not reliably
+    populated across source systems
+  ServiceRequest.priority: >
+    not in scope of typical source data; urgency is carried by the referral
+    pathway rather than this field
+  ServiceRequest.doNotPerform: >
+    not in scope of typical source data; a negation modifier that source
+    feeds do not populate
 
   # --- Classification -----------------------------------------------------
   ServiceRequest.category: >

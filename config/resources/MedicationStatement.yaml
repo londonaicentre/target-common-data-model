@@ -1,18 +1,7 @@
-## TO DO
-# 1. Remove extension medication statement last issue date
-# 2. Drop sequence from dosage
+# MedicationStatement
 #
-# # MedicationStatement
-#
-# Grain: one row per MedicationStatement resource. Fact table, OMOP
-# `drug_exposure` analogue (the asserted half). OMOP folds prescribing,
-# dispensing and administration into DRUG_EXPOSURE; this model keeps them
-# apart.
-#
-# Purpose: what a patient says they are taking. One row per asserted
-# medication - the admission reconciliation, the GP repeat list - holding
-# the drug, the window it covers and when the assertion was made. Weaker
-# provenance than MedicationAdministration by construction: somebody said so.
+# Purpose: what a patient is taking. One row per asserted medication.
+# May be recorded admission reconciliation, or GP Medication Statement
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -25,107 +14,74 @@ include:
 
   # --- Status -------------------------------------------------------------
 
-  # Scalar code. `not-taken` positively asserts the patient is NOT taking
-  # the drug, which is not the same as an absent row.
-  # OMOP: no equivalent.
+  # Whether the drug is being taken. `not-taken` positively asserts the
+  # patient is NOT taking the drug.
+  # status  string (enum MedicationStatementStatusEnum)
   MedicationStatement.status:
     bindings:
       MedicationStatement.status: default
 
   # --- What is being taken ------------------------------------------------
 
-  # Variant: [{system, code, display, is_source}] ->
-  # medicationcodeableconcept_coding. Source dm+d coding plus
-  # standard-vocabulary codings added downstream; `is_source` true on the
-  # original.
-  #
-  # Unbound: `preferred` to a dm+d `=` filter subset, which needs a
-  # terminology server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes drug_concept_id / drug_source_value /
-  # drug_source_concept_id - all three are rows here. OMOP allows one standard
-  # concept; this carries dm+d VMP, VTM and RxNorm at once, without the loss.
+  # The drug. Source dm+d coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  # medicationcodeableconcept_coding
+  #     array [ {system: string, code: string, display: string,
+  #              is_source: boolean} ]
   MedicationStatement.medicationCodeableConcept.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: drug_exposure.person_id.
+  # The Patient the statement is about.
+  # subject_id  string (FK -> Patient.id)
   MedicationStatement.subject:
     fk: Patient                 # profile allows [Patient, Group]
-  # Scalar string FK id -> context_id. FHIR names the encounter `context`
-  # here, so the field follows the element name (§4).
-  # OMOP: drug_exposure.visit_occurrence_id.
+
+  # The Encounter the statement was recorded during.
+  # context_id  string (FK -> Encounter.id)
   MedicationStatement.context:
     fk: Encounter               # profile allows [Encounter, EpisodeOfCare]
 
-  # Scalar datetime -> effectivedatetime. When the patient was taking the
-  # drug.
-  # OMOP: drug_exposure.drug_exposure_start_datetime.
+  # When the patient was taking the drug.
+  # effectivedatetime  timestamp
+  # effectiveperiod    struct {start: timestamp, end: timestamp}
   MedicationStatement.effectiveDateTime:
-
-  # Nested Period: {start, end} -> effectiveperiod. The window over which
-  # the drug was taken; a repeat medication has a start and often no end.
-  # OMOP: drug_exposure.drug_exposure_start_datetime /
-  # drug_exposure_end_datetime.
   MedicationStatement.effectivePeriod:
 
-  # Scalar datetime -> dateasserted. When the assertion was recorded, as
-  # distinct from when the drug was taken.
-  # OMOP: no equivalent.
+  # When the assertion was recorded
+  # dateasserted  timestamp
   MedicationStatement.dateAsserted:
 
   # --- Dosage -------------------------------------------------------------
 
-  # Variant: [{sequence, text, route{coding[]}}] -> dosage. How the patient
-  # reports taking the drug. `text` is the human-readable dose; `sequence`
-  # orders multi-step regimens, so a first entry would take one step of a
-  # taper.
-  # OMOP: drug_exposure.sig / route_concept_id.
-  MedicationStatement.dosage:
-    key: [sequence, text]
+  # The dosage is promoted to scalars from dosage[0] rather than kept as a
+  # variant
+
+  # How the patient reports taking the drug ("Atorvastatin 40mg ON").
+  # dosage_text  string
+  MedicationStatement.dosage[0].text:
+
+  # E.g. Oral vs IV. The coded route and the rendered term are both taken
+  # dosage_route_coding_code  string (enum MedicationRouteEnum)
+  # dosage_route_text         string
+  MedicationStatement.dosage[0].route.coding[0].code:
     bindings:
-      # Manual: CDM subset of the SNOMED route hierarchy FHIR binds
-      # `preferred`, which needs a terminology server.
-      MedicationStatement.dosage.route.coding.code: MedicationRouteEnum
-    exclude:
-      MedicationStatement.dosage.additionalInstruction: >
-        limited analytical utility; supplementary advice text rather than dose
-      MedicationStatement.dosage.patientInstruction: >
-        limited analytical utility; duplicates `text` without adding
-        analysable content
-      MedicationStatement.dosage.timing: >
-        not in scope of typical source data; Timing is a deep recursive
-        structure that would nest arrays inside the variant
-      MedicationStatement.dosage.asNeededBoolean: >
-        not in scope of typical source data
-      MedicationStatement.dosage.asNeededCodeableConcept: >
-        not in scope of typical source data
-      MedicationStatement.dosage.site: >
-        limited analytical utility; route carries the analytical signal
-      MedicationStatement.dosage.method: >
-        limited analytical utility; route carries the analytical signal
-      MedicationStatement.dosage.doseAndRate: >
-        not in scope of typical source data; an array of choice-typed
-        Quantities nested inside a variant, and the dose text is what these
-        feeds populate
-      MedicationStatement.dosage.maxDosePerPeriod: >
-        not in scope of typical source data; a prescribing safety ceiling
-        rather than a drug history fact
-      MedicationStatement.dosage.maxDosePerAdministration: >
-        not in scope of typical source data
-      MedicationStatement.dosage.maxDosePerLifetime: >
-        not in scope of typical source data
-      MedicationStatement.dosage.route.text: >
-        rendered term; the coding carries the meaning
+      MedicationStatement.dosage[0].route.coding[0].code: MedicationRouteEnum
+  MedicationStatement.dosage[0].route.text:
+
+  # Dose ceiling per administration, and its unit (e.g. *50mg* tds).
+  # Sparsely populated on drug-history feeds.
+  # dosage_maxdoseperadministration_value  float
+  # dosage_maxdoseperadministration_unit   string
+  MedicationStatement.dosage[0].maxDosePerAdministration.value:
+  MedicationStatement.dosage[0].maxDosePerAdministration.unit:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Statement id from the source
-  # system. The profile makes `system` and `value` 1..1 here, unlike most
-  # resources.
-  # OMOP: drug_exposure.drug_source_value.
+  # Statement id from the source system. The profile makes `system` and
+  # `value` 1..1 here, unlike most resources.
+  # identifier  array [ {system: string, value: string} ]
   MedicationStatement.identifier:
     key: [system, value]
     exclude:
@@ -138,25 +94,22 @@ include:
       MedicationStatement.identifier.use: >
         not reliably populated across source systems
 
-  # --- Extension slices ---------------------------------------------------
-
-  # Scalar datetime -> extension_medicationstatementlastissuedate. When the
-  # medication was last issued - what separates a live repeat from a stale
-  # list entry.
-  # OMOP: no equivalent; UK Core specific.
-  MedicationStatement.extension:medicationStatementLastIssueDate:
-
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0]. Author and timestamp are not taken.
+  # note_text  string
   MedicationStatement.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
 # ===========================================================================
 rejected:
+
+  # --- Extension slices ---------------------------------------------------
+  MedicationStatement.extension:medicationStatementLastIssueDate: >
+    limited analytical utility; last-issue date is a GP repeat-list
+    housekeeping field, and `effectivePeriod` with `dateAsserted` bounds the
+    assertion
 
   # --- medication[x] ------------------------------------------------------
   MedicationStatement.medicationReference: >
@@ -166,6 +119,51 @@ rejected:
   MedicationStatement.medicationCodeableConcept.text: >
     NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
     the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Dosage -------------------------------------------------------------
+  MedicationStatement.dosage: >
+    NOT whitelisted whole - the wanted leaves are promoted out of `dosage[0]`
+    instead, so the table carries flat scalars rather than a variant. A drug
+    history asserts one dose, so the first entry is the assertion
+  MedicationStatement.dosage.doseAndRate: >
+    NOT REACHABLE, rather than rejected. The structured dose
+    (doseAndRate.doseQuantity.value/.unit) is what "dose and unit" would mean
+    here, but `doseAndRate` is typed as the anonymous `Element` backbone and
+    stage 1 does not walk into it, so no doseQuantity leaf exists in the
+    expanded tree. The same is true of MedicationRequest.dosageInstruction.
+    `dosage_text` carries the dose as free text; MedicationAdministration has
+    a real `dosage.dose` Quantity where a numeric dose is required
+  MedicationStatement.dosage.sequence: >
+    not in scope of typical source data; a drug history asserts a dose rather
+    than an ordered multi-step regimen
+  MedicationStatement.dosage.additionalInstruction: >
+    limited analytical utility; supplementary advice text rather than dose
+  MedicationStatement.dosage.patientInstruction: >
+    limited analytical utility; duplicates `text` without adding analysable
+    content
+  MedicationStatement.dosage.timing: >
+    not in scope of typical source data; Timing is a deep recursive structure
+    (repeat.bounds[x], when, offset). `timing.code` carries BD/TDS where a
+    source populates it, but these feeds put frequency in the dose text,
+    which `dosage_text` takes
+  MedicationStatement.dosage.asNeededBoolean: >
+    not in scope of typical source data
+  MedicationStatement.dosage.asNeededCodeableConcept: >
+    not in scope of typical source data
+  MedicationStatement.dosage.site: >
+    limited analytical utility; route carries the analytical signal
+  MedicationStatement.dosage.method: >
+    limited analytical utility; route carries the analytical signal
+  MedicationStatement.dosage.maxDosePerPeriod: >
+    not in scope of typical source data; a Ratio, and a prescribing safety
+    ceiling rather than a drug history fact
+  MedicationStatement.dosage.maxDosePerLifetime: >
+    not in scope of typical source data
+  MedicationStatement.dosage.maxDosePerAdministration.comparator: >
+    not in scope of typical source data; a dose ceiling is not recorded as an
+    inequality
+  MedicationStatement.dosage.maxDosePerAdministration.system: >
+    UCUM system/code are fixed in practice; `unit` carries the human string
 
   # --- Provenance of the assertion ----------------------------------------
   MedicationStatement.informationSource: >

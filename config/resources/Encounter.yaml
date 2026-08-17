@@ -1,15 +1,13 @@
 ## TO DO
-# 1. Add Appointments with FK references (as list)
+# 1. Add Appointments with FK references (as list) - DONE (0..* -> _id list)
 # 2. Add Location with FK references (as list)
+#    - DECIDED AGAINST: `serviceProvider` already carries the "where" this
+#      table needs. See the `rejected` entry below.
 #
 # # Encounter
 #
-# Grain: one row per Encounter resource. Fact table, OMOP `visit_occurrence`
-# analogue.
-#
-# Purpose: a patient's contact with a service. One row per spell, episode
-# or attendance, holding when it happened, what kind it was, who provided
-# it, how the patient arrived and where they went.
+# Purpose: a patient's contact with a service. Including spells, episodes,
+# or attendances, and GP encounters.
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -22,39 +20,31 @@ include:
 
   # --- Status and classification ------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Where the encounter has got to - planned, in-progress, finished.
+  # status  string (enum EncounterStatusEnum)
   Encounter.status:
     bindings:
       Encounter.status: default
 
-  # Nested Coding: {system, code, display, is_source} -> class. A bare
-  # Coding with no array above it, so it promotes directly to the object.
-  # OMOP: visit_occurrence.visit_concept_id.
+  # Inpatient vs outpatient vs emergency, etc
+  # class  struct {system: string, code: string (enum EncounterClassEnum),
+  #                display: string, is_source: boolean}
   Encounter.class:
     bindings:
-      # Manual: v3 ActEncounterCode, bound `extensible`.
       Encounter.class.code: EncounterClassEnum
 
-  # Nested Coding from type[0].coding[0]: {system, code, display, is_source}
-  # -> type_coding. The CDM's own encounter axis (apc_spell,
-  # ecds_attendance).
-  #
-  # NOTE a CDM vocabulary imposed on an element UK Core binds `preferred` to
-  # SNOMED. It validates only once an upstream step writes CDM tokens into
-  # `type`; against raw UK Core data it fails its accepted_values test.
-  # OMOP: visit_occurrence.visit_source_value.
+  # The CDM's own encounter axis (apc_spell, ecds_attendance).
+  # type_coding  struct {system: string, code: string
+  #                      (enum EncounterCategoryEnum), display: string,
+  #                      is_source: boolean}
   Encounter.type.coding[0]:
     bindings:
       # Manual: CDM-defined vocabulary, not a FHIR value set.
       Encounter.type.coding[0].code: EncounterCategoryEnum
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> servicetype. Care setting / treatment function.
-  #
-  # Unbound: UKCore-CareSettingType is 419 SNOMED concepts bound `preferred`,
-  # a browse list rather than a constraint.
-  # OMOP: no equivalent; care setting is implicit in visit_concept_id.
+  # Care setting / treatment function.
+  # servicetype  struct { coding: [ {system: string, code: string,
+  #                                  display: string, is_source: boolean} ] }
   Encounter.serviceType:
     exclude:
       Encounter.serviceType.text: >
@@ -62,85 +52,88 @@ include:
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: visit_occurrence.person_id.
+  # The Patient the encounter is for.
+  # subject_id  string (FK -> Patient.id)
   Encounter.subject:
     fk: Patient                 # profile allows [Patient, Group]
 
-  # Scalar string FK id -> partof_id. The parent encounter - a consultant
-  # episode within a spell, making the spell/episode hierarchy queryable.
-  # OMOP: visit_detail.parent_visit_detail_id - hierarchy, not
-  # preceding_visit_occurrence_id, which is sequence.
+  # The parent encounter - e.g. a consultant episode within a spell
+  # partof_id  string (FK -> Encounter.id)
   Encounter.partOf:
     fk: Encounter
 
-  # Scalar string FK id -> serviceprovider_id. The provider organisation.
-  # OMOP: visit_occurrence.care_site_id.
+  # The provider organisation.
+  # serviceprovider_id  string (FK -> Organization.id)
   Encounter.serviceProvider:
     fk: Organization
 
-  # Nested Period: {start, end} -> period. Admission and discharge datetime;
-  # length of stay is derived from these, never stored.
-  # OMOP: visit_occurrence.visit_start_datetime / visit_end_datetime.
+  # The booking this encounter fulfilled. Appointment has no reference back
+  # to Encounter in R4, so this is the only direction the link exists.
+  # appointment_id  array [ string (FK -> Appointment.id) ]
+  Encounter.appointment:
+    fk: Appointment
+
+  # Admission and discharge datetime; length of stay is derived from these
+  # period  struct {start: timestamp, end: timestamp}
   Encounter.period:
 
   # --- The CDS admission / discharge grid ---------------------------------
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> hospitalization_extension_admissionmethod. Elective vs emergency.
-  # OMOP: no equivalent.
+  # E.g. Elective vs emergency.
+  # hospitalization_extension_admissionmethod
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum AdmissionMethodEnum), display: string,
+  #                         is_source: boolean} ] }
   Encounter.hospitalization.extension:admissionMethod:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
       Encounter.hospitalization.extension:admissionMethod.coding.code: AdmissionMethodEnum
     exclude:
       Encounter.hospitalization.extension:admissionMethod.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> hospitalization_admitsource. Where the patient was admitted from.
-  # OMOP: visit_occurrence.admitted_from_concept_id /
-  # admitted_from_source_value.
+  # Where the patient was admitted from.
+  # hospitalization_admitsource
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum AdmitSourceEnum), display: string,
+  #                         is_source: boolean} ] }
   Encounter.hospitalization.admitSource:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
       Encounter.hospitalization.admitSource.coding.code: AdmitSourceEnum
     exclude:
       Encounter.hospitalization.admitSource.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> hospitalization_dischargedisposition. Where the patient went on
-  # discharge.
-  # OMOP: visit_occurrence.discharged_to_concept_id /
-  # discharged_to_source_value.
+  # Where the patient went on discharge.
+  # hospitalization_dischargedisposition
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum DischargeDestinationEnum), display: string,
+  #                         is_source: boolean} ] }
   Encounter.hospitalization.dischargeDisposition:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
       Encounter.hospitalization.dischargeDisposition.coding.code: DischargeDestinationEnum
     exclude:
       Encounter.hospitalization.dischargeDisposition.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_dischargemethod. Includes death on discharge, so load
-  # bearing for mortality work alongside Patient.deceased.
-  # OMOP: no equivalent.
+  # How the patient left. Includes death on discharge.
+  # extension_dischargemethod
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum DischargeMethodEnum), display: string,
+  #                         is_source: boolean} ] }
   Encounter.extension:dischargeMethod:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
       Encounter.extension:dischargeMethod.coding.code: DischargeMethodEnum
     exclude:
       Encounter.extension:dischargeMethod.text: >
         rendered term; the coding carries the meaning
 
-  # Nested CodeableConcept: {coding[]} of {system, code, display, is_source}
-  # -> extension_outcomeofattendance. Outpatient attendance outcome -
-  # discharged vs follow-up.
-  # OMOP: no equivalent.
+  # Outpatient attendance outcome - discharged vs follow-up.
+  # extension_outcomeofattendance
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum OutcomeOfAttendanceEnum), display: string,
+  #                         is_source: boolean} ] }
   Encounter.extension:OutcomeOfAttendance:
     bindings:
-      # Manual: England codeset; FHIR binds the UK-wide union.
       Encounter.extension:OutcomeOfAttendance.coding.code: OutcomeOfAttendanceEnum
     exclude:
       Encounter.extension:OutcomeOfAttendance.text: >
@@ -148,11 +141,13 @@ include:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{condition_id, use{coding[]}, rank}] -> diagnosis. The CDS
-  # primary / secondary diagnosis grid. `rank` orders them, and is 0..1 so
-  # the condition FK joins it in the key.
-  # OMOP: condition_occurrence.condition_status_concept_id carries the
-  # diagnosis role/rank.
+  # The CDS primary / secondary diagnosis grid. `rank` orders them.
+  # diagnosis  array [ {condition_id: string (FK -> Condition.id),
+  #                     use: { coding: [ {system: string, code: string
+  #                                       (enum DiagnosisRoleEnum),
+  #                                       display: string,
+  #                                       is_source: boolean} ] },
+  #                     rank: integer} ]
   Encounter.diagnosis:
     key: [condition_id, rank]
     fk:
@@ -165,9 +160,8 @@ include:
       Encounter.diagnosis.use.text: >
         rendered term; the coding carries the meaning
 
-  # Variant: [{system, value}] -> identifier. PAS spell number, local
-  # episode id.
-  # OMOP: visit_occurrence.visit_source_value, a single value.
+  # PAS spell number or local episode id.
+  # identifier  array [ {system: string, value: string} ]
   Encounter.identifier:
     key: [system, value]
     exclude:
@@ -195,8 +189,11 @@ rejected:
   # --- Care team and location ---------------------------------------------
   Encounter.participant: Practitioner not modelled; would be a dangling FK
   Encounter.location: >
-    Location IS modelled, but ward stays need a grain of one row per location
-    period, which is a table of its own rather than a variant here
+    Location IS modelled, but `serviceProvider` already carries the "where"
+    this table needs, at the organisation grain analysis works at. The
+    finer, ward-level grain is not required: it would arrive as a variant of
+    one object per ward stay - or as a table of its own at one row per
+    location period - and neither is warranted for a signal nothing asks for
 
   # --- Emergency care -----------------------------------------------------
   Encounter.extension:emergencyCareDischargeStatus: >
@@ -210,9 +207,6 @@ rejected:
   Encounter.basedOn: >
     ServiceRequest IS modelled, but the field is 0..* and the referral-to-
     encounter link is not reliably populated
-  Encounter.appointment: >
-    Appointment IS modelled, but the field is 0..* and would become a variant
-    holding a single id in practice
   Encounter.account: billing/finance, out of scope for a clinical CDM
   Encounter.reasonReference: >
     limited analytical utility; the diagnosis variant carries the clinical

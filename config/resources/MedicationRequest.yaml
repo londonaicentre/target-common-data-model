@@ -1,22 +1,7 @@
-## TO DO
-# 1. Remove intent
-# 2. Remove priority
-# 3. Remove do not perform
-# 4. Remove MedicationRequest.courseOfTherapyType
-# 5. Remove validity period
-# 6. Remove number of repeats allowed
+# MedicationRequest
 #
-# # MedicationRequest
-#
-# Grain: one row per MedicationRequest resource. Fact table, OMOP
-# `drug_exposure` analogue (the prescribing half). OMOP folds prescribing,
-# dispensing and administration into DRUG_EXPOSURE; this model keeps them
-# apart.
-#
-# Purpose: what a patient was prescribed. One row per prescription, holding
-# the drug, when it was written, how it was to be taken and how much was
-# authorised. What was actually given is MedicationAdministration; what the
-# patient reports taking is MedicationStatement.
+# Purpose: what medication was requested for a patient.
+# In practice this is used for medication orders in primary care
 #
 # `id` (PK), `meta_source` and `meta_last_updated` are added to every table
 # and are not listed below.
@@ -27,150 +12,79 @@ package: fhir.r4.ukcore.stu2
 
 include:
 
-  # --- Status and intent --------------------------------------------------
+  # --- Status -------------------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
+  # Where the request has got to - active, completed, stopped.
+  # status  string (enum MedicationrequestStatusEnum)
   MedicationRequest.status:
     bindings:
       MedicationRequest.status: default
 
-  # Scalar code. Separates a proposal from an actual order.
-  # OMOP: no equivalent; roughly what drug_type_concept_id encodes.
-  MedicationRequest.intent:
-    bindings:
-      MedicationRequest.intent: default
+  # --- What was requested ------------------------------------------------
 
-  # Scalar code.
-  # OMOP: no equivalent.
-  MedicationRequest.priority:
-    bindings:
-      MedicationRequest.priority: default
-
-  # Scalar boolean -> donotperform. An explicit instruction NOT to
-  # prescribe; a modifier, so ignoring it inverts the meaning of the row.
-  # OMOP: no equivalent.
-  MedicationRequest.doNotPerform:
-
-  # --- What was prescribed ------------------------------------------------
-
-  # Variant: [{system, code, display, is_source}] ->
-  # medicationcodeableconcept_coding. Source dm+d coding plus
-  # standard-vocabulary codings added downstream; `is_source` true on the
-  # original.
-  #
-  # Unbound: `preferred` to a dm+d `=` filter subset, which needs a
-  # terminology server. The vocabulary lives in the mapping layer.
-  #
-  # OMOP: subsumes drug_concept_id / drug_source_value /
-  # drug_source_concept_id - all three are rows here. OMOP allows one standard
-  # concept; this carries dm+d VMP, VTM and RxNorm at once, without the loss.
+  # The drug. Source dm+d coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  # medicationcodeableconcept_coding
+  #     array [ {system: string, code: string, display: string,
+  #              is_source: boolean} ]
   MedicationRequest.medicationCodeableConcept.coding:
     key: [system, code]
 
   # --- Who and when -------------------------------------------------------
 
-  # Scalar string FK id -> subject_id.
-  # OMOP: drug_exposure.person_id.
+  # The Patient the request is for.
+  # subject_id  string (FK -> Patient.id)
   MedicationRequest.subject:
     fk: Patient                 # profile allows [Patient, Group]
-  # Scalar string FK id -> encounter_id.
-  # OMOP: drug_exposure.visit_occurrence_id.
+
+  # The Encounter the request was written during.
+  # encounter_id  string (FK -> Encounter.id)
   MedicationRequest.encounter:
     fk: Encounter
 
-  # Scalar datetime -> authoredon. When the prescription was written.
-  # OMOP: drug_exposure.drug_exposure_start_datetime.
+  # When the request was written.
+  # authoredon  timestamp
   MedicationRequest.authoredOn:
-
-  # --- Course of therapy --------------------------------------------------
-
-  # Nested CodeableConcept: {coding[], text} of {system, code, display,
-  # is_source} -> courseoftherapytype. Acute vs repeat vs repeat-dispensing.
-  #
-  # Unbound: `extensible` across two code systems
-  # (UKCore-MedicationRequestCourseOfTherapy and the FHIR core one), so
-  # `default` cannot resolve it to a single vocabulary.
-  # OMOP: no equivalent.
-  MedicationRequest.courseOfTherapyType:
-    exclude:
-      MedicationRequest.courseOfTherapyType.text: >
-        rendered term; the coding carries the meaning
 
   # --- Dosage -------------------------------------------------------------
 
-  # Variant: [{sequence, text, route{coding[]}, doseandrate[]}] ->
-  # dosageinstruction. How the drug is to be taken. `text` is the
-  # human-readable dose; `sequence` orders multi-step regimens, so a first
-  # entry would take one step of a taper.
-  # OMOP: drug_exposure.sig / route_concept_id / dose_unit_source_value.
-  MedicationRequest.dosageInstruction:
-    key: [sequence, text]
+  # The dosage is promoted to scalars from dosageInstruction[0]
+
+  # Human-readable dose as prescribed ("1 tablet TDS for 5 days").
+  # dosageinstruction_text  string
+  MedicationRequest.dosageInstruction[0].text:
+
+  # E.g. Oral vs IV. The coded route and the rendered term are both taken
+  # dosageinstruction_route_coding_code
+  #     string (enum MedicationRouteEnum)
+  # dosageinstruction_route_text  string
+  MedicationRequest.dosageInstruction[0].route.coding[0].code:
     bindings:
-      MedicationRequest.dosageInstruction.maxDosePerAdministration.comparator: default
-      # Manual: CDM subset of the SNOMED route hierarchy FHIR binds
-      # `preferred`, which needs a terminology server.
-      MedicationRequest.dosageInstruction.route.coding.code: MedicationRouteEnum
-    exclude:
-      MedicationRequest.dosageInstruction.additionalInstruction: >
-        limited analytical utility; supplementary advice text rather than dose
-      MedicationRequest.dosageInstruction.patientInstruction: >
-        limited analytical utility; duplicates `text` without adding
-        analysable content
-      MedicationRequest.dosageInstruction.timing: >
-        not in scope of typical source data; Timing is a deep recursive
-        structure (repeat.bounds[x], when, offset) that would nest arrays
-        inside the variant
-      MedicationRequest.dosageInstruction.asNeededBoolean: >
-        not in scope of typical source data
-      MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
-        not in scope of typical source data
-      MedicationRequest.dosageInstruction.site: >
-        limited analytical utility; body site is carried by
-        MedicationAdministration where it matters
-      MedicationRequest.dosageInstruction.method: >
-        limited analytical utility; route carries the analytical signal
-      MedicationRequest.dosageInstruction.maxDosePerPeriod: >
-        not in scope of typical source data; a Ratio nested inside a variant,
-        and a safety-checking concern rather than an exposure one
-      MedicationRequest.dosageInstruction.maxDosePerLifetime: >
-        not in scope of typical source data
-      MedicationRequest.dosageInstruction.route.text: >
-        rendered term; the coding carries the meaning
+      MedicationRequest.dosageInstruction[0].route.coding[0].code: MedicationRouteEnum
+  MedicationRequest.dosageInstruction[0].route.text:
+
+  # Dose ceiling per administration, and its unit (e.g. *50mg* tds).
+  # dosageinstruction_maxdoseperadministration_value  float
+  # dosageinstruction_maxdoseperadministration_unit   string
+  MedicationRequest.dosageInstruction[0].maxDosePerAdministration.value:
+  MedicationRequest.dosageInstruction[0].maxDosePerAdministration.unit:
 
   # --- Dispense request ---------------------------------------------------
 
-  # Scalar decimal -> dispenserequest_quantity_value. Quantity prescribed,
-  # which with the dose gives days of supply.
-  # OMOP: drug_exposure.quantity.
+  # Quantity and its unit, NOT a dose. ("50 tablets")
+  # dispenserequest_quantity_value  float
+  # dispenserequest_quantity_unit   string
   MedicationRequest.dispenseRequest.quantity.value:
-
-  # Scalar string -> dispenserequest_quantity_unit. Unit of the prescribed
-  # quantity.
-  # OMOP: drug_exposure.dose_unit_source_value.
   MedicationRequest.dispenseRequest.quantity.unit:
 
-  # Scalar unsignedInt -> dispenserequest_numberofrepeatsallowed. Repeats
-  # authorised.
-  # OMOP: drug_exposure.refills.
-  MedicationRequest.dispenseRequest.numberOfRepeatsAllowed:
-
-  # Scalar decimal -> dispenserequest_expectedsupplyduration_value, promoted
-  # from the Duration. Days of supply, which with authoredOn bounds the
-  # exposure period where no end date is recorded.
-  # OMOP: drug_exposure.days_supply.
+  # Days of supply
+  # dispenserequest_expectedsupplyduration_value  float
   MedicationRequest.dispenseRequest.expectedSupplyDuration.value:
-
-  # Nested Period: {start, end} -> dispenserequest_validityperiod.
-  # Prescription validity window.
-  # OMOP: drug_exposure.drug_exposure_start_date / drug_exposure_end_date.
-  MedicationRequest.dispenseRequest.validityPeriod:
 
   # --- Variants -----------------------------------------------------------
 
-  # Variant: [{system, value}] -> identifier. Prescription number from the
-  # source system.
-  # OMOP: drug_exposure.drug_source_value.
+  # Prescription number from the source system.
+  # identifier  array [ {system: string, value: string} ]
   MedicationRequest.identifier:
     key: [system, value]
     exclude:
@@ -185,15 +99,32 @@ include:
 
   # --- Free text ----------------------------------------------------------
 
-  # Scalar string -> note_text, promoted from note[0].text. Unstructured and
-  # frequently identifying; author and timestamp are not taken.
-  # OMOP: no equivalent.
+  # Free-text note, from note[0].
+  # note_text  string
   MedicationRequest.note[0].text:
 
 # ===========================================================================
 # Rejected - notable absences and why (§11)
 # ===========================================================================
 rejected:
+
+  # --- Status and intent --------------------------------------------------
+  MedicationRequest.intent: >
+    limited analytical utility; the CDM takes every MedicationRequest row as
+    a prescription, and the proposal/plan/order distinction is not reliably
+    populated across source systems
+  MedicationRequest.priority: >
+    not in scope of typical source data; urgency is not populated on
+    prescribing feeds
+  MedicationRequest.doNotPerform: >
+    not in scope of typical source data; a negation modifier that source
+    feeds do not populate
+
+  # --- Course of therapy --------------------------------------------------
+  MedicationRequest.courseOfTherapyType: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it to a single vocabulary, and the acute vs
+    repeat distinction is derivable from the prescribing sequence
 
   # --- medication[x] ------------------------------------------------------
   MedicationRequest.medicationReference: >
@@ -223,7 +154,57 @@ rejected:
     not in scope of typical source data; dispensing policy rather than
     clinical fact
 
+  # --- Dosage instruction --------------------------------------------------
+  MedicationRequest.dosageInstruction: >
+    NOT whitelisted whole - the wanted leaves are promoted out of
+    `dosageInstruction[0]` instead, so the table carries flat scalars rather
+    than a variant holding a nested CodeableConcept and Quantity. A
+    multi-step regimen is flattened to its first step, which these feeds do
+    not populate in any case
+  MedicationRequest.dosageInstruction.sequence: >
+    not in scope of typical source data; it orders a multi-step regimen, and
+    only the first step is taken
+  MedicationRequest.dosageInstruction.patientInstruction: >
+    limited analytical utility; duplicates `text` without adding analysable
+    content
+  MedicationRequest.dosageInstruction.timing: >
+    not in scope of typical source data; Timing is a deep recursive structure
+    (repeat.bounds[x], when, offset). `timing.code` carries BD/TDS where a
+    source populates it, but UK feeds put frequency in the dose text, which
+    `dosageinstruction_text` takes
+  MedicationRequest.dosageInstruction.asNeededBoolean: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.site: >
+    limited analytical utility; body site is carried by
+    MedicationAdministration where it matters
+  MedicationRequest.dosageInstruction.method: >
+    limited analytical utility; route carries the analytical signal
+  MedicationRequest.dosageInstruction.doseAndRate: >
+    not in scope of typical source data; an array of choice-typed Quantities,
+    and the dose text is what these feeds populate
+  MedicationRequest.dosageInstruction.maxDosePerPeriod: >
+    not in scope of typical source data; a Ratio, and a safety-checking
+    concern rather than an exposure one
+  MedicationRequest.dosageInstruction.maxDosePerLifetime: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.maxDosePerAdministration.comparator: >
+    not in scope of typical source data; a dose ceiling is not recorded as an
+    inequality, unlike an administered dose
+  MedicationRequest.dosageInstruction.maxDosePerAdministration.system: >
+    UCUM system/code are fixed in practice; `unit` carries the human string
+  MedicationRequest.dosageInstruction.additionalInstruction.text: >
+    rendered term; the coding carries the meaning
+
   # --- Dispense request detail --------------------------------------------
+  MedicationRequest.dispenseRequest.numberOfRepeatsAllowed: >
+    not in scope of typical source data; repeats authorised is a prescribing
+    policy field rather than an exposure fact, and is not reliably populated
+  MedicationRequest.dispenseRequest.validityPeriod: >
+    limited analytical utility; the prescription validity window is an
+    administrative window rather than an exposure one, which authoredOn and
+    expectedSupplyDuration.value carry
   MedicationRequest.dispenseRequest.initialFill: >
     not in scope of typical source data; a US pharmacy-benefit concept
   MedicationRequest.dispenseRequest.dispenseInterval: >
@@ -269,5 +250,5 @@ rejected:
 
   # --- Notes and extensions -----------------------------------------------
   MedicationRequest.extension:medicationRepeatInformation: >
-    limited analytical utility; courseOfTherapyType and
-    numberOfRepeatsAllowed carry the repeat signal
+    limited analytical utility; the repeat signal is derivable from the
+    prescribing sequence for the same drug and patient
