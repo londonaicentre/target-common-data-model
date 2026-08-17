@@ -14,9 +14,15 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Condition
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
 default_range: string
 classes:
   ConditionClinicalStatusCoding:
@@ -179,12 +185,11 @@ classes:
     description: One row per Condition resource.
     annotations:
       fhir_path: Condition
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Condition.id
           fhir_type: id
@@ -201,15 +206,17 @@ classes:
           fhir_path: Condition.meta.lastUpdated
           fhir_type: instant
       subject_id:
-        range: string
+        range: Patient
         required: true
+        inlined: false
         description: Who has the condition?
         annotations:
           fhir_path: Condition.subject
           fhir_type: Reference
           fk_target: Patient
       encounter_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Encounter created as part of
         annotations:
           fhir_path: Condition.encounter

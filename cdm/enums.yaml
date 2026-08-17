@@ -13,6 +13,10 @@ id: https://cdm.aicentre.co.uk/enums
 name: enums
 description: LinkML enums for the FlatFHIR CDM. Folded from the hand-written manifest and the offline
   expansion of bound FHIR value sets; contains only the enums the resource schemas reference.
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 enums:
@@ -117,35 +121,59 @@ enums:
       '99':
         description: Source of admission not known
   AppointmentCancellationReasonEnum:
-    description: CDM-defined cancellation reason. Attributes a cancellation to the patient or the provider
-      - the DNA-vs-cancellation breakdown. The FHIR CodeSystem is marked incomplete, so this cannot be
-      derived.
+    description: 'Cancellation reason - the axis that separates a patient DNA from a provider-side cancellation.
+      A CDM-chosen SUBSET of http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason, which
+      FHIR binds `example` and which `default` therefore cannot reach.
+
+      Codes and displays are taken VERBATIM from that code system. It is marked `content: example` but
+      ships all 32 concepts, so the subset is a modelling choice rather than a gap in the packages - the
+      parent codes (pat, prov, other) plus the child reasons that UK PAS systems actually populate. Deliberately
+      INCOMPLETE: a cancellation using a reason outside this list fails its accepted_values test rather
+      than resolving.
+
+      The 21 omitted children are mostly US-centric (oth-cms CMS therapy cap, pat-mt member terminated,
+      prov-mri MRI screening form) or too granular for a UK feed; widen the list if a source populates
+      them.'
     annotations:
       binding_source: manual
       origin: enum_manifest.yaml
     permissible_values:
       pat:
-        description: Patient cancelled
+        description: Patient
       pat-crs:
-        description: 'Patient: canceled via received schedule'
+        description: 'Patient: Canceled via automated reminder system'
       pat-cpp:
-        description: 'Patient: change in patient priority'
+        description: 'Patient: Canceled via Patient Portal'
       pat-dec:
-        description: 'Patient: deceased'
+        description: 'Patient: Deceased'
+      pat-fb:
+        description: 'Patient: Feeling Better'
+      pat-lt:
+        description: 'Patient: Lack of Transportation'
       pat-mv:
-        description: 'Patient: moved'
+        description: 'Patient: Moved'
+      pat-ucp:
+        description: 'Patient: Unhappy/Changed Provider'
       prov:
-        description: Provider cancelled
-      prov-pat-dec:
-        description: 'Provider: patient deceased'
-      prov-esc:
-        description: 'Provider: escalation of care'
+        description: Provider
+      prov-dch:
+        description: 'Provider: Discharged'
+      prov-hosp:
+        description: 'Provider: Hospitalized'
+      prov-pers:
+        description: 'Provider: Personal'
       maint:
-        description: Equipment maintenance or repair
+        description: Equipment Maintenance/Repair
       meds-inc:
-        description: Prep or meds incomplete
+        description: Prep/Med Incomplete
       other:
         description: Other
+      oth-err:
+        description: 'Other: Error'
+      oth-room:
+        description: 'Other: Room/Resource Maintenance'
+      oth-weath:
+        description: 'Other: Weather'
   AppointmentTypeEnum:
     description: Appointment type - the v2-0276 general codes plus the UK Core urgent-follow-up supplement.
       This is the union UKCore-AppointmentReasonCode binds; the value set spans two code systems so it
@@ -166,19 +194,22 @@ enums:
       EMERGENCY:
         description: Emergency appointment
       urgent-follow-up:
-        description: Urgent follow-up (UK Core)
+        description: Urgent follow-up
   ConditionCategoryEnum:
-    description: Condition category (UKCore-ConditionCategory + FHIR core condition-category).
+    description: 'Condition category. A UNION across two code systems, which is why it cannot be derived:
+      `problem-list-item` and `encounter-diagnosis` come from http://terminology.hl7.org/CodeSystem/condition-category,
+      and `presenting-complaint` and `co-morbidity` from https://fhir.hl7.org.uk/CodeSystem/UKCore-ConditionCategory.
+      Codes and displays are verbatim from those systems.'
     annotations:
       binding_source: manual
       origin: enum_manifest.yaml
     permissible_values:
       problem-list-item:
-        description: Problem list item
+        description: Problem List Item
       encounter-diagnosis:
-        description: Encounter diagnosis
+        description: Encounter Diagnosis
       presenting-complaint:
-        description: Presenting complaint
+        description: Presenting Complaint
       co-morbidity:
         description: Co-morbidity
   DiagnosisRoleEnum:
@@ -194,11 +225,11 @@ enums:
       CC:
         description: Chief complaint
       CM:
-        description: Co-morbidity diagnosis
+        description: Comorbidity diagnosis
       pre-op:
-        description: Pre-op diagnosis
+        description: pre-op diagnosis
       post-op:
-        description: Post-op diagnosis
+        description: post-op diagnosis
       billing:
         description: Billing
   DiagnosticServiceSectionEnum:
@@ -359,27 +390,27 @@ enums:
       origin: enum_manifest.yaml
     permissible_values:
       AMB:
-        description: Ambulatory
+        description: ambulatory
       EMER:
-        description: Emergency
+        description: emergency
       FLD:
-        description: Field
+        description: field
       HH:
-        description: Home health
+        description: home health
       IMP:
-        description: Inpatient encounter
+        description: inpatient encounter
       ACUTE:
-        description: Inpatient acute
+        description: inpatient acute
       NONAC:
-        description: Inpatient non-acute
+        description: inpatient non-acute
       OBSENC:
-        description: Observation encounter
+        description: observation encounter
       PRENC:
-        description: Pre-admission
+        description: pre-admission
       SS:
-        description: Short stay
+        description: short stay
       VR:
-        description: Virtual
+        description: virtual
   EthnicCategoryEnum:
     description: NHS England ethnic category codes (UKCore-EthnicCategoryEngland).
     annotations:
@@ -422,6 +453,101 @@ enums:
         description: Not stated
       '99':
         description: Not known
+  ImagingLateralityEnum:
+    description: Laterality of the body site a series was acquired from. The complete FHIR R4 bodysite-laterality
+      value set (SNOMED CT), which FHIR binds `example` and which `default` therefore cannot reach. Taken
+      whole - at three codes a subset saves nothing.
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      '419161000':
+        description: Unilateral left
+      '419465000':
+        description: Unilateral right
+      '51440002':
+        description: Bilateral
+  ImagingModalityEnum:
+    description: 'DICOM acquisition modality - the primary analyst axis of an imaging study (a CT is not
+      an MRI is not a plain film). FHIR binds ImagingStudy.modality and ImagingStudy.series.modality `extensible`
+      to DICOM CID 29 (http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html),
+      which is a DICOM publication rather than a FHIR ValueSet and ships in no package, so `default` cannot
+      reach it and the list has to be hand-written.
+
+      Codes and displays are DICOM Defined Terms taken VERBATIM from the DCM ontology as it ships in hl7.fhir.r4.core
+      (CodeSystem-dicom-dcim.json, http://dicom.nema.org/resources/ontology/DCM, 3156 concepts, content:
+      complete). They are hand-listed rather than derived with `source: codesystem` because DCM is a mixed
+      ontology - the same code system holds equipment codes (WSD workstation, PRINT server), derived-object
+      codes (PR, SEG, KO) and even patient sex codes (F, M, H). Only the acquisition modalities belong
+      on this column, and there is no subset mechanism on a `codesystem` entry.
+
+      Deliberately INCOMPLETE - a study using a modality outside this list fails its accepted_values test
+      rather than resolving; widen the list when that happens. Scope is UK NHS acute radiology, cardiology
+      and endoscopy. Notable omissions by choice: the ophthalmology cluster (OPT, OPV, OPM, OPR, AR, KER,
+      LEN, VA, FA, FS, SRF, OAM) and the legacy pre-PACS terms (CD, DD, CF, DF, VF, DS, AS, LP, CS, CP,
+      BI, DG, LS) - add the relevant block if you ingest eye services or a historical archive.'
+    annotations:
+      binding_source: manual
+      origin: enum_manifest.yaml
+    permissible_values:
+      CR:
+        description: Computed Radiography
+      DX:
+        description: Digital Radiography
+      RG:
+        description: Radiographic imaging
+      CT:
+        description: Computed Tomography
+      MR:
+        description: Magnetic Resonance
+      MA:
+        description: Magnetic resonance angiography
+      MG:
+        description: Mammography
+      US:
+        description: Ultrasound
+      RF:
+        description: Radiofluoroscopy
+      XA:
+        description: X-Ray Angiography
+      BMD:
+        description: Bone Mineral Densitometry
+      NM:
+        description: Nuclear Medicine
+      PT:
+        description: Positron emission tomography
+      ST:
+        description: Single-photon emission computed tomography
+      EC:
+        description: Echocardiography
+      ECG:
+        description: Electrocardiography
+      IVUS:
+        description: Intravascular Ultrasound
+      HD:
+        description: Hemodynamic Waveform
+      EPS:
+        description: Cardiac Electrophysiology
+      ES:
+        description: Endoscopy
+      XC:
+        description: External-camera Photography
+      OP:
+        description: Ophthalmic photography
+      OCT:
+        description: Optical Coherence Tomography
+      SM:
+        description: Slide Microscopy
+      RT:
+        description: Radiation Therapy Device
+      IO:
+        description: Intra-oral Radiography
+      PX:
+        description: Panoramic X-Ray
+      SR:
+        description: Structured Report Document
+      OT:
+        description: Other Modality
   LocationPhysicalTypeEnum:
     description: 'Physical form of a location - which level of the partOf hierarchy a row sits at (site
       > building > wing > ward > room > bed). The complete FHIR R4 location-physical-type list (http://terminology.hl7.org/CodeSystem/location-physical-type),
@@ -529,9 +655,9 @@ enums:
       origin: enum_manifest.yaml
     permissible_values:
       social-history:
-        description: Social history
+        description: Social History
       vital-signs:
-        description: Vital signs
+        description: Vital Signs
       imaging:
         description: Imaging
       laboratory:
@@ -546,50 +672,6 @@ enums:
         description: Therapy
       activity:
         description: Activity
-  ObservationInterpretationEnum:
-    description: Clinical interpretation of an observation result (HL7 FHIR observation-interpretation).
-    annotations:
-      binding_source: manual
-      origin: enum_manifest.yaml
-    permissible_values:
-      L:
-        description: Low
-      H:
-        description: High
-      LL:
-        description: Critical Low
-      HH:
-        description: Critical High
-      N:
-        description: Normal
-      A:
-        description: Abnormal
-      AA:
-        description: Critical Abnormal
-      U:
-        description: Significant Change Up
-      D:
-        description: Significant Change Down
-      B:
-        description: Better
-      W:
-        description: Worse
-      R:
-        description: Resistant
-      S:
-        description: Susceptible
-      I:
-        description: Intermediate
-      MS:
-        description: Moderately Susceptible
-      VS:
-        description: Very Susceptible
-      IE:
-        description: Insufficient Evidence
-      SYN-R:
-        description: Synergy - Resistant
-      SYN-S:
-        description: Synergy - Susceptible
   OutcomeOfAttendanceEnum:
     description: NHS England outcome of attendance codes (UKCore-OutcomeOfAttendanceEngland).
     annotations:
@@ -602,6 +684,23 @@ enums:
         description: Another appointment given
       '3':
         description: Appointment to be made at a later date
+  AddressUseEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/address-use (compose of 5 concepts).
+    annotations:
+      binding_source: fhir
+      value_set: http://hl7.org/fhir/ValueSet/address-use
+      binding_strength: required
+    permissible_values:
+      home:
+        description: Home
+      work:
+        description: Work
+      temp:
+        description: Temporary
+      old:
+        description: Old / Incorrect
+      billing:
+        description: Billing
   AdministrativeGenderEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/administrative-gender (compose of 4 concepts).
     annotations:
@@ -682,43 +781,6 @@ enums:
         description: Refuted
       entered-in-error:
         description: Entered in Error
-  DataAbsentReasonEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/data-absent-reason (compose of 15 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/data-absent-reason
-      binding_strength: extensible
-    permissible_values:
-      unknown:
-        description: Unknown
-      asked-unknown:
-        description: Asked But Unknown
-      temp-unknown:
-        description: Temporarily Unknown
-      not-asked:
-        description: Not Asked
-      asked-declined:
-        description: Asked But Declined
-      masked:
-        description: Masked
-      not-applicable:
-        description: Not Applicable
-      unsupported:
-        description: Unsupported
-      as-text:
-        description: As Text
-      error:
-        description: Error
-      not-a-number:
-        description: Not a Number (NaN)
-      negative-infinity:
-        description: Negative Infinity (NINF)
-      positive-infinity:
-        description: Positive Infinity (PINF)
-      not-performed:
-        description: Not Performed
-      not-permitted:
-        description: Not Permitted
   DiagnosticReportStatusEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/diagnostic-report-status (compose of 10 concepts).
     annotations:
@@ -815,17 +877,23 @@ enums:
         description: Entered in Error
       unknown:
         description: Unknown
-  LocationModeEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/location-mode (compose of 2 concepts).
+  ImagingstudyStatusEnum:
+    description: Derived from http://hl7.org/fhir/ValueSet/imagingstudy-status (compose of 5 concepts).
     annotations:
       binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/location-mode
+      value_set: http://hl7.org/fhir/ValueSet/imagingstudy-status
       binding_strength: required
     permissible_values:
-      instance:
-        description: Instance
-      kind:
-        description: Kind
+      registered:
+        description: Registered
+      available:
+        description: Available
+      cancelled:
+        description: Cancelled
+      entered-in-error:
+        description: Entered in Error
+      unknown:
+        description: Unknown
   LocationStatusEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/location-status (compose of 3 concepts).
     annotations:
@@ -883,29 +951,6 @@ enums:
         description: Unknown
       not-taken:
         description: Not Taken
-  MedicationrequestIntentEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/medicationrequest-intent (compose of 8 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/medicationrequest-intent
-      binding_strength: required
-    permissible_values:
-      proposal:
-        description: Proposal
-      plan:
-        description: Plan
-      order:
-        description: Order
-      original-order:
-        description: Original Order
-      reflex-order:
-        description: Reflex Order
-      filler-order:
-        description: Filler Order
-      instance-order:
-        description: Instance Order
-      option:
-        description: Option
   MedicationrequestStatusEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/medicationrequest-status (compose of 8 concepts).
     annotations:
@@ -973,34 +1018,6 @@ enums:
         description: Entered in Error
       unknown:
         description: Unknown
-  ParticipantrequiredEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/participantrequired (compose of 3 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/participantrequired
-      binding_strength: required
-    permissible_values:
-      required:
-        description: Required
-      optional:
-        description: Optional
-      information-only:
-        description: Information Only
-  ParticipationstatusEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/participationstatus (compose of 4 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/participationstatus
-      binding_strength: required
-    permissible_values:
-      accepted:
-        description: Accepted
-      declined:
-        description: Declined
-      tentative:
-        description: Tentative
-      needs-action:
-        description: Needs Action
   QuantityComparatorEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/quantity-comparator (compose of 4 concepts).
     annotations:
@@ -1016,46 +1033,6 @@ enums:
         description: Greater or Equal to
       '>':
         description: Greater than
-  RequestIntentEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/request-intent (compose of 9 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/request-intent
-      binding_strength: required
-    permissible_values:
-      proposal:
-        description: Proposal
-      plan:
-        description: Plan
-      directive:
-        description: Directive
-      order:
-        description: Order
-      original-order:
-        description: Original Order
-      reflex-order:
-        description: Reflex Order
-      filler-order:
-        description: Filler Order
-      instance-order:
-        description: Instance Order
-      option:
-        description: Option
-  RequestPriorityEnum:
-    description: Derived from http://hl7.org/fhir/ValueSet/request-priority (compose of 4 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: http://hl7.org/fhir/ValueSet/request-priority
-      binding_strength: required
-    permissible_values:
-      routine:
-        description: Routine
-      urgent:
-        description: Urgent
-      asap:
-        description: ASAP
-      stat:
-        description: STAT
   RequestStatusEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/request-status (compose of 7 concepts).
     annotations:
@@ -1092,35 +1069,17 @@ enums:
         description: Unsatisfactory
       entered-in-error:
         description: Entered in Error
-  UKCoreDeathNotificationStatusEnum:
-    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-DeathNotificationStatus (expansion
-      of 3 concepts).
+  UKCoreAddressKeyTypeEnum:
+    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-AddressKeyType (expansion of 2 concepts).
     annotations:
       binding_source: fhir
-      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-DeathNotificationStatus
+      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-AddressKeyType
       binding_strength: extensible
     permissible_values:
-      '2':
-        description: Formal - death notice received from Registrar of Deaths
-      '1':
-        description: Informal - death notice received via an update from a local NHS Organisation such
-          as GP or Trust
-      U:
-        description: Removed
-  UKCoreDeliveryChannelEnum:
-    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-DeliveryChannel (expansion of 3
-      concepts).
-    annotations:
-      binding_source: fhir
-      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-DeliveryChannel
-      binding_strength: extensible
-    permissible_values:
-      In-person:
-        description: In-person
-      Telephone:
-        description: Telephone
-      Video:
-        description: Video
+      PAF:
+        description: Postcode Address File
+      UPRN:
+        description: Unique Property Reference Number
   UKCorePracticeSettingCodeEnum:
     description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-PracticeSettingCode (expansion of
       87 concepts).
@@ -1303,14 +1262,3 @@ enums:
         description: Nursing
       '960':
         description: Allied Health Professional
-  UKCoreSampleCategoryEnum:
-    description: Derived from https://fhir.hl7.org.uk/ValueSet/UKCore-SampleCategory (expansion of 2 concepts).
-    annotations:
-      binding_source: fhir
-      value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SampleCategory
-      binding_strength: extensible
-    permissible_values:
-      tumour:
-        description: Tumour
-      germline:
-        description: Germline

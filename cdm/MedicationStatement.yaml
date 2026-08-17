@@ -14,9 +14,15 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationStatement
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
 default_range: string
 classes:
   MedicationStatementMedicationCodeableConceptCoding:
@@ -67,76 +73,6 @@ classes:
         annotations:
           fhir_path: MedicationStatement.effectivePeriod.end
           fhir_type: dateTime
-  MedicationStatementDosageRouteCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: MedicationStatement.dosage.route.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: MedicationStatement.dosage.route.coding.system
-          fhir_type: uri
-      code:
-        range: MedicationRouteEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: MedicationStatement.dosage.route.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SubstanceOrProductAdministrationRoute
-          binding_strength: preferred
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: MedicationStatement.dosage.route.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: MedicationStatement.dosage.route.coding.is_source
-          fhir_type: boolean
-  MedicationStatementDosageRoute:
-    description: How drug should enter body
-    annotations:
-      fhir_path: MedicationStatement.dosage.route
-    attributes:
-      coding:
-        range: MedicationStatementDosageRouteCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: MedicationStatement.dosage.route.coding
-          fhir_type: Coding
-  MedicationStatementDosage:
-    description: Details of how medication is/was taken or should be taken
-    annotations:
-      fhir_path: MedicationStatement.dosage
-      key_fields: sequence, text
-    attributes:
-      sequence:
-        range: integer
-        description: The order of the dosage instructions
-        annotations:
-          fhir_path: MedicationStatement.dosage.sequence
-          fhir_type: integer
-      text:
-        range: string
-        description: Free text dosage instructions e.g. SIG
-        annotations:
-          fhir_path: MedicationStatement.dosage.text
-          fhir_type: string
-      route:
-        range: MedicationStatementDosageRoute
-        description: How drug should enter body
-        annotations:
-          fhir_path: MedicationStatement.dosage.route
-          fhir_type: CodeableConcept
   MedicationStatementIdentifier:
     description: External identifier
     annotations:
@@ -161,12 +97,11 @@ classes:
     description: One row per MedicationStatement resource.
     annotations:
       fhir_path: MedicationStatement
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: MedicationStatement.id
           fhir_type: id
@@ -202,15 +137,17 @@ classes:
           fhir_path: MedicationStatement.medicationCodeableConcept.coding
           fhir_type: Coding
       subject_id:
-        range: string
+        range: Patient
         required: true
+        inlined: false
         description: Who is/was taking  the medication
         annotations:
           fhir_path: MedicationStatement.subject
           fhir_type: Reference
           fk_target: Patient
       context_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Encounter / Episode associated with MedicationStatement
         annotations:
           fhir_path: MedicationStatement.context
@@ -234,14 +171,39 @@ classes:
         annotations:
           fhir_path: MedicationStatement.dateAsserted
           fhir_type: dateTime
-      dosage:
-        range: MedicationStatementDosage
-        multivalued: true
-        inlined_as_list: true
-        description: Details of how medication is/was taken or should be taken
+      dosage_text:
+        range: string
+        description: Free text dosage instructions e.g. SIG
         annotations:
-          fhir_path: MedicationStatement.dosage
-          fhir_type: Dosage
+          fhir_path: MedicationStatement.dosage.text
+          fhir_type: string
+      dosage_route_coding_code:
+        range: MedicationRouteEnum
+        description: Symbol in syntax defined by the system
+        annotations:
+          fhir_path: MedicationStatement.dosage.route.coding.code
+          fhir_type: code
+          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SubstanceOrProductAdministrationRoute
+          binding_strength: preferred
+          binding_source: manual
+      dosage_route_text:
+        range: string
+        description: Plain text representation of the concept
+        annotations:
+          fhir_path: MedicationStatement.dosage.route.text
+          fhir_type: string
+      dosage_maxdoseperadministration_value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: MedicationStatement.dosage.maxDosePerAdministration.value
+          fhir_type: decimal
+      dosage_maxdoseperadministration_unit:
+        range: string
+        description: Unit representation
+        annotations:
+          fhir_path: MedicationStatement.dosage.maxDosePerAdministration.unit
+          fhir_type: string
       identifier:
         range: MedicationStatementIdentifier
         multivalued: true
@@ -250,13 +212,6 @@ classes:
         annotations:
           fhir_path: MedicationStatement.identifier
           fhir_type: Identifier
-      extension_medicationstatementlastissuedate:
-        range: datetime
-        required: true
-        description: The date when a prescription was last issued
-        annotations:
-          fhir_path: MedicationStatement.extension:medicationStatementLastIssueDate
-          fhir_type: dateTime
       note_text:
         range: string
         description: The annotation  - text content (as markdown)

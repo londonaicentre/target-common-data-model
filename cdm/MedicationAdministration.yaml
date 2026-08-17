@@ -14,9 +14,15 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationAdministration
   profile_version: 2.3.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
 default_range: string
 classes:
   MedicationAdministrationMedicationCodeableConceptCoding:
@@ -113,6 +119,137 @@ classes:
         annotations:
           fhir_path: MedicationAdministration.dosage.route.coding
           fhir_type: Coding
+  MedicationAdministrationDosageRateQuantity:
+    description: Dose quantity per unit of time
+    annotations:
+      fhir_path: MedicationAdministration.dosage.rateQuantity
+    attributes:
+      value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity.value
+          fhir_type: decimal
+      comparator:
+        range: QuantityComparatorEnum
+        description: < | <= | >= | > - how to understand the value
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity.comparator
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/quantity-comparator
+          binding_strength: required
+          binding_source: fhir
+      unit:
+        range: string
+        description: Unit representation
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity.unit
+          fhir_type: string
+      system:
+        range: uri
+        description: System that defines coded unit form
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity.system
+          fhir_type: uri
+      code:
+        range: string
+        description: Coded form of the unit
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity.code
+          fhir_type: code
+  MedicationAdministrationDosageRateRatioNumerator:
+    description: Numerator value
+    annotations:
+      fhir_path: MedicationAdministration.dosage.rateRatio.numerator
+    attributes:
+      value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator.value
+          fhir_type: decimal
+      comparator:
+        range: QuantityComparatorEnum
+        description: < | <= | >= | > - how to understand the value
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator.comparator
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/quantity-comparator
+          binding_strength: required
+          binding_source: fhir
+      unit:
+        range: string
+        description: Unit representation
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator.unit
+          fhir_type: string
+      system:
+        range: uri
+        description: System that defines coded unit form
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator.system
+          fhir_type: uri
+      code:
+        range: string
+        description: Coded form of the unit
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator.code
+          fhir_type: code
+  MedicationAdministrationDosageRateRatioDenominator:
+    description: Denominator value
+    annotations:
+      fhir_path: MedicationAdministration.dosage.rateRatio.denominator
+    attributes:
+      value:
+        range: float
+        description: Numerical value (with implicit precision)
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator.value
+          fhir_type: decimal
+      comparator:
+        range: QuantityComparatorEnum
+        description: < | <= | >= | > - how to understand the value
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator.comparator
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/quantity-comparator
+          binding_strength: required
+          binding_source: fhir
+      unit:
+        range: string
+        description: Unit representation
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator.unit
+          fhir_type: string
+      system:
+        range: uri
+        description: System that defines coded unit form
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator.system
+          fhir_type: uri
+      code:
+        range: string
+        description: Coded form of the unit
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator.code
+          fhir_type: code
+  MedicationAdministrationDosageRateRatio:
+    description: Dose quantity per unit of time
+    annotations:
+      fhir_path: MedicationAdministration.dosage.rateRatio
+    attributes:
+      numerator:
+        range: MedicationAdministrationDosageRateRatioNumerator
+        description: Numerator value
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.numerator
+          fhir_type: Quantity
+      denominator:
+        range: MedicationAdministrationDosageRateRatioDenominator
+        description: Denominator value
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio.denominator
+          fhir_type: Quantity
   MedicationAdministrationIdentifier:
     description: External identifier
     annotations:
@@ -135,12 +272,11 @@ classes:
     description: One row per MedicationAdministration resource.
     annotations:
       fhir_path: MedicationAdministration
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: MedicationAdministration.id
           fhir_type: id
@@ -175,20 +311,31 @@ classes:
           fhir_path: MedicationAdministration.medicationCodeableConcept.coding
           fhir_type: Coding
       subject_id:
-        range: string
+        range: Patient
         required: true
+        inlined: false
         description: Who received medication
         annotations:
           fhir_path: MedicationAdministration.subject
           fhir_type: Reference
           fk_target: Patient
       context_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Encounter or Episode of Care administered as part of
         annotations:
           fhir_path: MedicationAdministration.context
           fhir_type: Reference
           fk_target: Encounter
+      partof_id:
+        range: MedicationAdministration
+        multivalued: true
+        inlined: false
+        description: Part of referenced event
+        annotations:
+          fhir_path: MedicationAdministration.partOf
+          fhir_type: Reference
+          fk_target: MedicationAdministration
       effectivedatetime:
         range: datetime
         required: true
@@ -242,6 +389,18 @@ classes:
         annotations:
           fhir_path: MedicationAdministration.dosage.text
           fhir_type: string
+      dosage_ratequantity:
+        range: MedicationAdministrationDosageRateQuantity
+        description: Dose quantity per unit of time
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateQuantity
+          fhir_type: Quantity
+      dosage_rateratio:
+        range: MedicationAdministrationDosageRateRatio
+        description: Dose quantity per unit of time
+        annotations:
+          fhir_path: MedicationAdministration.dosage.rateRatio
+          fhir_type: Ratio
       identifier:
         range: MedicationAdministrationIdentifier
         multivalued: true

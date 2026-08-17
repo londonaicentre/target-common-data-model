@@ -14,9 +14,16 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Observation
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
+- specimen
 default_range: string
 classes:
   ObservationCategoryCoding:
@@ -164,85 +171,6 @@ classes:
         annotations:
           fhir_path: Observation.valueCodeableConcept.coding
           fhir_type: Coding
-  ObservationDataAbsentReasonCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.dataAbsentReason.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.dataAbsentReason.coding.system
-          fhir_type: uri
-      code:
-        range: DataAbsentReasonEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.dataAbsentReason.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/data-absent-reason
-          binding_strength: extensible
-          binding_source: fhir
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.dataAbsentReason.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.dataAbsentReason.coding.is_source
-          fhir_type: boolean
-  ObservationDataAbsentReason:
-    description: Why the result is missing
-    annotations:
-      fhir_path: Observation.dataAbsentReason
-    attributes:
-      coding:
-        range: ObservationDataAbsentReasonCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Observation.dataAbsentReason.coding
-          fhir_type: Coding
-  ObservationInterpretationCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.interpretation.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.interpretation.coding.system
-          fhir_type: uri
-      code:
-        range: ObservationInterpretationEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.interpretation.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/observation-interpretation
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.interpretation.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.interpretation.coding.is_source
-          fhir_type: boolean
   ObservationComponentCodeCoding:
     description: Code defined by a terminology system
     annotations:
@@ -396,12 +324,11 @@ classes:
     description: One row per Observation resource.
     annotations:
       fhir_path: Observation
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Observation.id
           fhir_type: id
@@ -442,19 +369,29 @@ classes:
           fhir_path: Observation.code.coding
           fhir_type: Coding
       subject_id:
-        range: string
+        range: Patient
+        inlined: false
         description: Who and/or what the observation is about
         annotations:
           fhir_path: Observation.subject
           fhir_type: Reference
           fk_target: Patient
       encounter_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Healthcare event during which this observation is made
         annotations:
           fhir_path: Observation.encounter
           fhir_type: Reference
           fk_target: Encounter
+      specimen_id:
+        range: Specimen
+        inlined: false
+        description: Specimen used for this observation
+        annotations:
+          fhir_path: Observation.specimen
+          fhir_type: Reference
+          fk_target: Specimen
       effectivedatetime:
         range: datetime
         description: Clinically relevant time/time-period for observation
@@ -485,18 +422,6 @@ classes:
         annotations:
           fhir_path: Observation.referenceRange.high.value
           fhir_type: decimal
-      dataabsentreason:
-        range: ObservationDataAbsentReason
-        description: Why the result is missing
-        annotations:
-          fhir_path: Observation.dataAbsentReason
-          fhir_type: CodeableConcept
-      interpretation_coding:
-        range: ObservationInterpretationCoding
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Observation.interpretation.coding
-          fhir_type: Coding
       component:
         range: ObservationComponent
         multivalued: true

@@ -14,6 +14,10 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Patient
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
@@ -61,11 +65,152 @@ classes:
       given:
         range: string
         multivalued: true
-        inlined_as_list: true
         description: Given names (not always 'first'). Includes middle names
         annotations:
           fhir_path: Patient.name.given
           fhir_type: string
+  PatientAddressExtensionAddressKeyExtensionTypeCoding:
+    description: Code defined by a terminology system
+    annotations:
+      fhir_path: Patient.address.extension:addressKey.extension:type.coding
+    attributes:
+      system:
+        range: uri
+        description: Identity of the terminology system
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.coding.system
+          fhir_type: uri
+      code:
+        range: UKCoreAddressKeyTypeEnum
+        description: Symbol in syntax defined by the system
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.coding.code
+          fhir_type: code
+          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-AddressKeyType
+          binding_strength: extensible
+          binding_source: fhir
+      display:
+        range: string
+        description: Representation defined by the system
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.coding.display
+          fhir_type: string
+      is_source:
+        range: boolean
+        description: True on the coding that came from the source system; false on codings added by a
+          downstream mapping step. CDM-defined, not native to FHIR (§6).
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.coding.is_source
+          fhir_type: boolean
+  PatientAddressExtensionAddressKeyExtensionType:
+    description: Address Key Type
+    annotations:
+      fhir_path: Patient.address.extension:addressKey.extension:type
+    attributes:
+      coding:
+        range: PatientAddressExtensionAddressKeyExtensionTypeCoding
+        multivalued: true
+        inlined_as_list: true
+        description: Code defined by a terminology system
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.coding
+          fhir_type: Coding
+      text:
+        range: string
+        description: Plain text representation of the concept
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type.text
+          fhir_type: string
+  PatientAddressExtensionAddressKey:
+    description: A patient's address key and type
+    annotations:
+      fhir_path: Patient.address.extension:addressKey
+    attributes:
+      extension_type:
+        range: PatientAddressExtensionAddressKeyExtensionType
+        required: true
+        description: Address Key Type
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:type
+          fhir_type: CodeableConcept
+      extension_value:
+        range: string
+        required: true
+        description: Address key value
+        annotations:
+          fhir_path: Patient.address.extension:addressKey.extension:value
+          fhir_type: string
+  PatientAddressPeriod:
+    description: Time period when address was/is in use
+    annotations:
+      fhir_path: Patient.address.period
+    attributes:
+      start:
+        range: datetime
+        description: Starting time with inclusive boundary
+        annotations:
+          fhir_path: Patient.address.period.start
+          fhir_type: dateTime
+      end:
+        range: datetime
+        description: End time with inclusive boundary, if not ongoing
+        annotations:
+          fhir_path: Patient.address.period.end
+          fhir_type: dateTime
+  PatientAddress:
+    description: An address for the individual
+    annotations:
+      fhir_path: Patient.address
+      key_fields: period, postalcode
+    attributes:
+      extension_addresskey:
+        range: PatientAddressExtensionAddressKey
+        multivalued: true
+        inlined_as_list: true
+        description: A patient's address key and type
+        annotations:
+          fhir_path: Patient.address.extension:addressKey
+          fhir_type: Extension
+      use:
+        range: AddressUseEnum
+        description: home | work | temp | old | billing - purpose of this address
+        annotations:
+          fhir_path: Patient.address.use
+          fhir_type: code
+          value_set: http://hl7.org/fhir/ValueSet/address-use
+          binding_strength: required
+          binding_source: fhir
+      line:
+        range: string
+        multivalued: true
+        description: Street name, number, direction & P.O. Box etc.
+        annotations:
+          fhir_path: Patient.address.line
+          fhir_type: string
+      city:
+        range: string
+        description: Name of city, town etc.
+        annotations:
+          fhir_path: Patient.address.city
+          fhir_type: string
+      postalcode:
+        range: string
+        description: Postal code for area
+        annotations:
+          fhir_path: Patient.address.postalCode
+          fhir_type: string
+      country:
+        range: string
+        description: Country (e.g. can be ISO 3166 2 or 3 letter code)
+        annotations:
+          fhir_path: Patient.address.country
+          fhir_type: string
+      period:
+        range: PatientAddressPeriod
+        description: Time period when address was/is in use
+        annotations:
+          fhir_path: Patient.address.period
+          fhir_type: Period
   PatientExtensionEthnicCategoryCoding:
     description: Code defined by a terminology system
     annotations:
@@ -112,62 +257,15 @@ classes:
         annotations:
           fhir_path: Patient.extension:ethnicCategory.coding
           fhir_type: Coding
-  PatientExtensionDeathNotificationStatusExtensionDeathNotificationStatusCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.system
-          fhir_type: uri
-      code:
-        range: UKCoreDeathNotificationStatusEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-DeathNotificationStatus
-          binding_strength: extensible
-          binding_source: fhir
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding.is_source
-          fhir_type: boolean
-  PatientExtensionDeathNotificationStatusExtensionDeathNotificationStatus:
-    description: The patient's death notification status.
-    annotations:
-      fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus
-    attributes:
-      coding:
-        range: PatientExtensionDeathNotificationStatusExtensionDeathNotificationStatusCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus.coding
-          fhir_type: Coding
   Patient:
     description: One row per Patient resource.
     annotations:
       fhir_path: Patient
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Patient.id
           fhir_type: id
@@ -251,17 +349,18 @@ classes:
         annotations:
           fhir_path: Patient.address.postalCode
           fhir_type: string
+      address:
+        range: PatientAddress
+        multivalued: true
+        inlined_as_list: true
+        description: An address for the individual
+        annotations:
+          fhir_path: Patient.address
+          fhir_type: Address
       extension_ethniccategory:
         range: PatientExtensionEthnicCategory
         required: true
         description: A code classifying the person's ethnicity
         annotations:
           fhir_path: Patient.extension:ethnicCategory
-          fhir_type: CodeableConcept
-      extension_deathnotificationstatus_extension_deathnotificationstatus:
-        range: PatientExtensionDeathNotificationStatusExtensionDeathNotificationStatus
-        required: true
-        description: The patient's death notification status.
-        annotations:
-          fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus
           fhir_type: CodeableConcept

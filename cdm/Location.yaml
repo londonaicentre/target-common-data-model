@@ -14,9 +14,14 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Location
   profile_version: 2.3.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- organization
 default_range: string
 classes:
   LocationTypeCoding:
@@ -131,12 +136,11 @@ classes:
     description: One row per Location resource.
     annotations:
       fhir_path: Location
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Location.id
           fhir_type: id
@@ -159,15 +163,6 @@ classes:
           fhir_path: Location.status
           fhir_type: code
           value_set: http://hl7.org/fhir/ValueSet/location-status
-          binding_strength: required
-          binding_source: fhir
-      mode:
-        range: LocationModeEnum
-        description: instance | kind
-        annotations:
-          fhir_path: Location.mode
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/location-mode
           binding_strength: required
           binding_source: fhir
       identifier_odssitecode_value:
@@ -198,25 +193,21 @@ classes:
           fhir_path: Location.physicalType
           fhir_type: CodeableConcept
       partof_id:
-        range: string
+        range: Location
+        inlined: false
         description: Another Location this one is physically a part of
         annotations:
           fhir_path: Location.partOf
           fhir_type: Reference
           fk_target: Location
       managingorganization_id:
-        range: string
+        range: Organization
+        inlined: false
         description: Organization responsible for provisioning and upkeep
         annotations:
           fhir_path: Location.managingOrganization
           fhir_type: Reference
           fk_target: Organization
-      address_postalcode:
-        range: string
-        description: Postal code for area
-        annotations:
-          fhir_path: Location.address.postalCode
-          fhir_type: string
       identifier:
         range: LocationIdentifier
         multivalued: true

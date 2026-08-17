@@ -13,6 +13,14 @@ Project flatfhir {
   Note: 'FlatFHIR CDM - a flattened analytical model derived from UK Core FHIR R4.'
 }
 
+enum AddressUseEnum {
+  home [note: 'Home']
+  work [note: 'Work']
+  temp [note: 'Temporary']
+  old [note: 'Old / Incorrect']
+  billing [note: 'Billing']
+}
+
 enum AdministrativeGenderEnum {
   male [note: 'Male']
   female [note: 'Female']
@@ -63,17 +71,24 @@ enum AdmitSourceEnum {
 }
 
 enum AppointmentCancellationReasonEnum {
-  pat [note: 'Patient cancelled']
-  "pat-crs" [note: 'Patient: canceled via received schedule']
-  "pat-cpp" [note: 'Patient: change in patient priority']
-  "pat-dec" [note: 'Patient: deceased']
-  "pat-mv" [note: 'Patient: moved']
-  prov [note: 'Provider cancelled']
-  "prov-pat-dec" [note: 'Provider: patient deceased']
-  "prov-esc" [note: 'Provider: escalation of care']
-  maint [note: 'Equipment maintenance or repair']
-  "meds-inc" [note: 'Prep or meds incomplete']
+  pat [note: 'Patient']
+  "pat-crs" [note: 'Patient: Canceled via automated reminder system']
+  "pat-cpp" [note: 'Patient: Canceled via Patient Portal']
+  "pat-dec" [note: 'Patient: Deceased']
+  "pat-fb" [note: 'Patient: Feeling Better']
+  "pat-lt" [note: 'Patient: Lack of Transportation']
+  "pat-mv" [note: 'Patient: Moved']
+  "pat-ucp" [note: 'Patient: Unhappy/Changed Provider']
+  prov [note: 'Provider']
+  "prov-dch" [note: 'Provider: Discharged']
+  "prov-hosp" [note: 'Provider: Hospitalized']
+  "prov-pers" [note: 'Provider: Personal']
+  maint [note: 'Equipment Maintenance/Repair']
+  "meds-inc" [note: 'Prep/Med Incomplete']
   other [note: 'Other']
+  "oth-err" [note: 'Other: Error']
+  "oth-room" [note: 'Other: Room/Resource Maintenance']
+  "oth-weath" [note: 'Other: Weather']
 }
 
 enum AppointmentTypeEnum {
@@ -82,7 +97,7 @@ enum AppointmentTypeEnum {
   CHECKUP [note: 'A routine check-up, such as an annual physical']
   FOLLOWUP [note: 'A follow up visit from a previous appointment']
   EMERGENCY [note: 'Emergency appointment']
-  "urgent-follow-up" [note: 'Urgent follow-up (UK Core)']
+  "urgent-follow-up" [note: 'Urgent follow-up']
 }
 
 enum AppointmentstatusEnum {
@@ -99,9 +114,9 @@ enum AppointmentstatusEnum {
 }
 
 enum ConditionCategoryEnum {
-  "problem-list-item" [note: 'Problem list item']
-  "encounter-diagnosis" [note: 'Encounter diagnosis']
-  "presenting-complaint" [note: 'Presenting complaint']
+  "problem-list-item" [note: 'Problem List Item']
+  "encounter-diagnosis" [note: 'Encounter Diagnosis']
+  "presenting-complaint" [note: 'Presenting Complaint']
   "co-morbidity" [note: 'Co-morbidity']
 }
 
@@ -123,31 +138,13 @@ enum ConditionVerStatusEnum {
   "entered-in-error" [note: 'Entered in Error']
 }
 
-enum DataAbsentReasonEnum {
-  unknown [note: 'Unknown']
-  "asked-unknown" [note: 'Asked But Unknown']
-  "temp-unknown" [note: 'Temporarily Unknown']
-  "not-asked" [note: 'Not Asked']
-  "asked-declined" [note: 'Asked But Declined']
-  masked [note: 'Masked']
-  "not-applicable" [note: 'Not Applicable']
-  unsupported [note: 'Unsupported']
-  "as-text" [note: 'As Text']
-  error [note: 'Error']
-  "not-a-number" [note: 'Not a Number (NaN)']
-  "negative-infinity" [note: 'Negative Infinity (NINF)']
-  "positive-infinity" [note: 'Positive Infinity (PINF)']
-  "not-performed" [note: 'Not Performed']
-  "not-permitted" [note: 'Not Permitted']
-}
-
 enum DiagnosisRoleEnum {
   AD [note: 'Admission diagnosis']
   DD [note: 'Discharge diagnosis']
   CC [note: 'Chief complaint']
-  CM [note: 'Co-morbidity diagnosis']
-  "pre-op" [note: 'Pre-op diagnosis']
-  "post-op" [note: 'Post-op diagnosis']
+  CM [note: 'Comorbidity diagnosis']
+  "pre-op" [note: 'pre-op diagnosis']
+  "post-op" [note: 'post-op diagnosis']
   billing [note: 'Billing']
 }
 
@@ -231,17 +228,17 @@ enum EncounterCategoryEnum {
 }
 
 enum EncounterClassEnum {
-  AMB [note: 'Ambulatory']
-  EMER [note: 'Emergency']
-  FLD [note: 'Field']
-  HH [note: 'Home health']
-  IMP [note: 'Inpatient encounter']
-  ACUTE [note: 'Inpatient acute']
-  NONAC [note: 'Inpatient non-acute']
-  OBSENC [note: 'Observation encounter']
-  PRENC [note: 'Pre-admission']
-  SS [note: 'Short stay']
-  VR [note: 'Virtual']
+  AMB [note: 'ambulatory']
+  EMER [note: 'emergency']
+  FLD [note: 'field']
+  HH [note: 'home health']
+  IMP [note: 'inpatient encounter']
+  ACUTE [note: 'inpatient acute']
+  NONAC [note: 'inpatient non-acute']
+  OBSENC [note: 'observation encounter']
+  PRENC [note: 'pre-admission']
+  SS [note: 'short stay']
+  VR [note: 'virtual']
 }
 
 enum EncounterStatusEnum {
@@ -298,9 +295,50 @@ enum EventStatusEnum {
   unknown [note: 'Unknown']
 }
 
-enum LocationModeEnum {
-  instance [note: 'Instance']
-  kind [note: 'Kind']
+enum ImagingLateralityEnum {
+  "419161000" [note: 'Unilateral left']
+  "419465000" [note: 'Unilateral right']
+  "51440002" [note: 'Bilateral']
+}
+
+enum ImagingModalityEnum {
+  CR [note: 'Computed Radiography']
+  DX [note: 'Digital Radiography']
+  RG [note: 'Radiographic imaging']
+  CT [note: 'Computed Tomography']
+  MR [note: 'Magnetic Resonance']
+  MA [note: 'Magnetic resonance angiography']
+  MG [note: 'Mammography']
+  US [note: 'Ultrasound']
+  RF [note: 'Radiofluoroscopy']
+  XA [note: 'X-Ray Angiography']
+  BMD [note: 'Bone Mineral Densitometry']
+  NM [note: 'Nuclear Medicine']
+  PT [note: 'Positron emission tomography']
+  ST [note: 'Single-photon emission computed tomography']
+  EC [note: 'Echocardiography']
+  ECG [note: 'Electrocardiography']
+  IVUS [note: 'Intravascular Ultrasound']
+  HD [note: 'Hemodynamic Waveform']
+  EPS [note: 'Cardiac Electrophysiology']
+  ES [note: 'Endoscopy']
+  XC [note: 'External-camera Photography']
+  OP [note: 'Ophthalmic photography']
+  OCT [note: 'Optical Coherence Tomography']
+  SM [note: 'Slide Microscopy']
+  RT [note: 'Radiation Therapy Device']
+  IO [note: 'Intra-oral Radiography']
+  PX [note: 'Panoramic X-Ray']
+  SR [note: 'Structured Report Document']
+  OT [note: 'Other Modality']
+}
+
+enum ImagingstudyStatusEnum {
+  registered [note: 'Registered']
+  available [note: 'Available']
+  cancelled [note: 'Cancelled']
+  "entered-in-error" [note: 'Entered in Error']
+  unknown [note: 'Unknown']
 }
 
 enum LocationPhysicalTypeEnum {
@@ -376,17 +414,6 @@ enum MedicationStatementStatusEnum {
   "not-taken" [note: 'Not Taken']
 }
 
-enum MedicationrequestIntentEnum {
-  proposal [note: 'Proposal']
-  plan [note: 'Plan']
-  order [note: 'Order']
-  "original-order" [note: 'Original Order']
-  "reflex-order" [note: 'Reflex Order']
-  "filler-order" [note: 'Filler Order']
-  "instance-order" [note: 'Instance Order']
-  option [note: 'Option']
-}
-
 enum MedicationrequestStatusEnum {
   active [note: 'Active']
   "on-hold" [note: 'On Hold']
@@ -409,8 +436,8 @@ enum NameUseEnum {
 }
 
 enum ObservationCategoryEnum {
-  "social-history" [note: 'Social history']
-  "vital-signs" [note: 'Vital signs']
+  "social-history" [note: 'Social History']
+  "vital-signs" [note: 'Vital Signs']
   imaging [note: 'Imaging']
   laboratory [note: 'Laboratory']
   procedure [note: 'Procedure']
@@ -418,28 +445,6 @@ enum ObservationCategoryEnum {
   exam [note: 'Exam']
   therapy [note: 'Therapy']
   activity [note: 'Activity']
-}
-
-enum ObservationInterpretationEnum {
-  L [note: 'Low']
-  H [note: 'High']
-  LL [note: 'Critical Low']
-  HH [note: 'Critical High']
-  N [note: 'Normal']
-  A [note: 'Abnormal']
-  AA [note: 'Critical Abnormal']
-  U [note: 'Significant Change Up']
-  D [note: 'Significant Change Down']
-  B [note: 'Better']
-  W [note: 'Worse']
-  R [note: 'Resistant']
-  S [note: 'Susceptible']
-  I [note: 'Intermediate']
-  MS [note: 'Moderately Susceptible']
-  VS [note: 'Very Susceptible']
-  IE [note: 'Insufficient Evidence']
-  "SYN-R" [note: 'Synergy - Resistant']
-  "SYN-S" [note: 'Synergy - Susceptible']
 }
 
 enum ObservationStatusEnum {
@@ -459,43 +464,11 @@ enum OutcomeOfAttendanceEnum {
   "3" [note: 'Appointment to be made at a later date']
 }
 
-enum ParticipantrequiredEnum {
-  required [note: 'Required']
-  optional [note: 'Optional']
-  "information-only" [note: 'Information Only']
-}
-
-enum ParticipationstatusEnum {
-  accepted [note: 'Accepted']
-  declined [note: 'Declined']
-  tentative [note: 'Tentative']
-  "needs-action" [note: 'Needs Action']
-}
-
 enum QuantityComparatorEnum {
   "<" [note: 'Less than']
   "<=" [note: 'Less or Equal to']
   ">=" [note: 'Greater or Equal to']
   ">" [note: 'Greater than']
-}
-
-enum RequestIntentEnum {
-  proposal [note: 'Proposal']
-  plan [note: 'Plan']
-  directive [note: 'Directive']
-  order [note: 'Order']
-  "original-order" [note: 'Original Order']
-  "reflex-order" [note: 'Reflex Order']
-  "filler-order" [note: 'Filler Order']
-  "instance-order" [note: 'Instance Order']
-  option [note: 'Option']
-}
-
-enum RequestPriorityEnum {
-  routine [note: 'Routine']
-  urgent [note: 'Urgent']
-  asap [note: 'ASAP']
-  stat [note: 'STAT']
 }
 
 enum RequestStatusEnum {
@@ -515,16 +488,9 @@ enum SpecimenStatusEnum {
   "entered-in-error" [note: 'Entered in Error']
 }
 
-enum UKCoreDeathNotificationStatusEnum {
-  "2" [note: 'Formal - death notice received from Registrar of Deaths']
-  "1" [note: 'Informal - death notice received via an update from a local NHS Organisation such as GP or Trust']
-  U [note: 'Removed']
-}
-
-enum UKCoreDeliveryChannelEnum {
-  "In-person" [note: 'In-person']
-  Telephone [note: 'Telephone']
-  Video [note: 'Video']
+enum UKCoreAddressKeyTypeEnum {
+  PAF [note: 'Postcode Address File']
+  UPRN [note: 'Unique Property Reference Number']
 }
 
 enum UKCorePracticeSettingCodeEnum {
@@ -617,32 +583,26 @@ enum UKCorePracticeSettingCodeEnum {
   "960" [note: 'Allied Health Professional']
 }
 
-enum UKCoreSampleCategoryEnum {
-  tumour [note: 'Tumour']
-  germline [note: 'Germline']
-}
-
 Table appointment {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Appointment.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Appointment.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Appointment.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Appointment.meta.lastUpdated | fhir_type: instant']
   status AppointmentstatusEnum [not null, note: 'proposed | pending | booked | arrived | fulfilled | cancelled | noshow | entered-in-error | checked-in | waitlist | fhir_path: Appointment.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/appointmentstatus']
+  participant_actor_id varchar [note: 'Person, Location/HealthcareService or Device | fhir_path: Appointment.participant.actor | fhir_type: Reference']
   start timestamp_ntz [note: 'When appointment is to take place | fhir_path: Appointment.start | fhir_type: instant']
   end timestamp_ntz [note: 'When appointment is to conclude | fhir_path: Appointment.end | fhir_type: instant']
-  minutesduration number [note: 'Can be less than start/end (e.g. estimate) | fhir_path: Appointment.minutesDuration | fhir_type: positiveInt']
   created timestamp_ntz [note: 'The date that this appointment was initially created | fhir_path: Appointment.created | fhir_type: dateTime']
   appointmenttype variant [note: 'The style of appointment or patient that has been booked in the slot (not service type) | AppointmentAppointmentType {coding} | fhir_path: Appointment.appointmentType | fhir_type: CodeableConcept']
   specialty variant [note: 'The specialty of a practitioner that would be required to perform the service requested in this appointment | AppointmentSpecialty [{coding}] - key: coding | fhir_path: Appointment.specialty | fhir_type: CodeableConcept']
   cancelationreason variant [note: 'The coded reason for the appointment being cancelled | AppointmentCancelationReason {coding} | fhir_path: Appointment.cancelationReason | fhir_type: CodeableConcept']
   identifier variant [note: 'External Ids for this item | AppointmentIdentifier [{system, value}] - key: system, value | fhir_path: Appointment.identifier | fhir_type: Identifier']
-  participant variant [note: 'Participants involved in appointment | AppointmentParticipant [{actor_id, required, status, period}] - key: actor_id, status | fhir_path: Appointment.participant | fhir_type: BackboneElement']
-  extension_deliverychannel variant [not null, note: 'A code that identifies the delivery channel of an appointment | AppointmentExtensionDeliveryChannel {coding} | fhir_path: Appointment.extension:deliveryChannel | fhir_type: CodeableConcept']
+  extension_bookingorganization_id varchar [not null, note: 'The organisation booking the appointment | fhir_path: Appointment.extension:bookingOrganization | fhir_type: Reference']
 
   Note: 'One row per Appointment resource.'
 }
 
 Table condition {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Condition.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Condition.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Condition.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Condition.meta.lastUpdated | fhir_type: instant']
   subject_id varchar [not null, note: 'Who has the condition? | fhir_path: Condition.subject | fhir_type: Reference']
@@ -660,26 +620,25 @@ Table condition {
 }
 
 Table diagnosticreport {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: DiagnosticReport.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: DiagnosticReport.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: DiagnosticReport.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: DiagnosticReport.meta.lastUpdated | fhir_type: instant']
   status DiagnosticReportStatusEnum [not null, note: 'registered | partial | preliminary | final + | fhir_path: DiagnosticReport.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/diagnostic-report-status']
-  code_coding variant [note: 'Code defined by a terminology system | DiagnosticReportCodeCoding [{system, code, display, is_source}] - key: system, code | fhir_path: DiagnosticReport.code.coding | fhir_type: Coding']
   category variant [note: 'Service category | DiagnosticReportCategory [{coding}] - key: coding | fhir_path: DiagnosticReport.category | fhir_type: CodeableConcept']
   subject_id varchar [note: 'The subject of the report - usually, but not always, the patient | fhir_path: DiagnosticReport.subject | fhir_type: Reference']
   encounter_id varchar [note: 'Health care event when test ordered | fhir_path: DiagnosticReport.encounter | fhir_type: Reference']
   effectivedatetime timestamp_ntz [note: 'Clinically relevant time/time-period for report | fhir_path: DiagnosticReport.effectiveDateTime | fhir_type: dateTime']
-  effectiveperiod variant [note: 'Clinically relevant time/time-period for report | DiagnosticReportEffectivePeriod {start, end} | fhir_path: DiagnosticReport.effectivePeriod | fhir_type: Period']
   issued timestamp_ntz [note: 'DateTime this version was made | fhir_path: DiagnosticReport.issued | fhir_type: instant']
   conclusion varchar [note: 'Clinical conclusion (interpretation) of test results | fhir_path: DiagnosticReport.conclusion | fhir_type: string']
-  conclusioncode variant [note: 'Codes for the clinical conclusion of test results | DiagnosticReportConclusionCode [{coding}] - key: coding | fhir_path: DiagnosticReport.conclusionCode | fhir_type: CodeableConcept']
+  result_id array [note: 'Observations | fhir_path: DiagnosticReport.result | fhir_type: Reference']
+  imagingstudy_id array [note: 'Reference to full details of imaging associated with the diagnostic report | fhir_path: DiagnosticReport.imagingStudy | fhir_type: Reference']
   identifier variant [note: 'Business identifier for report | DiagnosticReportIdentifier [{system, value}] - key: system, value | fhir_path: DiagnosticReport.identifier | fhir_type: Identifier']
 
   Note: 'One row per DiagnosticReport resource.'
 }
 
 Table encounter {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Encounter.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Encounter.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Encounter.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Encounter.meta.lastUpdated | fhir_type: instant']
   status EncounterStatusEnum [not null, note: 'planned | arrived | triaged | in-progress | onleave | finished | cancelled + | fhir_path: Encounter.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/encounter-status']
@@ -689,6 +648,7 @@ Table encounter {
   subject_id varchar [note: 'The patient or group present at the encounter | fhir_path: Encounter.subject | fhir_type: Reference']
   partof_id varchar [note: 'Another Encounter this encounter is part of | fhir_path: Encounter.partOf | fhir_type: Reference']
   serviceprovider_id varchar [note: 'The organization (facility) responsible for this encounter | fhir_path: Encounter.serviceProvider | fhir_type: Reference']
+  appointment_id array [note: 'The appointment that scheduled this encounter | fhir_path: Encounter.appointment | fhir_type: Reference']
   period variant [note: 'The start and end time of the encounter | EncounterPeriod {start, end} | fhir_path: Encounter.period | fhir_type: Period']
   hospitalization_extension_admissionmethod variant [not null, note: 'The method by which a patient was admitted to hospital | EncounterHospitalizationExtensionAdmissionMethod {coding} | fhir_path: Encounter.hospitalization.extension:admissionMethod | fhir_type: CodeableConcept']
   hospitalization_admitsource variant [note: 'From where patient was admitted (physician referral, transfer) | EncounterHospitalizationAdmitSource {coding} | fhir_path: Encounter.hospitalization.admitSource | fhir_type: CodeableConcept']
@@ -702,7 +662,7 @@ Table encounter {
 }
 
 Table episodeofcare {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: EpisodeOfCare.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: EpisodeOfCare.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: EpisodeOfCare.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: EpisodeOfCare.meta.lastUpdated | fhir_type: instant']
   status EpisodeOfCareStatusEnum [not null, note: 'planned | waitlist | active | onhold | finished | cancelled | entered-in-error | fhir_path: EpisodeOfCare.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/episode-of-care-status']
@@ -715,32 +675,52 @@ Table episodeofcare {
   Note: 'One row per EpisodeOfCare resource.'
 }
 
+Table imagingstudy {
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: ImagingStudy.id | fhir_type: id']
+  meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: ImagingStudy.meta.source | fhir_type: uri']
+  meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: ImagingStudy.meta.lastUpdated | fhir_type: instant']
+  status ImagingstudyStatusEnum [not null, note: 'registered | available | cancelled | entered-in-error | unknown | fhir_path: ImagingStudy.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/imagingstudy-status']
+  modality variant [note: 'All series modality if actual acquisition modalities | ImagingStudyModality [{system, code, display, is_source}] - key: system, code | fhir_path: ImagingStudy.modality | fhir_type: Coding']
+  procedurecode variant [note: 'The performed procedure code | ImagingStudyProcedureCode [{coding}] - key: coding | fhir_path: ImagingStudy.procedureCode | fhir_type: CodeableConcept']
+  description varchar [note: 'Institution-generated description | fhir_path: ImagingStudy.description | fhir_type: string']
+  subject_id varchar [not null, note: 'Who or what is the subject of the study | fhir_path: ImagingStudy.subject | fhir_type: Reference']
+  encounter_id varchar [note: 'Encounter with which this imaging study is associated | fhir_path: ImagingStudy.encounter | fhir_type: Reference']
+  started timestamp_ntz [note: 'When the study was started | fhir_path: ImagingStudy.started | fhir_type: dateTime']
+  location_id varchar [note: 'Where ImagingStudy occurred | fhir_path: ImagingStudy.location | fhir_type: Reference']
+  numberofseries number [note: 'Number of Study Related Series | fhir_path: ImagingStudy.numberOfSeries | fhir_type: unsignedInt']
+  procedurereference_id varchar [note: 'The performed Procedure reference | fhir_path: ImagingStudy.procedureReference | fhir_type: Reference']
+  identifier variant [note: 'Identifiers for the whole study | ImagingStudyIdentifier [{system, value}] - key: system, value | fhir_path: ImagingStudy.identifier | fhir_type: Identifier']
+  series variant [note: 'Each study has one or more series of instances | ImagingStudySeries [{uid, number, modality, description, numberofinstances, bodysite, laterality, started}] - key: uid | fhir_path: ImagingStudy.series | fhir_type: BackboneElement']
+  note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: ImagingStudy.note.text | fhir_type: markdown']
+
+  Note: 'One row per ImagingStudy resource.'
+}
+
 Table location {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Location.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Location.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Location.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Location.meta.lastUpdated | fhir_type: instant']
   status LocationStatusEnum [note: 'active | suspended | inactive | fhir_path: Location.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/location-status']
-  mode LocationModeEnum [note: 'instance | kind | fhir_path: Location.mode | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/location-mode']
   identifier_odssitecode_value varchar [not null, note: 'The value that is unique | fhir_path: Location.identifier:odsSiteCode.value | fhir_type: string']
   name varchar [note: 'Name of the location as used by humans | fhir_path: Location.name | fhir_type: string']
   type variant [note: 'Type of function performed | LocationType [{coding}] - key: coding | fhir_path: Location.type | fhir_type: CodeableConcept']
   physicaltype variant [note: 'Physical form of the location | LocationPhysicalType {coding} | fhir_path: Location.physicalType | fhir_type: CodeableConcept']
   partof_id varchar [note: 'Another Location this one is physically a part of | fhir_path: Location.partOf | fhir_type: Reference']
   managingorganization_id varchar [note: 'Organization responsible for provisioning and upkeep | fhir_path: Location.managingOrganization | fhir_type: Reference']
-  address_postalcode varchar [note: 'Postal code for area | fhir_path: Location.address.postalCode | fhir_type: string']
   identifier variant [note: 'Unique code or number identifying the location to its users | LocationIdentifier [{system, value}] - key: system, value | fhir_path: Location.identifier | fhir_type: Identifier']
 
   Note: 'One row per Location resource.'
 }
 
 Table medicationadministration {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: MedicationAdministration.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: MedicationAdministration.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: MedicationAdministration.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: MedicationAdministration.meta.lastUpdated | fhir_type: instant']
   status MedicationAdminStatusEnum [not null, note: 'in-progress | not-done | on-hold | completed | entered-in-error | stopped | unknown | fhir_path: MedicationAdministration.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/medication-admin-status']
   medicationcodeableconcept_coding variant [note: 'Code defined by a terminology system | MedicationAdministrationMedicationCodeableConceptCoding [{system, code, display, is_source}] - key: system, code | fhir_path: MedicationAdministration.medicationCodeableConcept.coding | fhir_type: Coding']
   subject_id varchar [not null, note: 'Who received medication | fhir_path: MedicationAdministration.subject | fhir_type: Reference']
   context_id varchar [note: 'Encounter or Episode of Care administered as part of | fhir_path: MedicationAdministration.context | fhir_type: Reference']
+  partof_id array [note: 'Part of referenced event | fhir_path: MedicationAdministration.partOf | fhir_type: Reference']
   effectivedatetime timestamp_ntz [not null, note: 'Start and end time of administration | fhir_path: MedicationAdministration.effectiveDateTime | fhir_type: dateTime']
   effectiveperiod variant [not null, note: 'Start and end time of administration | MedicationAdministrationEffectivePeriod {start, end} | fhir_path: MedicationAdministration.effectivePeriod | fhir_type: Period']
   dosage_dose_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationAdministration.dosage.dose.value | fhir_type: decimal']
@@ -749,6 +729,8 @@ Table medicationadministration {
   dosage_dose_comparator QuantityComparatorEnum [note: '< | <= | >= | > - how to understand the value | fhir_path: MedicationAdministration.dosage.dose.comparator | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/quantity-comparator']
   dosage_route variant [note: 'Path of substance into body | MedicationAdministrationDosageRoute {coding} | fhir_path: MedicationAdministration.dosage.route | fhir_type: CodeableConcept']
   dosage_text varchar [note: 'Free text dosage instructions e.g. SIG | fhir_path: MedicationAdministration.dosage.text | fhir_type: string']
+  dosage_ratequantity variant [note: 'Dose quantity per unit of time | MedicationAdministrationDosageRateQuantity {value, comparator, unit, system, code} | fhir_path: MedicationAdministration.dosage.rateQuantity | fhir_type: Quantity']
+  dosage_rateratio variant [note: 'Dose quantity per unit of time | MedicationAdministrationDosageRateRatio {numerator, denominator} | fhir_path: MedicationAdministration.dosage.rateRatio | fhir_type: Ratio']
   identifier variant [note: 'External identifier | MedicationAdministrationIdentifier [{system, value}] - key: system, value | fhir_path: MedicationAdministration.identifier | fhir_type: Identifier']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: MedicationAdministration.note.text | fhir_type: markdown']
 
@@ -756,24 +738,22 @@ Table medicationadministration {
 }
 
 Table medicationrequest {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: MedicationRequest.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: MedicationRequest.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: MedicationRequest.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: MedicationRequest.meta.lastUpdated | fhir_type: instant']
   status MedicationrequestStatusEnum [not null, note: 'active | on-hold | cancelled | completed | entered-in-error | stopped | draft | unknown | fhir_path: MedicationRequest.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/medicationrequest-status']
-  intent MedicationrequestIntentEnum [not null, note: 'proposal | plan | order | original-order | reflex-order | filler-order | instance-order | option | fhir_path: MedicationRequest.intent | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/medicationrequest-intent']
-  priority RequestPriorityEnum [note: 'routine | urgent | asap | stat | fhir_path: MedicationRequest.priority | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/request-priority']
-  donotperform boolean [note: 'True if request is prohibiting action | fhir_path: MedicationRequest.doNotPerform | fhir_type: boolean']
   medicationcodeableconcept_coding variant [note: 'Code defined by a terminology system | MedicationRequestMedicationCodeableConceptCoding [{system, code, display, is_source}] - key: system, code | fhir_path: MedicationRequest.medicationCodeableConcept.coding | fhir_type: Coding']
   subject_id varchar [not null, note: 'Who or group medication request is for | fhir_path: MedicationRequest.subject | fhir_type: Reference']
   encounter_id varchar [note: 'Encounter created as part of encounter/admission/stay | fhir_path: MedicationRequest.encounter | fhir_type: Reference']
   authoredon timestamp_ntz [note: 'When request was initially authored | fhir_path: MedicationRequest.authoredOn | fhir_type: dateTime']
-  courseoftherapytype variant [note: 'A course of therapy for a medication request | MedicationRequestCourseOfTherapyType {coding} | fhir_path: MedicationRequest.courseOfTherapyType | fhir_type: CodeableConcept']
-  dosageinstruction variant [note: 'How the medication should be taken | MedicationRequestDosageInstruction [{sequence, text, route, maxdoseperadministration}] - key: sequence, text | fhir_path: MedicationRequest.dosageInstruction | fhir_type: Dosage']
+  dosageinstruction_text varchar [note: 'Free text dosage instructions e.g. SIG | fhir_path: MedicationRequest.dosageInstruction.text | fhir_type: string']
+  dosageinstruction_route_coding_code MedicationRouteEnum [note: 'Symbol in syntax defined by the system | fhir_path: MedicationRequest.dosageInstruction.route.coding.code | fhir_type: code | value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SubstanceOrProductAdministrationRoute']
+  dosageinstruction_route_text varchar [note: 'Plain text representation of the concept | fhir_path: MedicationRequest.dosageInstruction.route.text | fhir_type: string']
+  dosageinstruction_maxdoseperadministration_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationRequest.dosageInstruction.maxDosePerAdministration.value | fhir_type: decimal']
+  dosageinstruction_maxdoseperadministration_unit varchar [note: 'Unit representation | fhir_path: MedicationRequest.dosageInstruction.maxDosePerAdministration.unit | fhir_type: string']
   dispenserequest_quantity_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationRequest.dispenseRequest.quantity.value | fhir_type: decimal']
   dispenserequest_quantity_unit varchar [note: 'Unit representation | fhir_path: MedicationRequest.dispenseRequest.quantity.unit | fhir_type: string']
-  dispenserequest_numberofrepeatsallowed number [note: 'Number of refills authorized | fhir_path: MedicationRequest.dispenseRequest.numberOfRepeatsAllowed | fhir_type: unsignedInt']
   dispenserequest_expectedsupplyduration_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationRequest.dispenseRequest.expectedSupplyDuration.value | fhir_type: decimal']
-  dispenserequest_validityperiod variant [note: 'Time period supply is authorized for | MedicationRequestDispenseRequestValidityPeriod {start, end} | fhir_path: MedicationRequest.dispenseRequest.validityPeriod | fhir_type: Period']
   identifier variant [note: 'External ids for this request | MedicationRequestIdentifier [{system, value}] - key: system, value | fhir_path: MedicationRequest.identifier | fhir_type: Identifier']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: MedicationRequest.note.text | fhir_type: markdown']
 
@@ -781,7 +761,7 @@ Table medicationrequest {
 }
 
 Table medicationstatement {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: MedicationStatement.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: MedicationStatement.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: MedicationStatement.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: MedicationStatement.meta.lastUpdated | fhir_type: instant']
   status MedicationStatementStatusEnum [not null, note: 'active | completed | entered-in-error | intended | stopped | on-hold | unknown | not-taken | fhir_path: MedicationStatement.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/medication-statement-status']
@@ -791,16 +771,19 @@ Table medicationstatement {
   effectivedatetime timestamp_ntz [note: 'The date/time or interval when the medication is/was/will be taken | fhir_path: MedicationStatement.effectiveDateTime | fhir_type: dateTime']
   effectiveperiod variant [note: 'The date/time or interval when the medication is/was/will be taken | MedicationStatementEffectivePeriod {start, end} | fhir_path: MedicationStatement.effectivePeriod | fhir_type: Period']
   dateasserted timestamp_ntz [note: 'When the statement was asserted? | fhir_path: MedicationStatement.dateAsserted | fhir_type: dateTime']
-  dosage variant [note: 'Details of how medication is/was taken or should be taken | MedicationStatementDosage [{sequence, text, route}] - key: sequence, text | fhir_path: MedicationStatement.dosage | fhir_type: Dosage']
+  dosage_text varchar [note: 'Free text dosage instructions e.g. SIG | fhir_path: MedicationStatement.dosage.text | fhir_type: string']
+  dosage_route_coding_code MedicationRouteEnum [note: 'Symbol in syntax defined by the system | fhir_path: MedicationStatement.dosage.route.coding.code | fhir_type: code | value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SubstanceOrProductAdministrationRoute']
+  dosage_route_text varchar [note: 'Plain text representation of the concept | fhir_path: MedicationStatement.dosage.route.text | fhir_type: string']
+  dosage_maxdoseperadministration_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationStatement.dosage.maxDosePerAdministration.value | fhir_type: decimal']
+  dosage_maxdoseperadministration_unit varchar [note: 'Unit representation | fhir_path: MedicationStatement.dosage.maxDosePerAdministration.unit | fhir_type: string']
   identifier variant [note: 'External identifier | MedicationStatementIdentifier [{system, value}] - key: system, value | fhir_path: MedicationStatement.identifier | fhir_type: Identifier']
-  extension_medicationstatementlastissuedate timestamp_ntz [not null, note: 'The date when a prescription was last issued | fhir_path: MedicationStatement.extension:medicationStatementLastIssueDate | fhir_type: dateTime']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: MedicationStatement.note.text | fhir_type: markdown']
 
   Note: 'One row per MedicationStatement resource.'
 }
 
 Table observation {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Observation.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Observation.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Observation.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Observation.meta.lastUpdated | fhir_type: instant']
   status ObservationStatusEnum [not null, note: 'registered | preliminary | final | amended + | fhir_path: Observation.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/observation-status']
@@ -808,13 +791,12 @@ Table observation {
   code_coding variant [note: 'Code defined by a terminology system | ObservationCodeCoding [{system, code, display, is_source}] - key: system, code | fhir_path: Observation.code.coding | fhir_type: Coding']
   subject_id varchar [note: 'Who and/or what the observation is about | fhir_path: Observation.subject | fhir_type: Reference']
   encounter_id varchar [note: 'Healthcare event during which this observation is made | fhir_path: Observation.encounter | fhir_type: Reference']
+  specimen_id varchar [note: 'Specimen used for this observation | fhir_path: Observation.specimen | fhir_type: Reference']
   effectivedatetime timestamp_ntz [note: 'Clinically relevant time/time-period for observation | fhir_path: Observation.effectiveDateTime | fhir_type: dateTime']
   valuequantity variant [note: 'Actual result | ObservationValueQuantity {value, comparator, unit, system, code} | fhir_path: Observation.valueQuantity | fhir_type: Quantity']
   valuecodeableconcept variant [note: 'Actual result | ObservationValueCodeableConcept {coding} | fhir_path: Observation.valueCodeableConcept | fhir_type: CodeableConcept']
   referencerange_low_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: Observation.referenceRange.low.value | fhir_type: decimal']
   referencerange_high_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: Observation.referenceRange.high.value | fhir_type: decimal']
-  dataabsentreason variant [note: 'Why the result is missing | ObservationDataAbsentReason {coding} | fhir_path: Observation.dataAbsentReason | fhir_type: CodeableConcept']
-  interpretation_coding variant [note: 'Code defined by a terminology system | ObservationInterpretationCoding {system, code, display, is_source} | fhir_path: Observation.interpretation.coding | fhir_type: Coding']
   component variant [note: 'Component results | ObservationComponent [{code, valuequantity, valuecodeableconcept}] - key: code | fhir_path: Observation.component | fhir_type: BackboneElement']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: Observation.note.text | fhir_type: markdown']
 
@@ -822,7 +804,7 @@ Table observation {
 }
 
 Table organization {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Organization.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Organization.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Organization.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Organization.meta.lastUpdated | fhir_type: instant']
   identifier_odsorganisationcode_value varchar [not null, note: 'The value that is unique | fhir_path: Organization.identifier:odsOrganisationCode.value | fhir_type: string']
@@ -837,7 +819,7 @@ Table organization {
 }
 
 Table patient {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Patient.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Patient.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Patient.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Patient.meta.lastUpdated | fhir_type: instant']
   identifier_nhsnumber_value varchar [not null, note: 'The value that is unique | fhir_path: Patient.identifier:nhsNumber.value | fhir_type: string']
@@ -850,14 +832,14 @@ Table patient {
   deceasedboolean boolean [note: 'Indicates if the individual is deceased or not | fhir_path: Patient.deceasedBoolean | fhir_type: boolean']
   deceaseddatetime timestamp_ntz [note: 'Indicates if the individual is deceased or not | fhir_path: Patient.deceasedDateTime | fhir_type: dateTime']
   address_postalcode varchar [note: 'Postal code for area | fhir_path: Patient.address.postalCode | fhir_type: string']
+  address variant [note: 'An address for the individual | PatientAddress [{extension_addresskey, use, line, city, postalcode, country, period}] - key: period, postalcode | fhir_path: Patient.address | fhir_type: Address']
   extension_ethniccategory variant [not null, note: 'A code classifying the person\'s ethnicity | PatientExtensionEthnicCategory {coding} | fhir_path: Patient.extension:ethnicCategory | fhir_type: CodeableConcept']
-  extension_deathnotificationstatus_extension_deathnotificationstatus variant [not null, note: 'The patient\'s death notification status. | PatientExtensionDeathNotificationStatusExtensionDeathNotificationStatus {coding} | fhir_path: Patient.extension:deathNotificationStatus.extension:deathNotificationStatus | fhir_type: CodeableConcept']
 
   Note: 'One row per Patient resource.'
 }
 
 Table procedure {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Procedure.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Procedure.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Procedure.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Procedure.meta.lastUpdated | fhir_type: instant']
   status EventStatusEnum [not null, note: 'preparation | in-progress | not-done | on-hold | stopped | completed | entered-in-error | unknown | fhir_path: Procedure.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/event-status']
@@ -874,13 +856,10 @@ Table procedure {
 }
 
 Table servicerequest {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: ServiceRequest.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: ServiceRequest.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: ServiceRequest.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: ServiceRequest.meta.lastUpdated | fhir_type: instant']
   status RequestStatusEnum [not null, note: 'draft | active | on-hold | revoked | completed | entered-in-error | unknown | fhir_path: ServiceRequest.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/request-status']
-  intent RequestIntentEnum [not null, note: 'proposal | plan | directive | order | original-order | reflex-order | filler-order | instance-order | option | fhir_path: ServiceRequest.intent | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/request-intent']
-  priority RequestPriorityEnum [note: 'routine | urgent | asap | stat | fhir_path: ServiceRequest.priority | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/request-priority']
-  donotperform boolean [note: 'True if service/procedure should not be performed | fhir_path: ServiceRequest.doNotPerform | fhir_type: boolean']
   code_coding variant [note: 'Code defined by a terminology system | ServiceRequestCodeCoding [{system, code, display, is_source}] - key: system, code | fhir_path: ServiceRequest.code.coding | fhir_type: Coding']
   subject_id varchar [not null, note: 'Individual or Entity the service is ordered for | fhir_path: ServiceRequest.subject | fhir_type: Reference']
   encounter_id varchar [note: 'Encounter in which the request was created | fhir_path: ServiceRequest.encounter | fhir_type: Reference']
@@ -895,7 +874,7 @@ Table servicerequest {
 }
 
 Table specimen {
-  id varchar [not null, note: 'Logical id of this resource. Primary key. | fhir_path: Specimen.id | fhir_type: id']
+  id varchar [pk, note: 'Logical id of this resource. | fhir_path: Specimen.id | fhir_type: id']
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Specimen.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Specimen.meta.lastUpdated | fhir_type: instant']
   status SpecimenStatusEnum [note: 'available | unavailable | unsatisfactory | entered-in-error | fhir_path: Specimen.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/specimen-status']
@@ -907,7 +886,6 @@ Table specimen {
   collection_bodysite variant [note: 'Anatomical collection site | SpecimenCollectionBodySite {coding} | fhir_path: Specimen.collection.bodySite | fhir_type: CodeableConcept']
   identifier variant [note: 'External Identifier | SpecimenIdentifier [{system, value}] - key: system, value | fhir_path: Specimen.identifier | fhir_type: Identifier']
   accessionidentifier_value varchar [note: 'The value that is unique | fhir_path: Specimen.accessionIdentifier.value | fhir_type: string']
-  extension_samplecategory variant [not null, note: 'A set of codes to record the category of the sample | SpecimenExtensionSampleCategory {coding} | fhir_path: Specimen.extension:sampleCategory | fhir_type: CodeableConcept']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: Specimen.note.text | fhir_type: markdown']
 
   Note: 'One row per Specimen resource.'
@@ -915,25 +893,36 @@ Table specimen {
 
 // --- Relationships (CONVENTIONS.md §2, §10) ---------------------------
 
+Ref: appointment.participant_actor_id > patient.id
+Ref: appointment.extension_bookingorganization_id > organization.id
 Ref: condition.subject_id > patient.id
 Ref: condition.encounter_id > encounter.id
 Ref: diagnosticreport.subject_id > patient.id
 Ref: diagnosticreport.encounter_id > encounter.id
+Ref: diagnosticreport.result_id > observation.id
+Ref: diagnosticreport.imagingstudy_id > imagingstudy.id
 Ref: encounter.subject_id > patient.id
 Ref: encounter.partof_id > encounter.id
 Ref: encounter.serviceprovider_id > organization.id
+Ref: encounter.appointment_id > appointment.id
 Ref: episodeofcare.patient_id > patient.id
 Ref: episodeofcare.managingorganization_id > organization.id
+Ref: imagingstudy.subject_id > patient.id
+Ref: imagingstudy.encounter_id > encounter.id
+Ref: imagingstudy.location_id > location.id
+Ref: imagingstudy.procedurereference_id > procedure.id
 Ref: location.partof_id > location.id
 Ref: location.managingorganization_id > organization.id
 Ref: medicationadministration.subject_id > patient.id
 Ref: medicationadministration.context_id > encounter.id
+Ref: medicationadministration.partof_id > medicationadministration.id
 Ref: medicationrequest.subject_id > patient.id
 Ref: medicationrequest.encounter_id > encounter.id
 Ref: medicationstatement.subject_id > patient.id
 Ref: medicationstatement.context_id > encounter.id
 Ref: observation.subject_id > patient.id
 Ref: observation.encounter_id > encounter.id
+Ref: observation.specimen_id > specimen.id
 Ref: organization.partof_id > organization.id
 Ref: procedure.subject_id > patient.id
 Ref: procedure.encounter_id > encounter.id

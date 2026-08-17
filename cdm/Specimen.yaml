@@ -14,9 +14,14 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Specimen
   profile_version: 2.4.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- patient
 default_range: string
 classes:
   SpecimenTypeCoding:
@@ -128,62 +133,15 @@ classes:
         annotations:
           fhir_path: Specimen.identifier.value
           fhir_type: string
-  SpecimenExtensionSampleCategoryCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Specimen.extension:sampleCategory.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory.coding.system
-          fhir_type: uri
-      code:
-        range: UKCoreSampleCategoryEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SampleCategory
-          binding_strength: extensible
-          binding_source: fhir
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory.coding.is_source
-          fhir_type: boolean
-  SpecimenExtensionSampleCategory:
-    description: A set of codes to record the category of the sample
-    annotations:
-      fhir_path: Specimen.extension:sampleCategory
-    attributes:
-      coding:
-        range: SpecimenExtensionSampleCategoryCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory.coding
-          fhir_type: Coding
   Specimen:
     description: One row per Specimen resource.
     annotations:
       fhir_path: Specimen
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Specimen.id
           fhir_type: id
@@ -217,7 +175,8 @@ classes:
           fhir_path: Specimen.type.coding
           fhir_type: Coding
       subject_id:
-        range: string
+        range: Patient
+        inlined: false
         description: Where the specimen came from. This may be from patient(s), from a location (e.g.,
           the source of an environmental sample), or a sampling of a substance or a device
         annotations:
@@ -262,13 +221,6 @@ classes:
         annotations:
           fhir_path: Specimen.accessionIdentifier.value
           fhir_type: string
-      extension_samplecategory:
-        range: SpecimenExtensionSampleCategory
-        required: true
-        description: A set of codes to record the category of the sample
-        annotations:
-          fhir_path: Specimen.extension:sampleCategory
-          fhir_type: CodeableConcept
       note_text:
         range: string
         description: The annotation  - text content (as markdown)

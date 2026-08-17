@@ -14,9 +14,15 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-ServiceRequest
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
 default_range: string
 classes:
   ServiceRequestCodeCoding:
@@ -132,12 +138,11 @@ classes:
     description: One row per ServiceRequest resource.
     annotations:
       fhir_path: ServiceRequest
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: ServiceRequest.id
           fhir_type: id
@@ -163,32 +168,6 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/request-status
           binding_strength: required
           binding_source: fhir
-      intent:
-        range: RequestIntentEnum
-        required: true
-        description: proposal | plan | directive | order | original-order | reflex-order | filler-order
-          | instance-order | option
-        annotations:
-          fhir_path: ServiceRequest.intent
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/request-intent
-          binding_strength: required
-          binding_source: fhir
-      priority:
-        range: RequestPriorityEnum
-        description: routine | urgent | asap | stat
-        annotations:
-          fhir_path: ServiceRequest.priority
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/request-priority
-          binding_strength: required
-          binding_source: fhir
-      donotperform:
-        range: boolean
-        description: True if service/procedure should not be performed
-        annotations:
-          fhir_path: ServiceRequest.doNotPerform
-          fhir_type: boolean
       code_coding:
         range: ServiceRequestCodeCoding
         multivalued: true
@@ -198,15 +177,17 @@ classes:
           fhir_path: ServiceRequest.code.coding
           fhir_type: Coding
       subject_id:
-        range: string
+        range: Patient
         required: true
+        inlined: false
         description: Individual or Entity the service is ordered for
         annotations:
           fhir_path: ServiceRequest.subject
           fhir_type: Reference
           fk_target: Patient
       encounter_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Encounter in which the request was created
         annotations:
           fhir_path: ServiceRequest.encounter

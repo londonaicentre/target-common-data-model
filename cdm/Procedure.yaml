@@ -14,9 +14,15 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Procedure
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- encounter
+- patient
 default_range: string
 classes:
   ProcedurePerformedPeriod:
@@ -133,12 +139,11 @@ classes:
     description: One row per Procedure resource.
     annotations:
       fhir_path: Procedure
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Procedure.id
           fhir_type: id
@@ -166,15 +171,17 @@ classes:
           binding_strength: required
           binding_source: fhir
       subject_id:
-        range: string
+        range: Patient
         required: true
+        inlined: false
         description: Who the procedure was performed on
         annotations:
           fhir_path: Procedure.subject
           fhir_type: Reference
           fk_target: Patient
       encounter_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Encounter created as part of
         annotations:
           fhir_path: Procedure.encounter

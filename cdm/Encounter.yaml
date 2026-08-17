@@ -14,9 +14,17 @@ annotations:
   grain: one_row_per_resource
   generated_from: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Encounter
   profile_version: 2.5.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  cdm: https://cdm.aicentre.co.uk/
+default_prefix: cdm
 imports:
 - linkml:types
 - enums
+- appointment
+- condition
+- organization
+- patient
 default_range: string
 classes:
   EncounterClass:
@@ -429,8 +437,9 @@ classes:
       key_fields: condition_id, rank
     attributes:
       condition_id:
-        range: string
+        range: Condition
         required: true
+        inlined: false
         description: The diagnosis or procedure relevant to the encounter
         annotations:
           fhir_path: Encounter.diagnosis.condition
@@ -471,12 +480,11 @@ classes:
     description: One row per Encounter resource.
     annotations:
       fhir_path: Encounter
-      primary_key: id
     attributes:
       id:
         range: string
-        required: true
-        description: Logical id of this resource. Primary key.
+        identifier: true
+        description: Logical id of this resource.
         annotations:
           fhir_path: Encounter.id
           fhir_type: id
@@ -522,26 +530,38 @@ classes:
           fhir_path: Encounter.serviceType
           fhir_type: CodeableConcept
       subject_id:
-        range: string
+        range: Patient
+        inlined: false
         description: The patient or group present at the encounter
         annotations:
           fhir_path: Encounter.subject
           fhir_type: Reference
           fk_target: Patient
       partof_id:
-        range: string
+        range: Encounter
+        inlined: false
         description: Another Encounter this encounter is part of
         annotations:
           fhir_path: Encounter.partOf
           fhir_type: Reference
           fk_target: Encounter
       serviceprovider_id:
-        range: string
+        range: Organization
+        inlined: false
         description: The organization (facility) responsible for this encounter
         annotations:
           fhir_path: Encounter.serviceProvider
           fhir_type: Reference
           fk_target: Organization
+      appointment_id:
+        range: Appointment
+        multivalued: true
+        inlined: false
+        description: The appointment that scheduled this encounter
+        annotations:
+          fhir_path: Encounter.appointment
+          fhir_type: Reference
+          fk_target: Appointment
       period:
         range: EncounterPeriod
         description: The start and end time of the encounter
