@@ -1,0 +1,179 @@
+# ImagingStudy
+#
+# Purpose: the imaging study that a radiology report describes
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: ImagingStudy
+profile: http://hl7.org/fhir/StructureDefinition/ImagingStudy
+package: hl7.fhir.r4.core
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the study has got to. `available` is a study whose images are
+  # retrievable; `registered` is booked but not yet acquired.
+  # status  string (enum ImagingstudyStatusEnum)
+  ImagingStudy.status:
+    bindings:
+      ImagingStudy.status: default
+
+  # --- What was imaged ----------------------------------------------------
+
+  # The DICOM acquisition modalities across the whole study
+  # Bound manually to DICOM CID 29 (FHIR extensible).
+  # modality  array [ {system: string, code: string
+  #                    (enum ImagingModalityEnum), display: string,
+  #                    is_source: boolean} ]
+  ImagingStudy.modality:
+    key: [system, code]
+    bindings:
+      ImagingStudy.modality.code: ImagingModalityEnum
+
+  # Any procedures performed during the study
+  # procedurecode  array [ { coding: [ {system: string, code: string,
+  #                            display: string, is_source: boolean} ] } ]
+  ImagingStudy.procedureCode:
+    key: [coding]
+    exclude:
+      ImagingStudy.procedureCode.text: >
+        rendered term; the coding carries the meaning
+
+  # The study description as the RIS holds it ("CT CHEST ABDO PELVIS WITH
+  # CONTRAST"). Free text.
+  # description  string
+  ImagingStudy.description:
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the study was acquired on.
+  # subject_id  string (FK -> Patient.id)
+  ImagingStudy.subject:
+    fk: Patient                 # profile allows [Patient, Device, Group]
+
+  # The Encounter the study was acquired during.
+  # encounter_id  string (FK -> Encounter.id)
+  ImagingStudy.encounter:
+    fk: Encounter
+
+  # When the study was acquired.
+  # started  timestamp
+  ImagingStudy.started:
+
+  # --- Where --------------------------------------------------------------
+
+  # The imaging department or scanner site the study was performed at.
+  # location_id  string (FK -> Location.id)
+  ImagingStudy.location:
+    fk: Location
+
+  # --- What came out of it ------------------------------------------------
+
+  # Series count as the study header reports it.
+  # numberofseries  integer
+  ImagingStudy.numberOfSeries:
+
+  # --- The linked procedure -----------------------------------------------
+
+  # The Procedure this study was acquired for, where the source links them.
+  # procedurereference_id  string (FK -> Procedure.id)
+  ImagingStudy.procedureReference:
+    fk: Procedure
+
+  # --- Variants -----------------------------------------------------------
+
+  # The DICOM Study Instance UID (system urn:dicom:uid) and the RIS accession
+  # number.
+  # identifier  array [ {system: string, value: string} ]
+  ImagingStudy.identifier:
+    key: [system, value]
+    exclude:
+      ImagingStudy.identifier.assigner: >
+        Organization not modelled here; `system` already namespaces the issuer
+      ImagingStudy.identifier.period: >
+        identifier validity windows are not populated in practice
+      ImagingStudy.identifier.type: >
+        redundant with `system`
+      ImagingStudy.identifier.use: >
+        not reliably populated across source systems
+
+  # One object per DICOM series within the study. This is where body site and
+  # laterality actually live in ImagingStudy - the resource carries no
+  # study-level bodySite - so the variant is the only way to reach them.
+  #
+  # series  array [ {uid: string, number: integer,
+  #                  modality: {system: string, code: string
+  #                             (enum ImagingModalityEnum), display: string,
+  #                             is_source: boolean},
+  #                  description: string, numberofinstances: integer,
+  #                  bodysite: {system: string, code: string,
+  #                             display: string, is_source: boolean},
+  #                  laterality: {system: string, code: string
+  #                             (enum ImagingLateralityEnum), display: string,
+  #                             is_source: boolean},
+  #                  started: timestamp} ]
+  ImagingStudy.series:
+    key: [uid]
+    bindings:
+      ImagingStudy.series.modality.code: ImagingModalityEnum
+      ImagingStudy.series.laterality.code: ImagingLateralityEnum
+    exclude:
+      ImagingStudy.series.instance: >
+        0..* beneath a 0..* path; the per-image DICOM manifest is a PACS
+        concern and `numberOfInstances` carries the count
+      ImagingStudy.series.endpoint: >
+        Endpoint not modelled; a DICOM retrieval URL is not an analytical fact
+      ImagingStudy.series.performer: >
+        0..* beneath a 0..* path, and the actor is a Practitioner, which is
+        not modelled
+      ImagingStudy.series.specimen: >
+        Specimen IS modelled, but the reference is 0..* beneath a 0..* path,
+        so it lands as an array of bare ids inside the variant; specimen
+        imaging is vanishingly rare in the source feeds
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  ImagingStudy.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- What came out of it ------------------------------------------------
+  ImagingStudy.numberOfInstances: >
+    limited analytical utility; a study-level image count is a PACS storage
+    metric rather than a clinical fact, and the series-level count remains
+    inside the `series` variant
+
+  # --- Series detail ------------------------------------------------------
+  ImagingStudy.series.bodySite: >
+    NOT whitelisted separately - it is reached inside the `series` variant,
+    which is where FHIR puts it. Promoting it would take series[0] only and
+    misreport a multi-region study. Unbound in any case: `example` to the
+    SNOMED body-site subset, which needs a terminology server
+
+  # --- Care team ----------------------------------------------------------
+  ImagingStudy.referrer: Practitioner not modelled; would be a dangling FK
+  ImagingStudy.interpreter: >
+    Practitioner not modelled; the reporting radiologist is carried by the
+    DiagnosticReport in any case
+
+  # --- References to other resources --------------------------------------
+  ImagingStudy.basedOn: >
+    ServiceRequest IS modelled, but the field is 0..* and the reference is
+    unconstrained across five resource types, so no single FK target is
+    correct
+  ImagingStudy.reasonReference: >
+    Condition and Observation ARE modelled, but the field is 0..* and the
+    reference spans five resource types; the indication is carried by the
+    linked Condition
+  ImagingStudy.reasonCode: >
+    limited analytical utility; `example` to a SNOMED subset needing a
+    terminology server, and the indication is carried by the linked Condition
+  ImagingStudy.endpoint: >
+    Endpoint not modelled; a DICOM retrieval URL is not an analytical fact
