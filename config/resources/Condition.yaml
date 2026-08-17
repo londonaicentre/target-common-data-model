@@ -134,5 +134,5 @@ rejected:
     NOT whitelisted whole - `category.coding[0]` is named instead, so a
     second category is dropped rather than becoming a variant
   Condition.extension:conditionEpisode: >
-    not in scope of typical source data; belongs with episode-of-care, which
-    is not modelled
+    not in scope of typical source data; the new/review episode distinction is
+    derivable from the onset and recorded dates across a patient's conditions

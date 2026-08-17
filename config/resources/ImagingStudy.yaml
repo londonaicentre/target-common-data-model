@@ -91,7 +91,8 @@ include:
     key: [system, value]
     exclude:
       ImagingStudy.identifier.assigner: >
-        Organization not modelled here; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       ImagingStudy.identifier.period: >
         identifier validity windows are not populated in practice
       ImagingStudy.identifier.type: >

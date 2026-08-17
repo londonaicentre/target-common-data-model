@@ -89,7 +89,8 @@ include:
     key: [system, value]
     exclude:
       MedicationRequest.identifier.assigner: >
-        Organization not modelled; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       MedicationRequest.identifier.period: >
         identifier validity windows are not populated in practice
       MedicationRequest.identifier.type: >
@@ -177,13 +178,19 @@ rejected:
   MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
     not in scope of typical source data
   MedicationRequest.dosageInstruction.site: >
-    limited analytical utility; body site is carried by
-    MedicationAdministration where it matters
+    limited analytical utility; a prescribing intention rather than a recorded
+    fact, and route carries the analytical signal. MedicationAdministration
+    rejects `dosage.site` on the same grounds, so no table carries body site
+    for medication
   MedicationRequest.dosageInstruction.method: >
     limited analytical utility; route carries the analytical signal
   MedicationRequest.dosageInstruction.doseAndRate: >
-    not in scope of typical source data; an array of choice-typed Quantities,
-    and the dose text is what these feeds populate
+    NOT REACHABLE, rather than rejected. `doseAndRate` is typed as the
+    anonymous `Element` backbone and stage 1 does not walk into it, so no
+    doseQuantity leaf exists in the expanded tree. The same is true of
+    MedicationStatement.dosage. `dosageinstruction_text` carries the dose as
+    free text; MedicationAdministration has a real `dosage.dose` Quantity
+    where a numeric dose is required
   MedicationRequest.dosageInstruction.maxDosePerPeriod: >
     not in scope of typical source data; a Ratio, and a safety-checking
     concern rather than an exposure one
@@ -194,8 +201,10 @@ rejected:
     inequality, unlike an administered dose
   MedicationRequest.dosageInstruction.maxDosePerAdministration.system: >
     UCUM system/code are fixed in practice; `unit` carries the human string
-  MedicationRequest.dosageInstruction.additionalInstruction.text: >
-    rendered term; the coding carries the meaning
+  MedicationRequest.dosageInstruction.additionalInstruction: >
+    limited analytical utility; supplementary instructions ("take with food")
+    are not analysed, and the whole element is out of the model rather than
+    just its rendered `.text`
 
   # --- Dispense request detail --------------------------------------------
   MedicationRequest.dispenseRequest.numberOfRepeatsAllowed: >

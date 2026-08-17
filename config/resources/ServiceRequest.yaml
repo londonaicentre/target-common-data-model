@@ -59,7 +59,8 @@ include:
     key: [system, value]
     exclude:
       ServiceRequest.identifier.assigner: >
-        Organization not modelled; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       ServiceRequest.identifier.period: >
         identifier validity windows are not populated in practice
       ServiceRequest.identifier.type: >
@@ -128,8 +129,10 @@ rejected:
   # --- Care team ----------------------------------------------------------
   ServiceRequest.requester: Practitioner not modelled; would be a dangling FK
   ServiceRequest.performer: >
-    Practitioner not modelled, and the reference is unconstrained across
-    resource types so no single FK target is correct
+    Practitioner not modelled, and the reference allows eight target types
+    (Practitioner, PractitionerRole, Organization, CareTeam, HealthcareService,
+    Patient, Device, RelatedPerson) with none canonical, so no single FK target
+    is correct
   ServiceRequest.performerType: not in scope of typical source data
 
   # --- Location -----------------------------------------------------------

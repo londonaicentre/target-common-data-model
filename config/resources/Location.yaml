@@ -74,8 +74,8 @@ include:
     key: [system, value]
     exclude:
       Location.identifier.assigner: >
-        Organization not modelled as the issuer; `system` already namespaces
-        it
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       Location.identifier.period: >
         identifier validity windows are not populated in practice
       Location.identifier.type: >

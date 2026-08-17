@@ -90,7 +90,8 @@ include:
     key: [system, value]
     exclude:
       Appointment.identifier.assigner: >
-        Organization not modelled; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       Appointment.identifier.period: >
         identifier validity windows are not populated in practice
       Appointment.identifier.type: >
@@ -149,8 +150,9 @@ rejected:
     limited analytical utility; the appointment `start` and `end` carry the
     window
   Appointment.participant.type: >
-    the participant's role, bound `extensible` to a SNOMED `is-a` subset that
-    needs a terminology server; the CDM takes the patient actor only
+    the participant's role, bound `extensible` to an HL7 v3 ParticipationType
+    `is-a` subset that needs a terminology server; the CDM takes the patient
+    actor only
 
   # --- Scheduling ---------------------------------------------------------
   Appointment.slot: Slot not modelled; would be a dangling FK

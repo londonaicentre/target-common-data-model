@@ -26,7 +26,8 @@ include:
     key: [system, value]
     exclude:
       Patient.identifier.assigner: >
-        Organization not modelled; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       Patient.identifier.period: >
         identifier validity windows are not populated in practice
       Patient.identifier.type: >

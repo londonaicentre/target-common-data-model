@@ -166,7 +166,8 @@ include:
     key: [system, value]
     exclude:
       Encounter.identifier.assigner: >
-        Organization not modelled; `system` already namespaces the issuer
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
       Encounter.identifier.period: >
         identifier validity windows are not populated in practice
       Encounter.identifier.type: >
