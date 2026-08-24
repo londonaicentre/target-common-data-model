@@ -16,7 +16,7 @@ annotations:
   profile_version: 4.0.1
 prefixes:
   linkml: https://w3id.org/linkml/
-  cdm: https://cdm.aicentre.co.uk/
+  aiccdm: https://cdm.aicentre.co.uk/
 default_prefix: cdm
 imports:
 - linkml:types

@@ -15,7 +15,7 @@ description: LinkML enums for the FlatFHIR CDM. Folded from the hand-written man
   expansion of bound FHIR value sets; contains only the enums the resource schemas reference.
 prefixes:
   linkml: https://w3id.org/linkml/
-  cdm: https://cdm.aicentre.co.uk/
+  aiccdm: https://cdm.aicentre.co.uk/
 default_prefix: cdm
 imports:
 - linkml:types
