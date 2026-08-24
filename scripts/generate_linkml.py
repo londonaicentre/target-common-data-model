@@ -81,7 +81,10 @@ SCHEMA_BASE_URI = "https://cdm.aicentre.co.uk"
 # schema to resolve outside SchemaView (which tolerates the omission, while the
 # generators and validator do not). `default_prefix` names the schema's own
 # element URIs.
-SCHEMA_PREFIXES = {"linkml": "https://w3id.org/linkml/", "cdm": f"{SCHEMA_BASE_URI}/"}
+SCHEMA_PREFIXES = {
+    "linkml": "https://w3id.org/linkml/",
+    "aiccdm": f"{SCHEMA_BASE_URI}/",
+}
 
 # The literal a config writes to take the FHIR binding recorded for a field.
 DEFAULT_BINDING = "default"
