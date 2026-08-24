@@ -16,7 +16,7 @@ description: LinkML enums for the FlatFHIR CDM. Folded from the hand-written man
 prefixes:
   linkml: https://w3id.org/linkml/
   aiccdm: https://cdm.aicentre.co.uk/
-default_prefix: cdm
+default_prefix: aiccdm
 imports:
 - linkml:types
 enums:
@@ -364,9 +364,12 @@ enums:
       '9':
         description: Method of discharge not known
   EncounterCategoryEnum:
-    description: CDM-defined encounter category. Primary analyst axis; not a FHIR element.
+    description: CDM-defined encounter category. Primary analyst axis; not a FHIR element. These codes
+      are the CDM's own and appear in no FHIR value set. Encounter.type is bound `preferred` to https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType,
+      a SNOMED CT descendant filter (185316007, 308467007, 185201007) with no overlap here; this axis
+      replaces that binding rather than narrowing it.
     annotations:
-      binding_source: manual
+      binding_source: local
       origin: enum_manifest.yaml
     permissible_values:
       apc_spell:

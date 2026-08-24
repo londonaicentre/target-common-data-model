@@ -17,7 +17,7 @@ annotations:
 prefixes:
   linkml: https://w3id.org/linkml/
   aiccdm: https://cdm.aicentre.co.uk/
-default_prefix: cdm
+default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
