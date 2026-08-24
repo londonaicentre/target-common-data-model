@@ -46,6 +46,13 @@ comes from:
 the value set expands offline; anything else is an error rather than a silent
 fallback to `string`.
 
+Each bound field records where its codes came from as `binding_source`:
+`fhir` for a value set the profile binds, `manual` for a hand-written entry
+that still describes that value set, and `local` for codes from outside FHIR
+that replace the binding. A `local` field carries the URL it displaces as
+`replaces_value_set` rather than `value_set`, so the schema never claims
+conformance to a vocabulary the column does not use (§12).
+
 Usage:
   uv run scripts/expand_fhir.py         # stage 1 first
   uv run scripts/generate_linkml.py
@@ -81,9 +88,10 @@ SCHEMA_BASE_URI = "https://cdm.aicentre.co.uk"
 # schema to resolve outside SchemaView (which tolerates the omission, while the
 # generators and validator do not). `default_prefix` names the schema's own
 # element URIs.
+SCHEMA_DEFAULT_PREFIX = "aiccdm"
 SCHEMA_PREFIXES = {
     "linkml": "https://w3id.org/linkml/",
-    "aiccdm": f"{SCHEMA_BASE_URI}/",
+    SCHEMA_DEFAULT_PREFIX: f"{SCHEMA_BASE_URI}/",
 }
 
 # The literal a config writes to take the FHIR binding recorded for a field.
@@ -335,7 +343,13 @@ class BindingInfo:
     enum_name: str
     value_set: str | None
     strength: str | None
-    source: str                      # "manual" | "fhir"
+    # Where the codes came from, not where they are written down:
+    #   fhir    derived from the value set the profile binds (`default`)
+    #   manual  hand-written in the manifest, but still describing that value
+    #           set - a verbatim copy, a subset, or a union across systems
+    #   local   hand-written codes from outside FHIR entirely, replacing the
+    #           binding rather than describing it (§12)
+    source: str
 
 
 def derived_enum_name(value_set_url: str) -> str:
@@ -380,6 +394,8 @@ class BindingResolver:
         self.used_manual: set[str] = set()
         # Manifest entries whose values match what `default` would have given.
         self.redundant: dict[str, str] = {}
+        # `local_codes` entries that turned out to reproduce their value set.
+        self.mislabelled: dict[str, str] = {}
         # Bound fields no config declared, reported at the end.
         self.undeclared: list[tuple[str, str, str]] = []
 
@@ -471,6 +487,21 @@ class BindingResolver:
                 f"{MANIFEST_PATH.relative_to(REPO_ROOT)}"
             )
         self.used_manual.add(name)
+        if self.manifest[name].get("local_codes"):
+            # Local codes replace the FHIR binding rather than narrowing it, so
+            # the field does not carry that value set (§12). Both the URL and
+            # its strength are kept: the strength is what says whether the
+            # replacement is conformant - `preferred` permits it, `required`
+            # would not - so dropping it would hide the one fact a reviewer
+            # needs.
+            if fhir:
+                self._flag_if_not_local(name, fhir, path)
+            return BindingInfo(
+                name,
+                (fhir or {}).get("value_set"),
+                (fhir or {}).get("strength"),
+                "local",
+            )
         if fhir:
             self._flag_if_redundant(name, fhir, path)
         return BindingInfo(
@@ -479,6 +510,29 @@ class BindingResolver:
             (fhir or {}).get("strength"),
             "manual",
         )
+
+    def _flag_if_not_local(self, name: str, fhir: dict, path: str) -> None:
+        """Report a `local_codes` entry that is really the FHIR value set.
+
+        Unlike the redundancy check this ignores binding strength: an entry
+        claiming its codes come from outside FHIR is wrong wherever they
+        reproduce the bound value set, reachable by `default` or not (§12).
+        """
+        if name in self.mislabelled:
+            return
+        manual = self.manifest_codes(name)
+        if manual is None:
+            return
+        concepts, _ = self._concepts(fhir["value_set"])
+        if concepts is None:
+            return
+        if manual == {c.code for c in concepts}:
+            self.mislabelled[name] = fhir["value_set"]
+            self.warnings.append(
+                f"manual binding `{name}` ({path}) is declared `local_codes` "
+                f"but reproduces the FHIR value set {fhir['value_set']} it "
+                f"claims to replace - drop the flag (§12)"
+            )
 
     def _flag_if_redundant(self, name: str, fhir: dict, path: str) -> None:
         """Report a manual enum that reproduces what `default` would give.
@@ -1142,7 +1196,15 @@ def render_slot(slot: Slot) -> dict[str, Any]:
         ann["fk_target"] = slot.fk_target
     if slot.binding:
         if slot.binding.value_set:
-            ann["value_set"] = slot.binding.value_set
+            # Local codes are not the bound value set, so the URL is recorded
+            # as what the field replaces rather than what it conforms to (§12).
+            # `binding_strength` still follows, qualifying the replaced binding.
+            key = (
+                "replaces_value_set"
+                if slot.binding.source == "local"
+                else "value_set"
+            )
+            ann[key] = slot.binding.value_set
         if slot.binding.strength:
             ann["binding_strength"] = slot.binding.strength
         ann["binding_source"] = slot.binding.source
@@ -1173,7 +1235,7 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
             "profile_version": schema.profile_version,
         },
         "prefixes": dict(SCHEMA_PREFIXES),
-        "default_prefix": "cdm",
+        "default_prefix": SCHEMA_DEFAULT_PREFIX,
         # §10. A reference slot's range is the target class, which has to be
         # in scope, so each FK target's schema is imported. LinkML permits the
         # mutual imports this produces (Encounter <-> Patient, and the
@@ -1258,7 +1320,10 @@ def render_enums(
         else:
             values, origin = [], "unknown"
 
-        ann: dict[str, Any] = {"binding_source": "manual", "origin": origin}
+        ann: dict[str, Any] = {
+            "binding_source": "local" if spec.get("local_codes") else "manual",
+            "origin": origin,
+        }
         enums[name] = {
             "description": spec.get("description", ""),
             "annotations": ann,
@@ -1292,7 +1357,7 @@ def render_enums(
             "contains only the enums the resource schemas reference."
         ),
         "prefixes": dict(SCHEMA_PREFIXES),
-        "default_prefix": "cdm",
+        "default_prefix": SCHEMA_DEFAULT_PREFIX,
         "imports": ["linkml:types"],
         "enums": enums,
     }

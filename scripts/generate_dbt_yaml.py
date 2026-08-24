@@ -14,8 +14,9 @@ Per model:
   * accepted_values with values nested under `arguments:` (binding_strength
     severity is implemented but commented out for now)
   * relationships (foreign-key) tests on class-typed reference columns
-  * FHIR lineage in `meta` (fhir_path / fhir_type / value_set) - the meta block
-    is omitted entirely for CDM-derived columns that have none
+  * FHIR lineage in `meta` (fhir_path / fhir_type / value_set /
+    replaces_value_set) - the meta block is omitted entirely for CDM-derived
+    columns that have none
   * own columns first, shared provenance slots (meta_*) last
 
 Inlined multivalued variant classes become Snowflake VARIANT columns on their
@@ -116,7 +117,7 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
 
     # meta - only emit keys that exist; drop the block entirely if nothing to say
     meta = {}
-    for key in ("fhir_path", "fhir_type", "value_set"):
+    for key in ("fhir_path", "fhir_type", "value_set", "replaces_value_set"):
         val = ann(slot, key)
         if val is not None:
             meta[key] = val

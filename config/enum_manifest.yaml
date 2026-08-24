@@ -18,6 +18,30 @@
 #   codesystem  – concepts extracted from a FHIR CodeSystem in node_modules/
 #                 identified by canonical url + npm package name
 #   manual      – values defined inline below (stable FHIR R4 / CDM-defined)
+#
+# `local_codes: true` marks an entry whose codes come from outside FHIR
+# entirely - a local vocabulary that REPLACES the field's binding rather than
+# copying, subsetting or unioning it. Almost every entry here leaves it off,
+# because almost every entry still describes the value set its field binds:
+#
+#   EncounterClassEnum    v3-ActEncounterCode, verbatim
+#   MedicationRouteEnum   a subset of the SNOMED routes UK Core binds
+#   ConditionCategoryEnum a union across two FHIR code systems
+#   EthnicCategoryEnum    the CodeSystem underlying the bound value set
+#
+# EncounterCategoryEnum is the exception: `apc_spell` and `ecds_attendance`
+# appear in no FHIR value set at all.
+#
+# With the flag set, the generator emits the bound URL as `replaces_value_set`
+# rather than `value_set`, and `binding_source: local` rather than `manual`, so
+# the schema does not claim conformance to a vocabulary the column does not
+# use. `binding_strength` is still emitted, because it is what says whether the
+# replacement is legitimate: FHIR's `preferred` explicitly permits an instance
+# to use codes from elsewhere, while `required` does not - a local vocabulary
+# replacing a `required` binding produces non-conformant FHIR.
+#
+# The flag is a claim the generator checks: an entry that sets it but whose
+# codes reproduce the bound value set anyway is reported on each run.
 
 enums:
   # ---------------------------------------------------------------------------
@@ -35,8 +59,15 @@ enums:
   # ---------------------------------------------------------------------------
 
   EncounterCategoryEnum:
-    description: "CDM-defined encounter category. Primary analyst axis; not a FHIR element."
+    description: >-
+      CDM-defined encounter category. Primary analyst axis; not a FHIR
+      element. These codes are the CDM's own and appear in no FHIR value set.
+      Encounter.type is bound `preferred` to
+      https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType, a SNOMED CT
+      descendant filter (185316007, 308467007, 185201007) with no overlap
+      here; this axis replaces that binding rather than narrowing it.
     source: manual
+    local_codes: true
     values:
       - { code: apc_spell, display: "APC spell (admission to discharge)" }
       - {

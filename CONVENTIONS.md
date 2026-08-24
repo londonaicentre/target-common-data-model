@@ -386,6 +386,33 @@ Paths are written in full. This is verbose, and deliberately so.
 
 **A manifest entry** is used where `default` will not do. Entries can be added here to enforce FHIR `preferred` strength bindings, or custom CDM-defined vocabularies. The manifest holds hand-written bindings and nothing else.
 
+**`local_codes: true`** on a manifest entry says its codes come from outside FHIR entirely - a local vocabulary that *replaces* the field's binding rather than copying, subsetting or unioning it. Almost no entry sets it, because almost every hand-written entry still describes the value set its field binds: `EncounterClassEnum` is v3-ActEncounterCode verbatim, `MedicationRouteEnum` a subset of the SNOMED routes UK Core binds, `ConditionCategoryEnum` a union across two code systems. `EncounterCategoryEnum` is the exception - `apc_spell` and `ecds_attendance` appear in no FHIR value set at all.
+
+**What `binding_source` records.** Every bound field carries one of three values, describing where its codes came from - not where they are written down:
+
+| `binding_source` | codes come from | annotation carrying the URL |
+|---|---|---|
+| `fhir` | the value set the profile binds, expanded offline (`default`) | `value_set` |
+| `manual` | a manifest entry that still describes that value set - verbatim, a subset, or a union | `value_set` |
+| `local` | outside FHIR entirely; the binding is replaced (`local_codes: true`) | `replaces_value_set` |
+
+`manual` and `local` are both hand-written. The difference is whether the codes still answer to the bound value set, and that is what the annotation key reflects: a `local` field must not claim `value_set`, because a reader - or a validator - would take that as a conformance claim the column does not meet.
+
+The URL is kept either way. A mapper still needs to know which FHIR slot the column occupies, and a `local` column is not exempt from that: it is still serialised into `Encounter.type.coding.code`.
+
+**Why the strength survives the replacement.** `binding_strength` is emitted for `local` fields too, and it is the load-bearing fact. FHIR's `preferred` says instances are encouraged to draw from the value set "but are not required to do so to be considered conformant" - so a local vocabulary in a `preferred` slot, carried under its own code system, is legal FHIR. The same replacement against a `required` binding is not. Dropping the strength would erase the distinction between a legitimate local axis and one that silently emits invalid FHIR:
+
+    code:
+      range: EncounterCategoryEnum
+      annotations:
+        fhir_path: Encounter.type.coding.code
+        fhir_type: code
+        replaces_value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType
+        binding_strength: preferred
+        binding_source: local
+
+Note that `binding_source: local` is a plain vocabulary term alongside `fhir` and `manual`, not a namespace: it is never resolved as a CURIE, and it is unrelated to the `aiccdm` schema prefix.
+
 ---
 
 # Post-generation checks
@@ -405,5 +432,7 @@ Reported, but not errors:
 **A whitelisted field carries a FHIR binding no config declared.** Emitted as a plain field (*How bindings work*).
 
 **A manifest entry reproduces the value set `default` would have resolved to.** Derivable, so the hand-written copy is redundant and can drift.
+
+**A `local_codes` entry reproduces the value set it claims to replace.** Not a local vocabulary after all; drop the flag. Checked regardless of binding strength, unlike the redundancy report above - which bails out on anything weaker than `extensible`, and so cannot see a `preferred` binding at all.
 
 **A manifest entry is named by no config.** Not emitted to `cdm/enums.yaml`.

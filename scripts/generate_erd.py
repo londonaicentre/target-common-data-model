@@ -7,7 +7,7 @@
 For each cdm/<resource>.yaml, resolve the schema via LinkML SchemaView and emit
 docs/erd.dbml - paste into https://dbdiagram.io to render, or publish with
 dbdocs. Carries enums as first-class objects and the FHIR lineage
-(fhir_path / fhir_type / value_set) as column notes.
+(fhir_path / fhir_type / value_set / replaces_value_set) as column notes.
 
 One entity per resource table. Following CONVENTIONS.md:
 
@@ -156,7 +156,7 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
         elif rng in classes:
             fields = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
             notes.append(f"{rng} {{{', '.join(fields)}}}")
-        for key in ("fhir_path", "fhir_type", "value_set"):
+        for key in ("fhir_path", "fhir_type", "value_set", "replaces_value_set"):
             val = ann(slot, key)
             if val is not None:
                 notes.append(f"{key}: {val}")
