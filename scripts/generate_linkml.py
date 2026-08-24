@@ -1179,7 +1179,7 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
         # mutual imports this produces (Encounter <-> Patient, and the
         # self-import a self-reference such as Encounter.partOf would ask for,
         # which is dropped as a schema cannot import itself).
-        "imports": ["linkml:types", "enums"] + sorted(t.lower() for t in referenced),
+        "imports": ["linkml:types", "enums"] + sorted(t for t in referenced),
         "default_range": "string",
     }
 
