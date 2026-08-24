@@ -1,0 +1,135 @@
+# Location
+#
+# Purpose: where care is delivered. One row per physical place.
+# Could be a site, a building, a ward, a bed
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Location
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Location
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the location is still in use.
+  # status  string (enum LocationStatusEnum)
+  Location.status:
+    bindings:
+      Location.status: default
+
+  # --- Identity -----------------------------------------------------------
+
+  # The ODS site code, promoted out of the identifier slice.
+  # identifier_odssitecode_value  string
+  Location.identifier:odsSiteCode.value:
+
+  # The location name - "Ward 12", "Radiology Dept".
+  # name  string
+  Location.name:
+
+  # --- Classification -----------------------------------------------------
+
+  # E.g. inpatient ward, theatre, ICU; 0..* as a can carry more than one
+  # type.
+  # type  array [ { coding: [ {system: string, code: string,
+  #                            display: string, is_source: boolean} ] } ]
+  Location.type:
+    key: [coding]
+    exclude:
+      Location.type.text: >
+        rendered term; the coding carries the meaning
+
+  # Which level of hierarchy the location sits at (e.g. ward, site)
+  # physicaltype  struct { coding: [ {system: string, code: string
+  #                                   (enum LocationPhysicalTypeEnum),
+  #                                   display: string,
+  #                                   is_source: boolean} ] }
+  Location.physicalType:
+    bindings:
+      Location.physicalType.coding.code: LocationPhysicalTypeEnum
+    exclude:
+      Location.physicalType.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Hierarchy and ownership --------------------------------------------
+
+  # The parent location - a bed within a ward, a ward within a building.
+  # partof_id  string (FK -> Location.id)
+  Location.partOf:
+    fk: Location
+
+  # The organisation that runs this location.
+  # managingorganization_id  string (FK -> Organization.id)
+  Location.managingOrganization:
+    fk: Organization
+
+  # --- Variants -----------------------------------------------------------
+
+  # Every identifier, ODS site code and local.
+  # identifier  array [ {system: string, value: string} ]
+  Location.identifier:
+    key: [system, value]
+    exclude:
+      Location.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      Location.identifier.period: >
+        identifier validity windows are not populated in practice
+      Location.identifier.type: >
+        redundant with `system`, which already distinguishes an ODS site code
+        from a local id
+      Location.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Status -------------------------------------------------------------
+  Location.mode: >
+    limited analytical utility; separates a specific place from a class of
+    place, and a provider feed carries `instance` rows almost exclusively,
+    so the field is near-constant
+
+  # --- Address ------------------------------------------------------------
+  Location.address: >
+    superseded by the ODS site code lookup - `identifier_odssitecode_value`
+    keys into ODS reference data, which carries the site address and its
+    derived geography
+  Location.address.postalCode: >
+    superseded by the ODS site code lookup, as above; a site postcode held
+    here would duplicate reference data and drift from it
+  Location.address.line: superseded by the ODS site code lookup
+  Location.address.city: superseded by postcode-based geography lookup
+  Location.address.district: superseded by postcode-based geography lookup
+  Location.address.country: effectively constant in a UK provider dataset
+
+  # --- Operational status -------------------------------------------------
+  Location.operationalStatus: >
+    not in scope of typical source data; a point-in-time bed state belongs to
+    a live capacity feed rather than a dimension table
+
+  # --- Contact and availability -------------------------------------------
+  Location.telecom: limited analytical utility; operational contact route
+  Location.hoursOfOperation: not in scope of typical source data
+  Location.availabilityExceptions: limited analytical utility; free text
+
+  # --- Description and aliases --------------------------------------------
+  Location.description: >
+    limited analytical utility; free text, and `name` and `type` carry the
+    identity and classification
+  Location.alias: >
+    limited analytical utility; name matching belongs to the linkage layer
+
+  # --- Position -----------------------------------------------------------
+  Location.position: >
+    superseded by ODS reference data for geocoding; postcode carries the
+    catchment signal
+
+  # --- References to unmodelled resources ---------------------------------
+  Location.endpoint: >
+    limited analytical utility; message-routing infrastructure

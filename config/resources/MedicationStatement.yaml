@@ -1,0 +1,203 @@
+# MedicationStatement
+#
+# Purpose: what a patient is taking. One row per asserted medication.
+# May be recorded admission reconciliation, or GP Medication Statement
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: MedicationStatement
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationStatement
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the drug is being taken. `not-taken` positively asserts the
+  # patient is NOT taking the drug.
+  # status  string (enum MedicationStatementStatusEnum)
+  MedicationStatement.status:
+    bindings:
+      MedicationStatement.status: default
+
+  # --- What is being taken ------------------------------------------------
+
+  # The drug. Source dm+d coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  # medicationcodeableconcept_coding
+  #     array [ {system: string, code: string, display: string,
+  #              is_source: boolean} ]
+  MedicationStatement.medicationCodeableConcept.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the statement is about.
+  # subject_id  string (FK -> Patient.id)
+  MedicationStatement.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The Encounter the statement was recorded during.
+  # context_id  string (FK -> Encounter.id)
+  MedicationStatement.context:
+    fk: Encounter               # profile allows [Encounter, EpisodeOfCare]
+
+  # When the patient was taking the drug.
+  # effectivedatetime  timestamp
+  # effectiveperiod    struct {start: timestamp, end: timestamp}
+  MedicationStatement.effectiveDateTime:
+  MedicationStatement.effectivePeriod:
+
+  # When the assertion was recorded
+  # dateasserted  timestamp
+  MedicationStatement.dateAsserted:
+
+  # --- Dosage -------------------------------------------------------------
+
+  # The dosage is promoted to scalars from dosage[0] rather than kept as a
+  # variant
+
+  # How the patient reports taking the drug ("Atorvastatin 40mg ON").
+  # dosage_text  string
+  MedicationStatement.dosage[0].text:
+
+  # E.g. Oral vs IV. The coded route and the rendered term are both taken
+  # dosage_route_coding_code  string (enum MedicationRouteEnum)
+  # dosage_route_text         string
+  MedicationStatement.dosage[0].route.coding[0].code:
+    bindings:
+      MedicationStatement.dosage[0].route.coding[0].code: MedicationRouteEnum
+  MedicationStatement.dosage[0].route.text:
+
+  # Dose ceiling per administration, and its unit (e.g. *50mg* tds).
+  # Sparsely populated on drug-history feeds.
+  # dosage_maxdoseperadministration_value  float
+  # dosage_maxdoseperadministration_unit   string
+  MedicationStatement.dosage[0].maxDosePerAdministration.value:
+  MedicationStatement.dosage[0].maxDosePerAdministration.unit:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Statement id from the source system. The profile makes `system` and
+  # `value` 1..1 here, unlike most resources.
+  # identifier  array [ {system: string, value: string} ]
+  MedicationStatement.identifier:
+    key: [system, value]
+    exclude:
+      MedicationStatement.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      MedicationStatement.identifier.period: >
+        identifier validity windows are not populated in practice
+      MedicationStatement.identifier.type: >
+        redundant with `system`
+      MedicationStatement.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0]. Author and timestamp are not taken.
+  # note_text  string
+  MedicationStatement.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Extension slices ---------------------------------------------------
+  MedicationStatement.extension:medicationStatementLastIssueDate: >
+    limited analytical utility; last-issue date is a GP repeat-list
+    housekeeping field, and `effectivePeriod` with `dateAsserted` bounds the
+    assertion
+
+  # --- medication[x] ------------------------------------------------------
+  MedicationStatement.medicationReference: >
+    Medication not modelled, by decision: this CDM takes dm+d inline via
+    medicationCodeableConcept. A feed writing the reference form loses the
+    drug code - a known and accepted limitation
+  MedicationStatement.medicationCodeableConcept.text: >
+    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
+    the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Dosage -------------------------------------------------------------
+  MedicationStatement.dosage: >
+    NOT whitelisted whole - the wanted leaves are promoted out of `dosage[0]`
+    instead, so the table carries flat scalars rather than a variant. A drug
+    history asserts one dose, so the first entry is the assertion
+  MedicationStatement.dosage.doseAndRate: >
+    NOT REACHABLE, rather than rejected. The structured dose
+    (doseAndRate.doseQuantity.value/.unit) is what "dose and unit" would mean
+    here, but `doseAndRate` is typed as the anonymous `Element` backbone and
+    stage 1 does not walk into it, so no doseQuantity leaf exists in the
+    expanded tree. The same is true of MedicationRequest.dosageInstruction.
+    `dosage_text` carries the dose as free text; MedicationAdministration has
+    a real `dosage.dose` Quantity where a numeric dose is required
+  MedicationStatement.dosage.sequence: >
+    not in scope of typical source data; a drug history asserts a dose rather
+    than an ordered multi-step regimen
+  MedicationStatement.dosage.additionalInstruction: >
+    limited analytical utility; supplementary advice text rather than dose
+  MedicationStatement.dosage.patientInstruction: >
+    limited analytical utility; duplicates `text` without adding analysable
+    content
+  MedicationStatement.dosage.timing: >
+    not in scope of typical source data; Timing is a deep recursive structure
+    (repeat.bounds[x], when, offset). `timing.code` carries BD/TDS where a
+    source populates it, but these feeds put frequency in the dose text,
+    which `dosage_text` takes
+  MedicationStatement.dosage.asNeededBoolean: >
+    not in scope of typical source data
+  MedicationStatement.dosage.asNeededCodeableConcept: >
+    not in scope of typical source data
+  MedicationStatement.dosage.site: >
+    limited analytical utility; route carries the analytical signal
+  MedicationStatement.dosage.method: >
+    limited analytical utility; route carries the analytical signal
+  MedicationStatement.dosage.maxDosePerPeriod: >
+    not in scope of typical source data; a Ratio, and a prescribing safety
+    ceiling rather than a drug history fact
+  MedicationStatement.dosage.maxDosePerLifetime: >
+    not in scope of typical source data
+  MedicationStatement.dosage.maxDosePerAdministration.comparator: >
+    not in scope of typical source data; a dose ceiling is not recorded as an
+    inequality
+  MedicationStatement.dosage.maxDosePerAdministration.system: >
+    UCUM system/code are fixed in practice; `unit` carries the human string
+
+  # --- Provenance of the assertion ----------------------------------------
+  MedicationStatement.informationSource: >
+    unconstrained pointer across Patient/Practitioner/RelatedPerson; no FK
+    target is correct
+  MedicationStatement.derivedFrom: >
+    limited analytical utility; the provenance chain is a graph, not a column
+
+  # --- Classification -----------------------------------------------------
+  MedicationStatement.category: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it, and the encounter carries the setting
+  MedicationStatement.statusReason: >
+    not in scope of typical source data; `example` to a SNOMED `is-a` subset
+    that needs a terminology server
+
+  # --- References to other resources --------------------------------------
+  MedicationStatement.basedOn: >
+    limited analytical utility; the prescribing chain is a graph, not a column
+  MedicationStatement.partOf: >
+    limited analytical utility; nesting within a larger event is a graph, not
+    a column
+  MedicationStatement.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationStatement.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+
+  # --- Extension slices ---------------------------------------------------
+  MedicationStatement.extension:pharmacistVerifiedIndicator: >
+    limited analytical utility; a workflow flag about the reconciliation
+    process rather than about the medication
+  MedicationStatement.extension:medicationPrescribingOrganizationType: >
+    limited analytical utility; the encounter and managing organisation carry
+    the care setting

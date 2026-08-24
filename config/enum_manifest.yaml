@@ -1,0 +1,429 @@
+# Hand-written manual bindings (CONVENTIONS.md §12).
+#
+# One of the two sources folded into cdm/enums.yaml; the other is
+# build/fhir_enums.yaml, expanded from the FHIR packages. A manual binding
+# overrides the FHIR default for the same field, and only entries a resource
+# config names by `binding:` are emitted.
+#
+# This file holds hand-written bindings and nothing else. An entry that merely
+# reproduces its FHIR value set is redundant - generate_linkml.py reports those
+# on each run.
+#
+# Run:  uv run scripts/generate_linkml.py
+#
+# Requires FHIR packages to be installed first:
+#   npm install
+#
+# source types:
+#   codesystem  – concepts extracted from a FHIR CodeSystem in node_modules/
+#                 identified by canonical url + npm package name
+#   manual      – values defined inline below (stable FHIR R4 / CDM-defined)
+#
+# `local_codes: true` marks an entry whose codes come from outside FHIR
+# entirely - a local vocabulary that REPLACES the field's binding rather than
+# copying, subsetting or unioning it. Almost every entry here leaves it off,
+# because almost every entry still describes the value set its field binds:
+#
+#   EncounterClassEnum    v3-ActEncounterCode, verbatim
+#   MedicationRouteEnum   a subset of the SNOMED routes UK Core binds
+#   ConditionCategoryEnum a union across two FHIR code systems
+#   EthnicCategoryEnum    the CodeSystem underlying the bound value set
+#
+# EncounterCategoryEnum is the exception: `apc_spell` and `ecds_attendance`
+# appear in no FHIR value set at all.
+#
+# With the flag set, the generator emits the bound URL as `replaces_value_set`
+# rather than `value_set`, and `binding_source: local` rather than `manual`, so
+# the schema does not claim conformance to a vocabulary the column does not
+# use. `binding_strength` is still emitted, because it is what says whether the
+# replacement is legitimate: FHIR's `preferred` explicitly permits an instance
+# to use codes from elsewhere, while `required` does not - a local vocabulary
+# replacing a `required` binding produces non-conformant FHIR.
+#
+# The flag is a claim the generator checks: an entry that sets it but whose
+# codes reproduce the bound value set anyway is reported on each run.
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Patient
+  # ---------------------------------------------------------------------------
+
+  EthnicCategoryEnum:
+    description: "NHS England ethnic category codes (UKCore-EthnicCategoryEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-EthnicCategoryEngland
+    package: fhir.r4.ukcore.stu2
+
+  # ---------------------------------------------------------------------------
+  # Encounter
+  # ---------------------------------------------------------------------------
+
+  EncounterCategoryEnum:
+    description: >-
+      CDM-defined encounter category. Primary analyst axis; not a FHIR
+      element. These codes are the CDM's own and appear in no FHIR value set.
+      Encounter.type is bound `preferred` to
+      https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType, a SNOMED CT
+      descendant filter (185316007, 308467007, 185201007) with no overlap
+      here; this axis replaces that binding rather than narrowing it.
+    source: manual
+    local_codes: true
+    values:
+      - { code: apc_spell, display: "APC spell (admission to discharge)" }
+      - {
+          code: apc_episode,
+          display: "APC consultant episode (within a spell)",
+        }
+      - { code: ecds_attendance, display: "Emergency Care Data Set attendance" }
+      - { code: opd_attendance, display: "Outpatient attendance" }
+      - { code: gp_encounter, display: "GP/primary care encounter" }
+      - { code: ward_stay, display: "Ward movement / bed-day record" }
+      - { code: icu_stay, display: "ICU/HDU stay" }
+
+  EncounterClassEnum:
+    description: "v3 ActEncounterCode - encounter class."
+    source: manual
+    values:
+      - { code: AMB, display: "ambulatory" }
+      - { code: EMER, display: "emergency" }
+      - { code: FLD, display: "field" }
+      - { code: HH, display: "home health" }
+      - { code: IMP, display: "inpatient encounter" }
+      - { code: ACUTE, display: "inpatient acute" }
+      - { code: NONAC, display: "inpatient non-acute" }
+      - { code: OBSENC, display: "observation encounter" }
+      - { code: PRENC, display: "pre-admission" }
+      - { code: SS, display: "short stay" }
+      - { code: VR, display: "virtual" }
+
+  AdmissionMethodEnum:
+    description: "NHS England admission method codes (UKCore-AdmissionMethodEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-AdmissionMethodEngland
+    package: fhir.r4.ukcore.stu2
+
+  AdmitSourceEnum:
+    description: "NHS England source of admission codes (UKCore-SourceOfAdmissionEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-SourceOfAdmissionEngland
+    package: fhir.r4.ukcore.stu2
+
+  DischargeMethodEnum:
+    description: "NHS England discharge method codes (UKCore-DischargeMethodEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-DischargeMethodEngland
+    package: fhir.r4.ukcore.stu2
+
+  DischargeDestinationEnum:
+    description: "NHS England discharge destination codes (UKCore-DischargeDestinationEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-DischargeDestinationEngland
+    package: fhir.r4.ukcore.stu2
+
+  OutcomeOfAttendanceEnum:
+    description: "NHS England outcome of attendance codes (UKCore-OutcomeOfAttendanceEngland)."
+    source: codesystem
+    url: https://fhir.hl7.org.uk/CodeSystem/UKCore-OutcomeOfAttendanceEngland
+    package: fhir.r4.ukcore.stu2
+
+  DiagnosisRoleEnum:
+    description: "Role of the diagnosis for the encounter (HL7 diagnosis-role value set)."
+    source: manual
+    values:
+      - { code: AD, display: "Admission diagnosis" }
+      - { code: DD, display: "Discharge diagnosis" }
+      - { code: CC, display: "Chief complaint" }
+      - { code: CM, display: "Comorbidity diagnosis" }
+      - { code: pre-op, display: "pre-op diagnosis" }
+      - { code: post-op, display: "post-op diagnosis" }
+      - { code: billing, display: "Billing" }
+
+  # ---------------------------------------------------------------------------
+  # Condition
+  # ---------------------------------------------------------------------------
+
+  ConditionCategoryEnum:
+    description: >-
+      Condition category. A UNION across two code systems, which is why it
+      cannot be derived: `problem-list-item` and `encounter-diagnosis` come
+      from http://terminology.hl7.org/CodeSystem/condition-category, and
+      `presenting-complaint` and `co-morbidity` from
+      https://fhir.hl7.org.uk/CodeSystem/UKCore-ConditionCategory. Codes and
+      displays are verbatim from those systems.
+    source: manual
+    values:
+      - { code: problem-list-item, display: "Problem List Item" }
+      - { code: encounter-diagnosis, display: "Encounter Diagnosis" }
+      - { code: presenting-complaint, display: "Presenting Complaint" }
+      - { code: co-morbidity, display: "Co-morbidity" }
+
+  ObservationCategoryEnum:
+    description: "Observation category (HL7 FHIR observation-category)."
+    source: manual
+    values:
+      - { code: social-history, display: "Social History" }
+      - { code: vital-signs, display: "Vital Signs" }
+      - { code: imaging, display: "Imaging" }
+      - { code: laboratory, display: "Laboratory" }
+      - { code: procedure, display: "Procedure" }
+      - { code: survey, display: "Survey" }
+      - { code: exam, display: "Exam" }
+      - { code: therapy, display: "Therapy" }
+      - { code: activity, display: "Activity" }
+
+  # ---------------------------------------------------------------------------
+  # Medications
+  # ---------------------------------------------------------------------------
+
+  MedicationRouteEnum:
+    description: >-
+      Route of administration. A CDM-chosen SUBSET of the SNOMED CT route
+      hierarchy as bound by UKCore-SubstanceOrProductAdministrationRoute
+      (http://snomed.info/sct), which FHIR binds `preferred` and which
+      `default` therefore cannot reach. Codes and displays are SNOMED concept
+      IDs taken from that value set; this list is deliberately INCOMPLETE,
+      covering the routes seen in hospital EHR prescribing and administration
+      data. A conformant record using a route outside this list fails its
+      accepted_values test rather than resolving - widen the list when that
+      happens.
+    source: manual
+    values:
+      - { code: "26643006", display: "Oral" }
+      - { code: "47625008", display: "Intravenous" }
+      - { code: "78421000", display: "Intramuscular" }
+      - { code: "34206005", display: "Subcutaneous" }
+      - { code: "6064005", display: "Topical" }
+      - { code: "18679011000001101", display: "Inhalation" }
+      - { code: "37161004", display: "Rectal" }
+      - { code: "16857009", display: "Vaginal" }
+      - { code: "37839007", display: "Sublingual" }
+      - { code: "54471007", display: "Buccal" }
+      - { code: "46713006", display: "Nasal" }
+      - { code: "54485002", display: "Ophthalmic route" }
+      - { code: "10547007", display: "Otic" }
+      - { code: "45890007", display: "Transdermal" }
+      - { code: "72607000", display: "Intrathecal" }
+      - { code: "404820008", display: "Epidural" }
+      - { code: "58100008", display: "Intraarterial" }
+      - { code: "12130007", display: "Intraarticular" }
+      - { code: "417255000", display: "Intraosseous" }
+      - { code: "38239002", display: "Intraperitoneal" }
+      - { code: "127492001", display: "Nasogastric route" }
+      - { code: "127490009", display: "Gastrostomy route" }
+      - { code: "90028008", display: "Urethral" }
+      - { code: "372464004", display: "Intradermal" }
+      - { code: "372468001", display: "Intraocular" }
+      - { code: "3594011000001102", display: "Route of administration not applicable" }
+
+  # ---------------------------------------------------------------------------
+  # Appointment
+  # ---------------------------------------------------------------------------
+
+  AppointmentTypeEnum:
+    description: "Appointment type - the v2-0276 general codes plus the UK Core urgent-follow-up supplement. This is the union UKCore-AppointmentReasonCode binds; the value set spans two code systems so it cannot be expanded offline, and UKCore-AppointmentReasonCode alone is a one-code supplement rather than a usable list."
+    source: manual
+    values:
+      - { code: ROUTINE, display: "Routine appointment - default if not valued" }
+      - { code: WALKIN, display: "A previously unscheduled walk-in visit" }
+      - { code: CHECKUP, display: "A routine check-up, such as an annual physical" }
+      - { code: FOLLOWUP, display: "A follow up visit from a previous appointment" }
+      - { code: EMERGENCY, display: "Emergency appointment" }
+      # From UKCore-AppointmentReasonCode; the other five are v2-0276.
+      - { code: urgent-follow-up, display: "Urgent follow-up" }
+
+  AppointmentCancellationReasonEnum:
+    description: >-
+      Cancellation reason - the axis that separates a patient DNA from a
+      provider-side cancellation. A CDM-chosen SUBSET of
+      http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason,
+      which FHIR binds `example` and which `default` therefore cannot reach.
+
+      Codes and displays are taken VERBATIM from that code system. It is
+      marked `content: example` but ships all 32 concepts, so the subset is a
+      modelling choice rather than a gap in the packages - the parent codes
+      (pat, prov, other) plus the child reasons that UK PAS systems actually
+      populate. Deliberately INCOMPLETE: a cancellation using a reason outside
+      this list fails its accepted_values test rather than resolving.
+
+      The 21 omitted children are mostly US-centric (oth-cms CMS therapy cap,
+      pat-mt member terminated, prov-mri MRI screening form) or too granular
+      for a UK feed; widen the list if a source populates them.
+    source: manual
+    values:
+      # --- Patient-side ---------------------------------------------------
+      - { code: pat, display: "Patient" }
+      - { code: pat-crs, display: "Patient: Canceled via automated reminder system" }
+      - { code: pat-cpp, display: "Patient: Canceled via Patient Portal" }
+      - { code: pat-dec, display: "Patient: Deceased" }
+      - { code: pat-fb, display: "Patient: Feeling Better" }
+      - { code: pat-lt, display: "Patient: Lack of Transportation" }
+      - { code: pat-mv, display: "Patient: Moved" }
+      - { code: pat-ucp, display: "Patient: Unhappy/Changed Provider" }
+      # --- Provider-side --------------------------------------------------
+      - { code: prov, display: "Provider" }
+      - { code: prov-dch, display: "Provider: Discharged" }
+      - { code: prov-hosp, display: "Provider: Hospitalized" }
+      - { code: prov-pers, display: "Provider: Personal" }
+      # --- Service-side ---------------------------------------------------
+      - { code: maint, display: "Equipment Maintenance/Repair" }
+      - { code: meds-inc, display: "Prep/Med Incomplete" }
+      - { code: other, display: "Other" }
+      - { code: oth-err, display: "Other: Error" }
+      - { code: oth-room, display: "Other: Room/Resource Maintenance" }
+      - { code: oth-weath, display: "Other: Weather" }
+
+  # ---------------------------------------------------------------------------
+  # DiagnosticReport
+  # ---------------------------------------------------------------------------
+
+  DiagnosticServiceSectionEnum:
+    description: >-
+      Diagnostic service section - the axis separating a microbiology culture
+      from a chemistry panel from a radiology report. A CDM-chosen SUBSET of
+      HL7 v2-0074
+      (http://terminology.hl7.org/CodeSystem/v2-0074), which FHIR binds
+      `example` and which `default` therefore cannot reach. Codes and displays
+      are taken from that code system; this list is deliberately INCOMPLETE,
+      covering the services seen in UK LIMS and RIS feeds. A report using a
+      section outside this list fails its accepted_values test rather than
+      resolving - widen the list when that happens.
+
+      The imaging modalities in v2-0074 (CT, NMR, NMS, RUS, CUS, OUS, XRC,
+      IMG, RX) are collapsed into RAD. Modality is a property of the study
+      rather than of the reporting service, and it is carried by
+      DiagnosticReport.code; splitting the service axis by modality would
+      make a plain radiology report and a CT report look like different
+      services when they come from the same department.
+    source: manual
+    values:
+      - { code: CH, display: "Chemistry" }
+      - { code: HM, display: "Hematology" }
+      - { code: MB, display: "Microbiology" }
+      - { code: BLB, display: "Blood Bank" }
+      - { code: SR, display: "Serology" }
+      - { code: VR, display: "Virology" }
+      - { code: MYC, display: "Mycology" }
+      - { code: PAR, display: "Parasitology" }
+      - { code: IMM, display: "Immunology" }
+      - { code: SP, display: "Surgical Pathology" }
+      - { code: PAT, display: "Pathology (gross & histopath, not surgical)" }
+      - { code: CP, display: "Cytopathology" }
+      - { code: GE, display: "Genetics" }
+      - { code: RAD, display: "Radiology" }
+      - { code: BG, display: "Blood Gases" }
+      - { code: URN, display: "Urinalysis" }
+      - { code: TX, display: "Toxicology" }
+      - { code: OTH, display: "Other" }
+
+  # ---------------------------------------------------------------------------
+  # ImagingStudy
+  # ---------------------------------------------------------------------------
+
+  ImagingModalityEnum:
+    description: >-
+      DICOM acquisition modality - the primary analyst axis of an imaging
+      study (a CT is not an MRI is not a plain film). FHIR binds
+      ImagingStudy.modality and ImagingStudy.series.modality `extensible` to
+      DICOM CID 29
+      (http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html),
+      which is a DICOM publication rather than a FHIR ValueSet and ships in no
+      package, so `default` cannot reach it and the list has to be
+      hand-written.
+
+      Codes and displays are DICOM Defined Terms taken VERBATIM from the DCM
+      ontology as it ships in hl7.fhir.r4.core
+      (CodeSystem-dicom-dcim.json, http://dicom.nema.org/resources/ontology/DCM,
+      3156 concepts, content: complete). They are hand-listed rather than
+      derived with `source: codesystem` because DCM is a mixed ontology - the
+      same code system holds equipment codes (WSD workstation, PRINT server),
+      derived-object codes (PR, SEG, KO) and even patient sex codes (F, M, H).
+      Only the acquisition modalities belong on this column, and there is no
+      subset mechanism on a `codesystem` entry.
+
+      Deliberately INCOMPLETE - a study using a modality outside this list
+      fails its accepted_values test rather than resolving; widen the list
+      when that happens. Scope is UK NHS acute radiology, cardiology and
+      endoscopy. Notable omissions by choice: the ophthalmology cluster (OPT,
+      OPV, OPM, OPR, AR, KER, LEN, VA, FA, FS, SRF, OAM) and the legacy
+      pre-PACS terms (CD, DD, CF, DF, VF, DS, AS, LP, CS, CP, BI, DG, LS) -
+      add the relevant block if you ingest eye services or a historical
+      archive.
+    source: manual
+    values:
+      # --- Radiology: plain film and cross-sectional ---------------------
+      - { code: CR, display: "Computed Radiography" }
+      - { code: DX, display: "Digital Radiography" }
+      - { code: RG, display: "Radiographic imaging" }
+      - { code: CT, display: "Computed Tomography" }
+      - { code: MR, display: "Magnetic Resonance" }
+      - { code: MA, display: "Magnetic resonance angiography" }
+      - { code: MG, display: "Mammography" }
+      - { code: US, display: "Ultrasound" }
+      - { code: RF, display: "Radiofluoroscopy" }
+      - { code: XA, display: "X-Ray Angiography" }
+      - { code: BMD, display: "Bone Mineral Densitometry" }
+      # --- Nuclear medicine ---------------------------------------------
+      - { code: NM, display: "Nuclear Medicine" }
+      - { code: PT, display: "Positron emission tomography" }
+      - { code: ST, display: "Single-photon emission computed tomography" }
+      # --- Cardiology ----------------------------------------------------
+      - { code: EC, display: "Echocardiography" }
+      - { code: ECG, display: "Electrocardiography" }
+      - { code: IVUS, display: "Intravascular Ultrasound" }
+      - { code: HD, display: "Hemodynamic Waveform" }
+      - { code: EPS, display: "Cardiac Electrophysiology" }
+      # --- Endoscopy, photography and other departments ------------------
+      - { code: ES, display: "Endoscopy" }
+      - { code: XC, display: "External-camera Photography" }
+      - { code: OP, display: "Ophthalmic photography" }
+      - { code: OCT, display: "Optical Coherence Tomography" }
+      - { code: SM, display: "Slide Microscopy" }
+      - { code: RT, display: "Radiation Therapy Device" }
+      # --- Dental --------------------------------------------------------
+      - { code: IO, display: "Intra-oral Radiography" }
+      - { code: PX, display: "Panoramic X-Ray" }
+      # --- Non-image objects that still arrive as a study ----------------
+      - { code: SR, display: "Structured Report Document" }
+      - { code: OT, display: "Other Modality" }
+
+  ImagingLateralityEnum:
+    description: >-
+      Laterality of the body site a series was acquired from. The complete
+      FHIR R4 bodysite-laterality value set (SNOMED CT), which FHIR binds
+      `example` and which `default` therefore cannot reach. Taken whole - at
+      three codes a subset saves nothing.
+    source: manual
+    values:
+      - { code: "419161000", display: "Unilateral left" }
+      - { code: "419465000", display: "Unilateral right" }
+      - { code: "51440002", display: "Bilateral" }
+
+  # ---------------------------------------------------------------------------
+  # Location
+  # ---------------------------------------------------------------------------
+
+  LocationPhysicalTypeEnum:
+    description: >-
+      Physical form of a location - which level of the partOf hierarchy a row
+      sits at (site > building > wing > ward > room > bed). The complete FHIR
+      R4 location-physical-type list
+      (http://terminology.hl7.org/CodeSystem/location-physical-type), which
+      FHIR binds `example` and which `default` therefore cannot reach. Taken
+      whole rather than subsetted: at 14 codes a subset saves nothing and
+      would make a conformant value fail.
+    source: manual
+    values:
+      - { code: si, display: "Site" }
+      - { code: bu, display: "Building" }
+      - { code: wi, display: "Wing" }
+      - { code: wa, display: "Ward" }
+      - { code: lvl, display: "Level" }
+      - { code: co, display: "Corridor" }
+      - { code: ro, display: "Room" }
+      - { code: bd, display: "Bed" }
+      - { code: ve, display: "Vehicle" }
+      - { code: ho, display: "House" }
+      - { code: ca, display: "Cabinet" }
+      - { code: rd, display: "Road" }
+      - { code: area, display: "Area" }
+      - { code: jdn, display: "Jurisdiction" }

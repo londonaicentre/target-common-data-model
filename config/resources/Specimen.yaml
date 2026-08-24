@@ -1,0 +1,131 @@
+# Specimen
+#
+# Purpose: what sample was taken from a patient.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Specimen
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Specimen
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the specimen is usable.
+  # status  string (enum SpecimenStatusEnum)
+  Specimen.status:
+    bindings:
+      Specimen.status: default
+
+  # --- What was collected -------------------------------------------------
+
+  # E.g. Blood culture, urine, wound swab, CSF. Source coding plus
+  # standard-vocabulary codings added downstream; `is_source` true on the
+  # original.
+  # type_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
+  Specimen.type.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the specimen was taken from.
+  # subject_id  string (FK -> Patient.id)
+  Specimen.subject:
+    fk: Patient                 # profile allows [Patient, Group, Device,
+                                # Substance, Location]
+
+  # When the specimen was collected.
+  # collection_collecteddatetime  timestamp
+  # collection_collectedperiod    struct {start: timestamp, end: timestamp}
+  Specimen.collection.collectedDateTime:
+  Specimen.collection.collectedPeriod:
+
+  # When the lab received it.
+  # receivedtime  timestamp
+  Specimen.receivedTime:
+
+  # --- Where from ---------------------------------------------------------
+
+  # Body site the specimen came from
+  # collection_bodysite  struct { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] }
+  Specimen.collection.bodySite:
+    exclude:
+      Specimen.collection.bodySite.text: >
+        rendered term; the coding carries the meaning
+      Specimen.collection.bodySite.extension:bodySiteReference: >
+        Reference to BodyStructure, which the CDM does not model; the coding
+        carries the site
+
+  # --- Variants -----------------------------------------------------------
+
+  # Specimen number from the source system.
+  # identifier  array [ {system: string, value: string} ]
+  Specimen.identifier:
+    key: [system, value]
+    exclude:
+      Specimen.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      Specimen.identifier.period: >
+        identifier validity windows are not populated in practice
+      Specimen.identifier.type: >
+        redundant with `system`
+      Specimen.identifier.use: >
+        not reliably populated across source systems
+
+  # The lab accession number
+  # accessionidentifier_value  string
+  Specimen.accessionIdentifier.value:
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  Specimen.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Extension slices ---------------------------------------------------
+  Specimen.extension:sampleCategory: >
+    not in scope of typical source data; the patient-sample vs control
+    distinction is a laboratory QC concern, and analytical feeds carry
+    patient samples only
+
+  # --- Collection detail --------------------------------------------------
+  Specimen.collection.method: not in scope of typical source data
+  Specimen.collection.quantity: not in scope of typical source data
+  Specimen.collection.duration: >
+    not in scope of typical source data; `collectedperiod` bounds a timed
+    collection
+  Specimen.collection.collector: Practitioner not modelled; would be a dangling FK
+  Specimen.collection.fastingStatusCodeableConcept: >
+    not in scope of typical source data
+  Specimen.collection.fastingStatusDuration: not in scope of typical source data
+
+  # --- Processing and containers ------------------------------------------
+  Specimen.processing: >
+    limited analytical utility; laboratory workflow rather than clinical fact
+  Specimen.container: limited analytical utility; a lab QC concern
+  Specimen.condition: >
+    not in scope of typical source data; `extensible` across two code systems
+    (UKCore-BiopsyState and v2-0493) so `default` cannot resolve it
+
+  # --- References to other resources --------------------------------------
+  Specimen.request: >
+    ServiceRequest IS modelled, but the field is 0..* and would become a
+    variant of bare ids; the accession identifier carries the link
+  Specimen.parent: >
+    limited analytical utility; the aliquot chain is a graph, not a column
+
+  # --- Identity -----------------------------------------------------------
+  Specimen.accessionIdentifier: >
+    NOT whitelisted whole - only `accessionIdentifier.value` is named, so the
+    accession promotes to a scalar join key rather than an object. The
+    `system` is effectively constant within a lab feed

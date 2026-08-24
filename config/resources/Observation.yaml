@@ -1,0 +1,224 @@
+# Observation
+#
+# Purpose: what was measured or observed, and what the answer was.
+# Lab test, vital sign, recorded finding etc
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Observation
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Observation
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the result has got to - registered, preliminary, final.
+  # status  string (enum ObservationStatusEnum)
+  Observation.status:
+    bindings:
+      Observation.status: default
+
+  # --- Category -----------------------------------------------------------
+
+  # The coarse axis, e.g. blood test vs vital sign.
+  # category_coding  struct {system: string, code: string
+  #                          (enum ObservationCategoryEnum), display: string,
+  #                          is_source: boolean}
+  Observation.category.coding[0]:
+    bindings:
+      Observation.category.coding.code: ObservationCategoryEnum
+
+  # --- What was measured --------------------------------------------------
+
+  # What was measured. Source code plus mapped equivalents added downstream;
+  # `is_source` true on the original
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
+  Observation.code.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the result is for.
+  # subject_id  string (FK -> Patient.id)
+  Observation.subject:
+    fk: Patient                 # profile allows [Patient, Group, Device,
+                                # Location]
+
+  # The Encounter the result was recorded during.
+  # encounter_id  string (FK -> Encounter.id)
+  Observation.encounter:
+    fk: Encounter
+
+  # What the result was measured on
+  # specimen_id  string (FK -> Specimen.id)
+  Observation.specimen:
+    fk: Specimen
+
+  # When the specimen was taken or the observation made.
+  # effectivedatetime  timestamp
+  Observation.effectiveDateTime:
+
+  # --- The result ---------------------------------------------------------
+
+  # Numeric results. `unit` is the human string and `code` the UCUM unit;
+  # valuequantity  struct {value: float, comparator: string
+  #                        (enum QuantityComparatorEnum), unit: string,
+  #                        system: string, code: string}
+  Observation.valueQuantity:
+    bindings:
+      Observation.valueQuantity.comparator: default
+
+  # Categorical results.
+  # valuecodeableconcept  struct { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] }
+  Observation.valueCodeableConcept:
+    exclude:
+      Observation.valueCodeableConcept.text: >
+        rendered term; the coding carries the meaning
+
+  # The lab's own normal range, from referenceRange[0]
+  # referencerange_low_value   float
+  # referencerange_high_value  float
+  Observation.referenceRange.low.value:
+  Observation.referenceRange.high.value:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Multi-part results - systolic and diastolic are two components of one
+  # blood pressure. A 'blood pressure' observation would include a SBP and DBP
+  # reading in this array.
+  # component  array [ {code: { coding: [ {system: string, code: string,
+  #                              display: string, is_source: boolean} ] },
+  #                     valuequantity: {value: float, comparator: string
+  #                              (enum QuantityComparatorEnum), unit: string,
+  #                              system: string, code: string},
+  #                     valuecodeableconcept: { coding: [ {system: string,
+  #                              code: string, display: string,
+  #                              is_source: boolean} ] }} ]
+  Observation.component:
+    key: [code]
+    bindings:
+      Observation.component.valueQuantity.comparator: default
+    exclude:
+      Observation.component.dataAbsentReason: >
+        not in scope of typical source data; absence is read from a null
+        value rather than a coded reason
+      Observation.component.interpretation: >
+        not in scope of typical source data; abnormality is derived from the
+        value against referenceRange rather than taken from a lab flag
+      Observation.component.valueString: >
+        limited analytical utility; free text inside a variant
+      Observation.component.valueBoolean: not in scope of typical source data
+      Observation.component.valueInteger: >
+        not in scope of typical source data; integer results arrive as
+        valueQuantity
+      Observation.component.valueRange: not in scope of typical source data
+      Observation.component.valueRatio: not in scope of typical source data
+      Observation.component.valueSampledData: >
+        not in scope of typical source data; waveform data belongs in a
+        signal store
+      Observation.component.valueTime: not in scope of typical source data
+      Observation.component.valueDateTime: not in scope of typical source data
+      Observation.component.valuePeriod: not in scope of typical source data
+      Observation.component.code.text: >
+        rendered term; the coding carries the meaning
+      Observation.component.valueCodeableConcept.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  Observation.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Absence and interpretation -----------------------------------------
+  Observation.dataAbsentReason: >
+    not in scope of typical source data; absence is read from a null value
+    rather than a coded reason, and the field is sparsely populated
+  Observation.interpretation: >
+    not in scope of typical source data; abnormality is derived from the
+    value against referenceRange rather than trusted from a lab flag, which
+    is not applied consistently across analysers
+
+  # --- Reference ranges ---------------------------------------------------
+  Observation.referenceRange: >
+    NOT whitelisted whole - `referenceRange.low.value` and `.high.value` are
+    named instead, so the age and population qualifiers do not become a
+    variant
+  Observation.referenceRange.type: not in scope of typical source data
+  Observation.referenceRange.appliesTo: not in scope of typical source data
+  Observation.referenceRange.age: not in scope of typical source data
+  Observation.referenceRange.text: limited analytical utility; free text
+
+  # --- Other value[x] forms -----------------------------------------------
+  # Only Quantity and CodeableConcept are whitelisted.
+  Observation.valueString: limited analytical utility; free text
+  Observation.valueBoolean: >
+    not in scope of typical source data; boolean results arrive as a coded
+    concept
+  Observation.valueInteger: >
+    not in scope of typical source data; integer results arrive as
+    valueQuantity with a unit
+  Observation.valueRange: not in scope of typical source data
+  Observation.valueRatio: not in scope of typical source data
+  Observation.valueSampledData: >
+    not in scope of typical source data; waveform data belongs in a signal
+    store
+  Observation.valueTime: not in scope of typical source data
+  Observation.valueDateTime: not in scope of typical source data
+  Observation.valuePeriod: not in scope of typical source data
+
+  # --- Timing -------------------------------------------------------------
+  Observation.effectivePeriod: not in scope of typical source data
+  Observation.effectiveTiming: >
+    not in scope of typical source data; scheduled timing belongs to orders,
+    not results
+  Observation.effectiveInstant: not in scope of typical source data
+  Observation.issued: >
+    limited analytical utility; an operational timestamp, where analysis uses
+    the effective time. DiagnosticReport.issued carries turnaround
+
+  # --- Specimen and method ------------------------------------------------
+  Observation.device: Device not modelled; would be a dangling FK
+  Observation.bodySite: >
+    limited analytical utility; laterality and site need their own model
+  Observation.method: not in scope of typical source data
+
+  # --- Care team and provenance -------------------------------------------
+  Observation.performer: Practitioner not modelled; would be a dangling FK
+  Observation.basedOn: >
+    ServiceRequest IS modelled, but the link is not reliably populated in UK
+    lab feeds
+  Observation.partOf: >
+    limited analytical utility; nesting within a larger event is a graph, not
+    a column
+  Observation.focus: >
+    not in scope of typical source data; needs its own subject-resolution
+    rule to be safe
+
+  # --- Result grouping ----------------------------------------------------
+  Observation.hasMember: >
+    limited analytical utility; a lab panel is a graph, and the structure is
+    recoverable from code and effective time
+  Observation.derivedFrom: >
+    limited analytical utility; the provenance chain is a graph, not a column
+
+  # --- Notes and identity -------------------------------------------------
+  Observation.identifier: >
+    limited analytical utility; `id` carries resource identity and
+    Observation identifiers are not used to reconcile feeds
+
+  # --- Extensions ---------------------------------------------------------
+  Observation.extension:triggeredByR5: >
+    limited analytical utility; the reflex-testing trigger graph is out of
+    scope
+  Observation.extension:bodyStructureR5: >
+    BodyStructure not modelled; would be a dangling FK

@@ -1,0 +1,194 @@
+# MedicationAdministration
+#
+# Purpose: what a patient was administered.
+# In practice, this represents prescribing & administration in secondary care
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: MedicationAdministration
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationAdministration
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the dose was given. `not-done` is a recorded omission
+  # status  string (enum MedicationAdminStatusEnum)
+  MedicationAdministration.status:
+    bindings:
+      MedicationAdministration.status: default
+
+  # --- What was given -----------------------------------------------------
+
+  # The drug. Source dm+d coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  # medicationcodeableconcept_coding
+  #     array [ {system: string, code: string, display: string,
+  #              is_source: boolean} ]
+  MedicationAdministration.medicationCodeableConcept.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the dose was given to.
+  # subject_id  string (FK -> Patient.id)
+  MedicationAdministration.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The Encounter the dose was given during.
+  # context_id  string (FK -> Encounter.id)
+  MedicationAdministration.context:
+    fk: Encounter               # profile allows [Encounter, EpisodeOfCare]
+
+  # A dose nested within a larger administration event. Carried to future
+  # proof the model, for example parent infusion + rate changes.
+  # partof_id  array [ string (FK -> MedicationAdministration.id) ]
+  MedicationAdministration.partOf:
+    fk: MedicationAdministration  # profile allows [MedicationAdministration,
+                                  # Procedure]
+
+  # When the drug was given. `effectivedatetime` for a single dose,
+  # `effectiveperiod` for an administration such as an infusion.
+  # effectivedatetime  timestamp
+  # effectiveperiod    struct {start: timestamp, end: timestamp}
+  MedicationAdministration.effectiveDateTime:
+  MedicationAdministration.effectivePeriod:
+
+  # --- Dose and route -----------------------------------------------------
+  # `dosage` is 0..1 here so we promote children to scalars.
+
+  # The dose actually given, and its unit.
+  # dosage_dose_value  float
+  # dosage_dose_unit   string
+  MedicationAdministration.dosage.dose.value:
+  MedicationAdministration.dosage.dose.unit:
+
+  # UCUM unit code - mapped to standard
+  # dosage_dose_code  string
+  MedicationAdministration.dosage.dose.code:
+
+  # Comparator, e.g. "<", ">" for a dose.
+  # dosage_dose_comparator  string (enum QuantityComparatorEnum)
+  MedicationAdministration.dosage.dose.comparator:
+    bindings:
+      MedicationAdministration.dosage.dose.comparator: default
+
+  # E.g. Oral vs IV
+  # dosage_route  struct { coding: [ {system: string, code: string
+  #                                   (enum MedicationRouteEnum),
+  #                                   display: string,
+  #                                   is_source: boolean} ] }
+  MedicationAdministration.dosage.route:
+    bindings:
+      # Manual: CDM subset of the SNOMED route hierarchy (FHIR preferred)
+      MedicationAdministration.dosage.route.coding.code: MedicationRouteEnum
+    exclude:
+      MedicationAdministration.dosage.route.text: >
+        rendered term; the coding carries the meaning
+
+  # Free-text dose instruction as given
+  # dosage_text  string
+  MedicationAdministration.dosage.text:
+
+  # --- Infusion rate ------------------------------------------------------
+  # Both forms of rate[x] are kept.
+
+  # A simple rate, as in mL/hour.
+  # dosage_ratequantity  struct {value: float, comparator: string
+  #                              (enum QuantityComparatorEnum), unit: string,
+  #                              system: string, code: string}
+  MedicationAdministration.dosage.rateQuantity:
+    bindings:
+      MedicationAdministration.dosage.rateQuantity.comparator: default
+
+  # A rate expressed as one amount over another, as in 500 mg per 100 mL.
+  # dosage_rateratio  struct {numerator: {value: float, comparator: string
+  #                             (enum QuantityComparatorEnum), unit: string,
+  #                             system: string, code: string},
+  #                           denominator: {value: float, comparator: string
+  #                             (enum QuantityComparatorEnum), unit: string,
+  #                             system: string, code: string}}
+  MedicationAdministration.dosage.rateRatio:
+    bindings:
+      MedicationAdministration.dosage.rateRatio.numerator.comparator: default
+      MedicationAdministration.dosage.rateRatio.denominator.comparator: default
+
+  # --- Variants -----------------------------------------------------------
+
+  # Administration record id from the source system.
+  # identifier  array [ {system: string, value: string} ]
+  MedicationAdministration.identifier:
+    key: [system, value]
+    exclude:
+      MedicationAdministration.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      MedicationAdministration.identifier.period: >
+        identifier validity windows are not populated in practice
+      MedicationAdministration.identifier.type: >
+        redundant with `system`
+      MedicationAdministration.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note
+  # note_text  string
+  MedicationAdministration.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- medication[x] ------------------------------------------------------
+  MedicationAdministration.medicationReference: >
+    Medication not modelled, by decision: this CDM takes dm+d inline via
+    medicationCodeableConcept. A feed writing the reference form loses the
+    drug code - a known and accepted limitation
+  MedicationAdministration.medicationCodeableConcept.text: >
+    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
+    the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Status reason ------------------------------------------------------
+  MedicationAdministration.statusReason: >
+    not in scope of typical source data; `example` to a SNOMED `is-a` subset
+    that needs a terminology server
+
+  # --- Classification -----------------------------------------------------
+  MedicationAdministration.category: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it, and the encounter carries the setting
+
+  # --- Dose detail --------------------------------------------------------
+  MedicationAdministration.dosage.site: >
+    limited analytical utility; route carries the analytical signal
+  MedicationAdministration.dosage.method: >
+    limited analytical utility; route carries the analytical signal
+
+  # --- Care team ----------------------------------------------------------
+  MedicationAdministration.performer: >
+    Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  MedicationAdministration.request: >
+    MedicationRequest IS modelled, but the link is not reliably populated in
+    UK feeds and a mostly-null FK invites joins that silently drop
+    administrations
+  MedicationAdministration.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationAdministration.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationAdministration.supportingInformation: >
+    unconstrained pointer across resource types; no FK target is correct
+  MedicationAdministration.device: Device not modelled; would be a dangling FK
+  MedicationAdministration.eventHistory: >
+    Provenance not modelled; would be a dangling FK
+
+  # --- Notes and protocol -------------------------------------------------
+  MedicationAdministration.instantiates: >
+    protocol conformance is out of scope

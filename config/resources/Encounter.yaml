@@ -1,0 +1,249 @@
+## TO DO
+# 1. Add Appointments with FK references (as list) - DONE (0..* -> _id list)
+# 2. Add Location with FK references (as list)
+#    - DECIDED AGAINST: `serviceProvider` already carries the "where" this
+#      table needs. See the `rejected` entry below.
+#
+# # Encounter
+#
+# Purpose: a patient's contact with a service. Including spells, episodes,
+# or attendances, and GP encounters.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Encounter
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Encounter
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status and classification ------------------------------------------
+
+  # Where the encounter has got to - planned, in-progress, finished.
+  # status  string (enum EncounterStatusEnum)
+  Encounter.status:
+    bindings:
+      Encounter.status: default
+
+  # Inpatient vs outpatient vs emergency, etc
+  # class  struct {system: string, code: string (enum EncounterClassEnum),
+  #                display: string, is_source: boolean}
+  Encounter.class:
+    bindings:
+      Encounter.class.code: EncounterClassEnum
+
+  # The CDM's own encounter axis (apc_spell, ecds_attendance).
+  # type_coding  struct {system: string, code: string
+  #                      (enum EncounterCategoryEnum), display: string,
+  #                      is_source: boolean}
+  Encounter.type.coding[0]:
+    bindings:
+      # Manual: CDM-defined vocabulary, not a FHIR value set.
+      Encounter.type.coding[0].code: EncounterCategoryEnum
+
+  # Care setting / treatment function.
+  # servicetype  struct { coding: [ {system: string, code: string,
+  #                                  display: string, is_source: boolean} ] }
+  Encounter.serviceType:
+    exclude:
+      Encounter.serviceType.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the encounter is for.
+  # subject_id  string (FK -> Patient.id)
+  Encounter.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The parent encounter - e.g. a consultant episode within a spell
+  # partof_id  string (FK -> Encounter.id)
+  Encounter.partOf:
+    fk: Encounter
+
+  # The provider organisation.
+  # serviceprovider_id  string (FK -> Organization.id)
+  Encounter.serviceProvider:
+    fk: Organization
+
+  # The booking this encounter fulfilled. Appointment has no reference back
+  # to Encounter in R4, so this is the only direction the link exists.
+  # appointment_id  array [ string (FK -> Appointment.id) ]
+  Encounter.appointment:
+    fk: Appointment
+
+  # Admission and discharge datetime; length of stay is derived from these
+  # period  struct {start: timestamp, end: timestamp}
+  Encounter.period:
+
+  # --- The CDS admission / discharge grid ---------------------------------
+
+  # E.g. Elective vs emergency.
+  # hospitalization_extension_admissionmethod
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum AdmissionMethodEnum), display: string,
+  #                         is_source: boolean} ] }
+  Encounter.hospitalization.extension:admissionMethod:
+    bindings:
+      Encounter.hospitalization.extension:admissionMethod.coding.code: AdmissionMethodEnum
+    exclude:
+      Encounter.hospitalization.extension:admissionMethod.text: >
+        rendered term; the coding carries the meaning
+
+  # Where the patient was admitted from.
+  # hospitalization_admitsource
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum AdmitSourceEnum), display: string,
+  #                         is_source: boolean} ] }
+  Encounter.hospitalization.admitSource:
+    bindings:
+      Encounter.hospitalization.admitSource.coding.code: AdmitSourceEnum
+    exclude:
+      Encounter.hospitalization.admitSource.text: >
+        rendered term; the coding carries the meaning
+
+  # Where the patient went on discharge.
+  # hospitalization_dischargedisposition
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum DischargeDestinationEnum), display: string,
+  #                         is_source: boolean} ] }
+  Encounter.hospitalization.dischargeDisposition:
+    bindings:
+      Encounter.hospitalization.dischargeDisposition.coding.code: DischargeDestinationEnum
+    exclude:
+      Encounter.hospitalization.dischargeDisposition.text: >
+        rendered term; the coding carries the meaning
+
+  # How the patient left. Includes death on discharge.
+  # extension_dischargemethod
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum DischargeMethodEnum), display: string,
+  #                         is_source: boolean} ] }
+  Encounter.extension:dischargeMethod:
+    bindings:
+      Encounter.extension:dischargeMethod.coding.code: DischargeMethodEnum
+    exclude:
+      Encounter.extension:dischargeMethod.text: >
+        rendered term; the coding carries the meaning
+
+  # Outpatient attendance outcome - discharged vs follow-up.
+  # extension_outcomeofattendance
+  #     struct { coding: [ {system: string, code: string
+  #                         (enum OutcomeOfAttendanceEnum), display: string,
+  #                         is_source: boolean} ] }
+  Encounter.extension:OutcomeOfAttendance:
+    bindings:
+      Encounter.extension:OutcomeOfAttendance.coding.code: OutcomeOfAttendanceEnum
+    exclude:
+      Encounter.extension:OutcomeOfAttendance.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # The CDS primary / secondary diagnosis grid. `rank` orders them.
+  # diagnosis  array [ {condition_id: string (FK -> Condition.id),
+  #                     use: { coding: [ {system: string, code: string
+  #                                       (enum DiagnosisRoleEnum),
+  #                                       display: string,
+  #                                       is_source: boolean} ] },
+  #                     rank: integer} ]
+  Encounter.diagnosis:
+    key: [condition_id, rank]
+    fk:
+      Encounter.diagnosis.condition: Condition   # profile allows [Condition,
+                                                 # Procedure]
+    bindings:
+      # Manual: promotes the FHIR `preferred` diagnosis-role value set.
+      Encounter.diagnosis.use.coding.code: DiagnosisRoleEnum
+    exclude:
+      Encounter.diagnosis.use.text: >
+        rendered term; the coding carries the meaning
+
+  # PAS spell number or local episode id.
+  # identifier  array [ {system: string, value: string} ]
+  Encounter.identifier:
+    key: [system, value]
+    exclude:
+      Encounter.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      Encounter.identifier.period: >
+        identifier validity windows are not populated in practice
+      Encounter.identifier.type: >
+        redundant with `system`
+      Encounter.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Audit trails -------------------------------------------------------
+  Encounter.statusHistory: >
+    limited analytical utility; the current status is what analysis uses and
+    transitions belong to an event model
+  Encounter.classHistory: >
+    limited analytical utility; as statusHistory
+
+  # --- Care team and location ---------------------------------------------
+  Encounter.participant: Practitioner not modelled; would be a dangling FK
+  Encounter.location: >
+    Location IS modelled, but `serviceProvider` already carries the "where"
+    this table needs, at the organisation grain analysis works at. The
+    finer, ward-level grain is not required: it would arrive as a variant of
+    one object per ward stay - or as a table of its own at one row per
+    location period - and neither is warranted for a signal nothing asks for
+
+  # --- Emergency care -----------------------------------------------------
+  Encounter.extension:emergencyCareDischargeStatus: >
+    not in scope of typical source data; `dischargeMethod` and
+    `dischargeDisposition` carry the signal for the general case
+
+  # --- References to other resources --------------------------------------
+  Encounter.episodeOfCare: >
+    EpisodeOfCare IS modelled, but as GP registration; the field is 0..* and
+    the link is not reliably populated in acute feeds
+  Encounter.basedOn: >
+    ServiceRequest IS modelled, but the field is 0..* and the referral-to-
+    encounter link is not reliably populated
+  Encounter.account: billing/finance, out of scope for a clinical CDM
+  Encounter.reasonReference: >
+    limited analytical utility; the diagnosis variant carries the clinical
+    reason more reliably
+  Encounter.hospitalization.origin: >
+    Location IS modelled, but admitSource carries the analytical signal
+  Encounter.hospitalization.destination: >
+    Location IS modelled, but dischargeDisposition carries the analytical
+    signal
+
+  # --- Hospitalization detail ---------------------------------------------
+  Encounter.hospitalization.dietPreference: >
+    not in scope of typical source data; hotel services, not clinical
+  Encounter.hospitalization.specialCourtesy: >
+    not in scope of typical source data; hotel services, not clinical
+  Encounter.hospitalization.specialArrangement: >
+    not in scope of typical source data; service planning
+  Encounter.hospitalization.reAdmission: >
+    not in scope of typical source data; readmission is derived from the
+    encounter sequence rather than trusted from a source flag
+  Encounter.hospitalization.preAdmissionIdentifier: >
+    not in scope of typical source data; the elective pathway is not modelled
+
+  # --- Other --------------------------------------------------------------
+  Encounter.type: >
+    NOT whitelisted whole - `type.coding[0]` is named instead, so a second
+    treatment function is dropped rather than becoming a variant
+  Encounter.priority: >
+    not in scope of typical source data; urgency reads from class and
+    admissionMethod
+  Encounter.reasonCode: >
+    limited analytical utility; duplicates the diagnosis variant with a
+    weaker binding
+  Encounter.length: >
+    derivable from period_start and period_end; storing it invites the two
+    disagreeing
+  Encounter.extension:legalStatus: >
+    not in scope of typical source data; Mental Health Act status is 0..* and
+    carries its own governance requirements

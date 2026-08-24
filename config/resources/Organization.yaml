@@ -1,0 +1,92 @@
+# Organization
+#
+# Purpose: who provides care. One row per trust, practice or department,
+# holding the ODS codes
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Organization
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Organization
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Identity -----------------------------------------------------------
+
+  # The ODS organisation code, promoted out of the identifier slice.
+  # identifier_odsorganisationcode_value  string
+  Organization.identifier:odsOrganisationCode.value:
+
+  # The ODS site code, promoted out of the identifier slice. A trust has one
+  # org code and many site codes.
+  # identifier_odssitecode_value  string
+  Organization.identifier:odsSiteCode.value:
+
+  # Every identifier, ODS and local.
+  # identifier  array [ {system: string, value: string} ]
+  Organization.identifier:
+    key: [system, value]
+    exclude:
+      Organization.identifier.assigner: >
+        self-referential to Organization; `system` already namespaces the
+        issuer
+      Organization.identifier.period: >
+        identifier validity windows are not populated in practice
+      Organization.identifier.type: >
+        redundant with `system`
+      Organization.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Description --------------------------------------------------------
+
+  # The human-readable organisation name.
+  # name  string
+  Organization.name:
+
+  # E.g. Trust vs practice vs department.
+  # type_coding  struct {system: string, code: string, display: string,
+  #                      is_source: boolean}
+  Organization.type.coding[0]:
+
+  # Whether the organisation is still in use.
+  # active  boolean
+  Organization.active:
+
+  # --- Hierarchy ----------------------------------------------------------
+
+  # Parent organisation - a site within a trust, a practice within a PCN.
+  # partof_id  string (FK -> Organization.id)
+  Organization.partOf:
+    fk: Organization
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Contact details ----------------------------------------------------
+  Organization.telecom: limited analytical utility; operational contact route
+  Organization.contact: >
+    limited analytical utility; named contacts are operational and identifying
+  Organization.endpoint: >
+    limited analytical utility; message-routing infrastructure
+
+  # --- Address ------------------------------------------------------------
+  Organization.address: >
+    superseded by ODS reference data, which is the authority; join on the org
+    code instead
+
+  # --- Other --------------------------------------------------------------
+  Organization.alias: >
+    limited analytical utility; name matching belongs to the linkage layer
+  Organization.type: >
+    NOT whitelisted whole - `type.coding[0]` is named instead, so a second
+    organisation type is dropped rather than becoming a variant
+  Organization.extension:mainLocation: >
+    Location IS modelled, but the reference is sparsely populated and
+    Location.managingOrganization carries the link in the direction feeds
+    populate it
+  Organization.extension:organizationPeriod: >
+    superseded by ODS reference data, the authority on organisational
+    lifecycle

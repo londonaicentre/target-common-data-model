@@ -12,7 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v8.3.2
-      - run: uvx --with linkml linkml lint cdm --all --ignore-warnings
 
       - name: Install FHIR packages
         run: npm install .
@@ -20,15 +19,21 @@ jobs:
       # Quick smoke test to ensure scripts run okay
       - name: Check the spec generates cleanly
         run: |
-          uv run scripts/generate_enums.py
+          uv run scripts/expand_fhir.py
+          uv run scripts/generate_linkml.py
           uv run scripts/generate_dbt_seeds.py
           uv run scripts/generate_dbt_yaml.py
+          uv run scripts/generate_erd.py
 
-      - name: Ensure Enums are correct / up to date
+      - name: Lint the generated schemas
+        run: uvx --with linkml linkml lint cdm --all --ignore-warnings
+
+      - name: Ensure generated schemas are up to date
         run: |
           if git diff --quiet --exit-code; then
-          echo "Regenerating output did not result in changed enums"
+            echo "Regenerating output did not result in changes"
           else
-            echo "Enum file changed on regeneration; ensure committed version is up to date."
+            echo "Generated files changed on regeneration; ensure the committed versions are up to date."
+            git diff --stat
             exit 1
           fi

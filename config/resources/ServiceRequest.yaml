@@ -1,0 +1,179 @@
+# ServiceRequest
+#
+# Purpose: what was asked for. Used for referrals or orders
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: ServiceRequest
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-ServiceRequest
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the request has got to - active, completed, revoked.
+  # status  string (enum RequestStatusEnum)
+  ServiceRequest.status:
+    bindings:
+      ServiceRequest.status: default
+
+  # --- What was requested -------------------------------------------------
+
+  # What was asked for. Source SNOMED coding plus standard-vocabulary codings
+  # added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
+  ServiceRequest.code.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the request is for.
+  # subject_id  string (FK -> Patient.id)
+  ServiceRequest.subject:
+    fk: Patient                 # profile allows [Patient, Group, Location,
+                                # Device]
+
+  # The Encounter the request was raised during.
+  # encounter_id  string (FK -> Encounter.id)
+  ServiceRequest.encounter:
+    fk: Encounter
+
+  # When the request was made (e.g. the RTT clock start on a referral).
+  # authoredon  timestamp
+  ServiceRequest.authoredOn:
+
+  # When the requested service should occur.
+  # occurrencedatetime  timestamp
+  # occurrenceperiod    struct {start: timestamp, end: timestamp}
+  ServiceRequest.occurrenceDateTime:
+  ServiceRequest.occurrencePeriod:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Referral or order number from the source system.
+  # identifier  array [ {system: string, value: string} ]
+  ServiceRequest.identifier:
+    key: [system, value]
+    exclude:
+      ServiceRequest.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      ServiceRequest.identifier.period: >
+        identifier validity windows are not populated in practice
+      ServiceRequest.identifier.type: >
+        redundant with `system`
+      ServiceRequest.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Extension slices ---------------------------------------------------
+
+  # Where the referral came from - GP, self-referral, consultant-to-consultant.
+  # extension_sourceofservicerequest
+  #     struct { coding: [ {system: string, code: string, display: string,
+  #                         is_source: boolean} ] }
+  ServiceRequest.extension:sourceOfServiceRequest:
+    exclude:
+      ServiceRequest.extension:sourceOfServiceRequest.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  ServiceRequest.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Status and intent --------------------------------------------------
+  ServiceRequest.intent: >
+    limited analytical utility; the CDM takes every ServiceRequest row as a
+    request, and the proposal/plan/order distinction is not reliably
+    populated across source systems
+  ServiceRequest.priority: >
+    not in scope of typical source data; urgency is carried by the referral
+    pathway rather than this field
+  ServiceRequest.doNotPerform: >
+    not in scope of typical source data; a negation modifier that source
+    feeds do not populate
+
+  # --- Classification -----------------------------------------------------
+  ServiceRequest.category: >
+    not in scope of typical source data; the requested `code` carries what
+    was asked for
+  ServiceRequest.category:genomicsWholeCaseSequencing: >
+    not in scope of typical source data; a genomics-specific slice
+  ServiceRequest.orderDetail: >
+    limited analytical utility; supplementary instructions rather than what
+    was ordered
+
+  # --- Quantity -----------------------------------------------------------
+  ServiceRequest.quantityQuantity: not in scope of typical source data
+  ServiceRequest.quantityRatio: not in scope of typical source data
+  ServiceRequest.quantityRange: not in scope of typical source data
+
+  # --- Timing -------------------------------------------------------------
+  ServiceRequest.occurrenceTiming: >
+    not in scope of typical source data; Timing is a deep recursive structure
+    (repeat.bounds[x], when, offset)
+
+  # --- As-needed ----------------------------------------------------------
+  ServiceRequest.asNeededBoolean: not in scope of typical source data
+  ServiceRequest.asNeededCodeableConcept: not in scope of typical source data
+
+  # --- Care team ----------------------------------------------------------
+  ServiceRequest.requester: Practitioner not modelled; would be a dangling FK
+  ServiceRequest.performer: >
+    Practitioner not modelled, and the reference allows eight target types
+    (Practitioner, PractitionerRole, Organization, CareTeam, HealthcareService,
+    Patient, Device, RelatedPerson) with none canonical, so no single FK target
+    is correct
+  ServiceRequest.performerType: not in scope of typical source data
+
+  # --- Location -----------------------------------------------------------
+  ServiceRequest.locationReference: >
+    Location IS modelled, but this is the requested location rather than
+    where the service happened, and it is sparsely populated
+  ServiceRequest.locationCode: not in scope of typical source data
+
+  # --- Body site and specimen ---------------------------------------------
+  ServiceRequest.bodySite: >
+    limited analytical utility; laterality and site need their own model
+  ServiceRequest.specimen: >
+    Specimen IS modelled, but the link runs the other way in practice:
+    Specimen.request points here, and that is the direction feeds populate
+
+  # --- References to other resources --------------------------------------
+  ServiceRequest.basedOn: >
+    limited analytical utility; the request chain is a graph, not a column
+  ServiceRequest.replaces: >
+    limited analytical utility; a self-referencing chain, reconstructable
+    from authoredOn and the code
+  ServiceRequest.requisition: not in scope of typical source data
+  ServiceRequest.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  ServiceRequest.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  ServiceRequest.supportingInfo: >
+    unconstrained pointer across resource types; no FK target is correct
+  ServiceRequest.insurance: billing/finance, out of scope for a clinical CDM
+  ServiceRequest.relevantHistory: Provenance not modelled; would be a dangling FK
+
+  # --- Notes and protocol -------------------------------------------------
+  ServiceRequest.patientInstruction: limited analytical utility; free text
+  ServiceRequest.instantiatesCanonical: >
+    PlanDefinition not modelled; protocol conformance is out of scope
+  ServiceRequest.instantiatesUri: as above, by URI
+
+  # --- Extension slices ---------------------------------------------------
+  ServiceRequest.extension:additionalContact: >
+    limited analytical utility; operational contact route, and identifying
+  ServiceRequest.extension:coverage: >
+    billing/finance, out of scope for a clinical CDM

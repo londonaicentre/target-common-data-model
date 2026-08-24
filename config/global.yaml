@@ -1,0 +1,102 @@
+# Global configuration for the FlatFHIR CDM generator.
+#
+# This file defines exclusions and nothing else - the paths, types and element
+# names that are dropped from every resource before any whitelist is consulted
+# (CONVENTIONS.md §1). A resource config cannot resurrect anything listed here.
+#
+# Expansion mechanics (recursion ceiling, extension collapsing, FHIRPath type
+# handling) are properties of stage 1 and live with the expander, not here.
+#
+# Run:  uv run scripts/expand_fhir.py       # stage 1
+#       uv run scripts/generate_linkml.py   # stage 2
+
+# ===========================================================================
+# FHIR packages (node_modules/, installed by `npm install`)
+# ===========================================================================
+packages:
+  profile: fhir.r4.ukcore.stu2      # UK Core resource profiles
+  core: hl7.fhir.r4.core            # base datatype snapshots and value sets
+
+# ===========================================================================
+# Exclusions
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 1. Resource housekeeping, by path relative to the resource root.
+#
+# These describe the FHIR document rather than the clinical data in it.
+#
+# `language` is Resource.language - the language the resource content is
+# written in, not a language spoken by the patient.
+# ---------------------------------------------------------------------------
+exclude_paths:
+  - contained       # inline resources; the CDM holds real FKs
+  - implicitRules   # processing rules for a FHIR server
+  - language        # language of the resource content, not of the patient
+
+  # Resource.meta survives only as provenance. `source` and `lastUpdated` are
+  # added to every table (§3); the rest describes the message.
+  - meta.versionId  # the resource version on the server it came from
+  - meta.profile    # 0..* canonical URLs asserting conformance
+  - meta.security   # 0..* handling labels; access control is the warehouse's
+  - meta.tag        # 0..* workflow tags, written ad hoc by whatever produced
+                    # the resource - too unreliable to model as a column
+
+# ---------------------------------------------------------------------------
+# 2. Rendered and binary payloads, at any depth.
+#
+# Narrative covers Resource.text and the `.text` on name/address. Attachment
+# covers Patient.photo and DiagnosticReport.presentedForm.
+#
+# Note this excludes the Narrative DATATYPE, not the `.text` string on a
+# CodeableConcept - that is a plain string and is trimmed per entry where the
+# coding already carries the meaning.
+# ---------------------------------------------------------------------------
+exclude_types:
+  - Narrative
+  - Attachment
+
+# ---------------------------------------------------------------------------
+# 4. Anonymous extension and modifierExtension elements, at any depth.
+#
+# An unsliced `extension` is a placeholder with no name, type or binding, so
+# no column can be derived from it.
+#
+# The distinction is taken from the element id, not the path: a last segment
+# of exactly `extension` is anonymous, `extension:ethnicCategory` is a named
+# slice available to a whitelist.
+#
+#   Patient.extension                  -> dropped
+#   Patient.name.extension             -> dropped
+#   Patient.extension:ethnicCategory   -> available to the whitelist
+# ---------------------------------------------------------------------------
+exclude_anonymous_extensions: true
+
+# ---------------------------------------------------------------------------
+# 5. Coding children that are terminology-server bookkeeping.
+#
+# Applied to any element of type Coding at any depth, including the Codings
+# inside a CodeableConcept and inside a variant. What survives is
+# system / code / display - plus `is_source`, which the CDM adds (§6).
+# ---------------------------------------------------------------------------
+exclude_coding_children:
+  - version         # which edition of the code system was used
+  - userSelected    # whether a human picked this coding in the source UI
+
+# ===========================================================================
+# Handled in stage 1, not here
+#
+# Two exclusions in CONVENTIONS.md §1 never reach stage 2, because the
+# expander cannot emit the elements in the first place:
+#
+#   element `.id` at any depth      - typed as a FHIRPath system type, which
+#                                     expand_fhir.py drops outright
+#   Reference children other than
+#   `reference`                     - expand_fhir.py stops at a Reference, so
+#                                     .type / .identifier / .display are never
+#                                     walked. A Reference becomes a scalar
+#                                     `_id` foreign key in stage 2 (§2)
+#
+# They are listed in CONVENTIONS.md as properties of the model, which they
+# are; they are simply not configurable, so no key appears here.
+# ===========================================================================

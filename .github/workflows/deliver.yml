@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'cdm/**'
+      - 'config/**'
       - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'

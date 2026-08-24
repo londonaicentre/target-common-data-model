@@ -1,0 +1,263 @@
+# MedicationRequest
+#
+# Purpose: what medication was requested for a patient.
+# In practice this is used for medication orders in primary care
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: MedicationRequest
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-MedicationRequest
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the request has got to - active, completed, stopped.
+  # status  string (enum MedicationrequestStatusEnum)
+  MedicationRequest.status:
+    bindings:
+      MedicationRequest.status: default
+
+  # --- What was requested ------------------------------------------------
+
+  # The drug. Source dm+d coding plus standard-vocabulary codings added
+  # downstream; `is_source` true on the original.
+  # medicationcodeableconcept_coding
+  #     array [ {system: string, code: string, display: string,
+  #              is_source: boolean} ]
+  MedicationRequest.medicationCodeableConcept.coding:
+    key: [system, code]
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the request is for.
+  # subject_id  string (FK -> Patient.id)
+  MedicationRequest.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The Encounter the request was written during.
+  # encounter_id  string (FK -> Encounter.id)
+  MedicationRequest.encounter:
+    fk: Encounter
+
+  # When the request was written.
+  # authoredon  timestamp
+  MedicationRequest.authoredOn:
+
+  # --- Dosage -------------------------------------------------------------
+
+  # The dosage is promoted to scalars from dosageInstruction[0]
+
+  # Human-readable dose as prescribed ("1 tablet TDS for 5 days").
+  # dosageinstruction_text  string
+  MedicationRequest.dosageInstruction[0].text:
+
+  # E.g. Oral vs IV. The coded route and the rendered term are both taken
+  # dosageinstruction_route_coding_code
+  #     string (enum MedicationRouteEnum)
+  # dosageinstruction_route_text  string
+  MedicationRequest.dosageInstruction[0].route.coding[0].code:
+    bindings:
+      MedicationRequest.dosageInstruction[0].route.coding[0].code: MedicationRouteEnum
+  MedicationRequest.dosageInstruction[0].route.text:
+
+  # Dose ceiling per administration, and its unit (e.g. *50mg* tds).
+  # dosageinstruction_maxdoseperadministration_value  float
+  # dosageinstruction_maxdoseperadministration_unit   string
+  MedicationRequest.dosageInstruction[0].maxDosePerAdministration.value:
+  MedicationRequest.dosageInstruction[0].maxDosePerAdministration.unit:
+
+  # --- Dispense request ---------------------------------------------------
+
+  # Quantity and its unit, NOT a dose. ("50 tablets")
+  # dispenserequest_quantity_value  float
+  # dispenserequest_quantity_unit   string
+  MedicationRequest.dispenseRequest.quantity.value:
+  MedicationRequest.dispenseRequest.quantity.unit:
+
+  # Days of supply
+  # dispenserequest_expectedsupplyduration_value  float
+  MedicationRequest.dispenseRequest.expectedSupplyDuration.value:
+
+  # --- Variants -----------------------------------------------------------
+
+  # Prescription number from the source system.
+  # identifier  array [ {system: string, value: string} ]
+  MedicationRequest.identifier:
+    key: [system, value]
+    exclude:
+      MedicationRequest.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      MedicationRequest.identifier.period: >
+        identifier validity windows are not populated in practice
+      MedicationRequest.identifier.type: >
+        redundant with `system`
+      MedicationRequest.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  MedicationRequest.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Status and intent --------------------------------------------------
+  MedicationRequest.intent: >
+    limited analytical utility; the CDM takes every MedicationRequest row as
+    a prescription, and the proposal/plan/order distinction is not reliably
+    populated across source systems
+  MedicationRequest.priority: >
+    not in scope of typical source data; urgency is not populated on
+    prescribing feeds
+  MedicationRequest.doNotPerform: >
+    not in scope of typical source data; a negation modifier that source
+    feeds do not populate
+
+  # --- Course of therapy --------------------------------------------------
+  MedicationRequest.courseOfTherapyType: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it to a single vocabulary, and the acute vs
+    repeat distinction is derivable from the prescribing sequence
+
+  # --- medication[x] ------------------------------------------------------
+  MedicationRequest.medicationReference: >
+    Medication not modelled, by decision: this CDM takes dm+d inline via
+    medicationCodeableConcept. A feed writing the reference form loses the
+    drug code - a known and accepted limitation
+  MedicationRequest.medicationCodeableConcept.text: >
+    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
+    the rendered drug name is dropped and the dm+d coding carries the meaning
+
+  # --- Classification -----------------------------------------------------
+  MedicationRequest.category: >
+    not in scope of typical source data; `extensible` across two code systems
+    so `default` cannot resolve it, and the encounter carries the setting
+  MedicationRequest.statusReason: >
+    not in scope of typical source data; populated only on rows `status`
+    already excludes
+
+  # --- Reported vs primary record -----------------------------------------
+  MedicationRequest.reportedBoolean: >
+    limited analytical utility; a provenance flag about the feed, and
+    MedicationStatement is where patient-reported medication belongs
+  MedicationRequest.reportedReference: as above, by reference
+
+  # --- Substitution -------------------------------------------------------
+  MedicationRequest.substitution: >
+    not in scope of typical source data; dispensing policy rather than
+    clinical fact
+
+  # --- Dosage instruction --------------------------------------------------
+  MedicationRequest.dosageInstruction: >
+    NOT whitelisted whole - the wanted leaves are promoted out of
+    `dosageInstruction[0]` instead, so the table carries flat scalars rather
+    than a variant holding a nested CodeableConcept and Quantity. A
+    multi-step regimen is flattened to its first step, which these feeds do
+    not populate in any case
+  MedicationRequest.dosageInstruction.sequence: >
+    not in scope of typical source data; it orders a multi-step regimen, and
+    only the first step is taken
+  MedicationRequest.dosageInstruction.patientInstruction: >
+    limited analytical utility; duplicates `text` without adding analysable
+    content
+  MedicationRequest.dosageInstruction.timing: >
+    not in scope of typical source data; Timing is a deep recursive structure
+    (repeat.bounds[x], when, offset). `timing.code` carries BD/TDS where a
+    source populates it, but UK feeds put frequency in the dose text, which
+    `dosageinstruction_text` takes
+  MedicationRequest.dosageInstruction.asNeededBoolean: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.site: >
+    limited analytical utility; a prescribing intention rather than a recorded
+    fact, and route carries the analytical signal. MedicationAdministration
+    rejects `dosage.site` on the same grounds, so no table carries body site
+    for medication
+  MedicationRequest.dosageInstruction.method: >
+    limited analytical utility; route carries the analytical signal
+  MedicationRequest.dosageInstruction.doseAndRate: >
+    NOT REACHABLE, rather than rejected. `doseAndRate` is typed as the
+    anonymous `Element` backbone and stage 1 does not walk into it, so no
+    doseQuantity leaf exists in the expanded tree. The same is true of
+    MedicationStatement.dosage. `dosageinstruction_text` carries the dose as
+    free text; MedicationAdministration has a real `dosage.dose` Quantity
+    where a numeric dose is required
+  MedicationRequest.dosageInstruction.maxDosePerPeriod: >
+    not in scope of typical source data; a Ratio, and a safety-checking
+    concern rather than an exposure one
+  MedicationRequest.dosageInstruction.maxDosePerLifetime: >
+    not in scope of typical source data
+  MedicationRequest.dosageInstruction.maxDosePerAdministration.comparator: >
+    not in scope of typical source data; a dose ceiling is not recorded as an
+    inequality, unlike an administered dose
+  MedicationRequest.dosageInstruction.maxDosePerAdministration.system: >
+    UCUM system/code are fixed in practice; `unit` carries the human string
+  MedicationRequest.dosageInstruction.additionalInstruction: >
+    limited analytical utility; supplementary instructions ("take with food")
+    are not analysed, and the whole element is out of the model rather than
+    just its rendered `.text`
+
+  # --- Dispense request detail --------------------------------------------
+  MedicationRequest.dispenseRequest.numberOfRepeatsAllowed: >
+    not in scope of typical source data; repeats authorised is a prescribing
+    policy field rather than an exposure fact, and is not reliably populated
+  MedicationRequest.dispenseRequest.validityPeriod: >
+    limited analytical utility; the prescription validity window is an
+    administrative window rather than an exposure one, which authoredOn and
+    expectedSupplyDuration.value carry
+  MedicationRequest.dispenseRequest.initialFill: >
+    not in scope of typical source data; a US pharmacy-benefit concept
+  MedicationRequest.dispenseRequest.dispenseInterval: >
+    not in scope of typical source data
+  MedicationRequest.dispenseRequest.expectedSupplyDuration: >
+    NOT whitelisted whole - `expectedSupplyDuration.value` is named instead;
+    the UCUM unit/system/code are fixed to days in practice
+  MedicationRequest.dispenseRequest.performer: >
+    Organization IS modelled, but the nominated pharmacy is operational
+    dispensing routing rather than a clinical fact
+
+  # --- Care team ----------------------------------------------------------
+  MedicationRequest.requester: Practitioner not modelled; would be a dangling FK
+  MedicationRequest.performer: Practitioner not modelled; would be a dangling FK
+  MedicationRequest.performerType: not in scope of typical source data
+  MedicationRequest.recorder: Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  MedicationRequest.basedOn: >
+    limited analytical utility; the prescribing chain is a graph, not a column
+  MedicationRequest.priorPrescription: >
+    limited analytical utility; a self-referencing chain, reconstructable from
+    authoredOn and the drug code
+  MedicationRequest.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationRequest.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  MedicationRequest.supportingInformation: >
+    unconstrained pointer across resource types; no FK target is correct
+  MedicationRequest.insurance: billing/finance, out of scope for a clinical CDM
+  MedicationRequest.detectedIssue: DetectedIssue not modelled; would be a dangling FK
+  MedicationRequest.eventHistory: Provenance not modelled; would be a dangling FK
+
+  # --- Grouping and protocol ----------------------------------------------
+  MedicationRequest.groupIdentifier: >
+    not in scope of typical source data; authoredOn groups prescriptions
+    adequately
+  MedicationRequest.instantiatesCanonical: >
+    PlanDefinition not modelled; protocol conformance is out of scope
+  MedicationRequest.instantiatesUri: as above, by URI
+
+  # --- Notes and extensions -----------------------------------------------
+  MedicationRequest.extension:medicationRepeatInformation: >
+    limited analytical utility; the repeat signal is derivable from the
+    prescribing sequence for the same drug and patient

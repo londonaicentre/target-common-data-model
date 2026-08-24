@@ -35,8 +35,18 @@ def one_line(text):
 
 
 def snake(enum_name: str) -> str:
+    """`AdmitSourceEnum` -> `admit_source`, `UKCoreDeathNotificationStatusEnum`
+    -> `ukcore_death_notification_status`.
+
+    An acronym is kept whole rather than split letter by letter, so a derived
+    enum named after a `UKCore-*` value set does not become `u_k_core_*`.
+    """
     base = re.sub(r"Enum$", "", enum_name)
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", base).lower()
+    # Split between an acronym and a following word (UKCoreDeath -> UKCore|Death)
+    base = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", base)
+    # Split between a word and a following capital (AdmitSource -> Admit|Source)
+    base = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", base)
+    return base.lower()
 
 
 def pv_rows(pv: dict) -> list[tuple[str, str]]:

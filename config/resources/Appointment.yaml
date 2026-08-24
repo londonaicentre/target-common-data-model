@@ -1,0 +1,176 @@
+# Appointment
+#
+# Purpose: what was booked, and what became of it.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Appointment
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Appointment
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # What became of the booking`.
+  # status  string (enum AppointmentstatusEnum)
+  Appointment.status:
+    bindings:
+      Appointment.status: default
+
+  # --- Who ----------------------------------------------------------------
+
+  # The Patient the appointment is for. `actor` is the only route to the
+  # patient as Appointment has no `subject`.
+  # participant_actor_id  string (FK -> Patient.id)
+  Appointment.participant[0].actor:
+    fk: Patient                 # profile allows [Patient, Practitioner,
+                                # PractitionerRole, RelatedPerson, Device,
+                                # HealthcareService, Location]
+
+  # --- When ---------------------------------------------------------------
+
+  # Scheduled start of the appointment.
+  # start  timestamp
+  Appointment.start:
+
+  # Scheduled end of the appointment.
+  # end  timestamp
+  Appointment.end:
+
+  # When the appointment was booked.
+  # created  timestamp
+  Appointment.created:
+
+  # --- What kind ----------------------------------------------------------
+
+  # The kind of appointment booked.
+  # appointmenttype  struct { coding: [ {system: string, code: string
+  #                                      (enum AppointmentTypeEnum),
+  #                                      display: string,
+  #                                      is_source: boolean} ] }
+  Appointment.appointmentType:
+    bindings:
+      Appointment.appointmentType.coding.code: AppointmentTypeEnum
+    exclude:
+      Appointment.appointmentType.text: >
+        coding used to carry meaning
+
+  # Treatment function / outpatient setting.
+  # specialty  array [ { coding: [ {system: string, code: string
+  #                                 (enum UKCorePracticeSettingCodeEnum),
+  #                                 display: string,
+  #                                 is_source: boolean} ] } ]
+  Appointment.specialty:
+    key: [coding]
+    bindings:
+      Appointment.specialty.coding.code: default
+    exclude:
+      Appointment.specialty.text: >
+        coding used to carry meaning
+
+  # Who cancelled and why
+  # cancelationreason  struct { coding: [ {system: string, code: string
+  #                              (enum AppointmentCancellationReasonEnum),
+  #                              display: string,
+  #                              is_source: boolean} ] }
+  Appointment.cancelationReason:
+    bindings:
+      Appointment.cancelationReason.coding.code: AppointmentCancellationReasonEnum
+    exclude:
+      Appointment.cancelationReason.text: >
+        coding used to carry meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Booking reference from the source system
+  # identifier  array [ {system: string, value: string} ]
+  Appointment.identifier:
+    key: [system, value]
+    exclude:
+      Appointment.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      Appointment.identifier.period: >
+        identifier validity windows are not populated in practice
+      Appointment.identifier.type: >
+        redundant with `system`
+      Appointment.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Extension slices ---------------------------------------------------
+
+  # The organisation that booked the appointment.
+  # extension_bookingorganization_id  string (FK -> Organization.id)
+  Appointment.extension:bookingOrganization:
+    fk: Organization
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Service classification ---------------------------------------------
+  Appointment.serviceCategory: >
+    not in scope of typical source data; `specialty` carries the
+    treatment-function axis
+  Appointment.serviceType: >
+    not in scope of typical source data; bound `example` to an incomplete
+    CodeSystem
+
+  # --- Reason -------------------------------------------------------------
+  Appointment.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition or the referral
+  Appointment.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition or the referral
+
+  # --- Priority and description -------------------------------------------
+  Appointment.priority: >
+    limited analytical utility; an unsignedInt with no agreed scale, so
+    uninterpretable across feeds
+  Appointment.description: limited analytical utility; free text
+  Appointment.comment: limited analytical utility; free text
+  Appointment.patientInstruction: limited analytical utility; free text
+
+  # --- Participant --------------------------------------------------------
+  Appointment.participant: >
+    NOT whitelisted whole - `participant[0].actor` is named instead, so the
+    patient promotes to a single canonical FK rather than the table carrying
+    a variant of every actor
+  Appointment.participant.required: >
+    not in scope of typical source data; a booking-negotiation flag, and the
+    CDM takes the patient participant only
+  Appointment.participant.status: >
+    per-participant attendance; the row-level `status` carries the
+    DNA/cancellation distinction that analysis reads
+  Appointment.participant.period: >
+    limited analytical utility; the appointment `start` and `end` carry the
+    window
+  Appointment.participant.type: >
+    the participant's role, bound `extensible` to an HL7 v3 ParticipationType
+    `is-a` subset that needs a terminology server; the CDM takes the patient
+    actor only
+
+  # --- Scheduling ---------------------------------------------------------
+  Appointment.slot: Slot not modelled; would be a dangling FK
+  Appointment.requestedPeriod: >
+    not in scope of typical source data; a booking-negotiation artefact
+
+  # --- References to other resources --------------------------------------
+  Appointment.basedOn: >
+    ServiceRequest IS modelled, but the field is 0..* and would become a
+    variant holding a single id in practice
+  Appointment.supportingInformation: >
+    unconstrained pointer across resource types; no FK target is correct
+
+  # --- Extension slices ---------------------------------------------------
+  Appointment.extension:deliveryChannel: >
+    not in scope of typical source data; in-person vs telephone vs video is
+    not reliably populated, and `appointmentType` carries the contact axis
+
+  # --- When ---------------------------------------------------------------
+  Appointment.minutesDuration: >
+    derivable from `start` and `end`; storing it invites the two disagreeing

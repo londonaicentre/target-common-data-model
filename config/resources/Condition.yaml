@@ -1,0 +1,138 @@
+# Condition
+#
+# Purpose: what a patient has been diagnosed with. One row per recorded
+# diagnosis or problem, holding the code, when it started and stopped, and
+# how far it can be trusted.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Condition
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Condition
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the condition belongs to.
+  # subject_id  string (FK -> Patient.id)
+  Condition.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The Encounter the condition was recorded during.
+  # encounter_id  string (FK -> Encounter.id)
+  Condition.encounter:
+    fk: Encounter
+
+  # When the condition began, and when it resolved.
+  # onsetdatetime      timestamp
+  # abatementdatetime  timestamp
+  Condition.onsetDateTime:
+  Condition.abatementDateTime:
+
+  # When the condition was entered, may be distinct from when it began.
+  # recordeddate  timestamp
+  Condition.recordedDate:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the condition is active or resolved.
+  # clinicalstatus  struct { coding: [ {system: string, code: string
+  #                                     (enum ConditionClinicalEnum),
+  #                                     display: string,
+  #                                     is_source: boolean} ] }
+  Condition.clinicalStatus:
+    bindings:
+      Condition.clinicalStatus.coding.code: default
+    exclude:
+      Condition.clinicalStatus.text: >
+        rendered term; the coding carries the meaning
+
+  # How far the diagnosis can be trusted.
+  # verificationstatus  struct { coding: [ {system: string, code: string
+  #                                         (enum ConditionVerStatusEnum),
+  #                                         display: string,
+  #                                         is_source: boolean} ] }
+  Condition.verificationStatus:
+    bindings:
+      Condition.verificationStatus.coding.code: default
+    exclude:
+      Condition.verificationStatus.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Category -----------------------------------------------------------
+
+  # Category, e.g. problem-list entry vs encounter diagnosis.
+  # category_coding  struct {system: string, code: string
+  #                          (enum ConditionCategoryEnum), display: string,
+  #                          is_source: boolean}
+  Condition.category.coding[0]:
+    bindings:
+      # Manual: unions UK Core and FHIR core, so it spans two code systems.
+      Condition.category.coding.code: ConditionCategoryEnum
+
+  # --- The fact -----------------------------------
+
+  # What the condition is. Source coding plus other mappings
+  # added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
+  Condition.code.coding:
+    key: [system, code]
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  Condition.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Severity and site --------------------------------------------------
+  Condition.severity: not in scope of typical source data
+  Condition.bodySite: >
+    limited analytical utility; laterality and site need their own model, and
+    a first-entry scalar would mislead on a bilateral condition
+
+  # --- Backbone elements --------------------------------------------------
+  Condition.stage: not in scope of typical source data
+  Condition.evidence: >
+    limited analytical utility; the provenance chain is a graph problem, not
+    a column
+
+  # --- References to unmodelled resources ---------------------------------
+  Condition.recorder: Practitioner not modelled; would be a dangling FK
+  Condition.asserter: Practitioner not modelled; would be a dangling FK
+
+  # --- Identity -----------------------------------------------------------
+  Condition.identifier: >
+    limited analytical utility; `id` carries resource identity and Condition
+    identifiers are not used to reconcile feeds
+
+  # --- onset[x] / abatement[x] --------------------------------------------
+  # Only the dateTime forms are whitelisted.
+  Condition.onsetAge: not in scope of typical source data
+  Condition.onsetPeriod: not in scope of typical source data
+  Condition.onsetRange: not in scope of typical source data
+  Condition.onsetString: limited analytical utility; free text
+  Condition.abatementAge: not in scope of typical source data
+  Condition.abatementPeriod: not in scope of typical source data
+  Condition.abatementRange: not in scope of typical source data
+  Condition.abatementString: limited analytical utility; free text
+
+  # --- Other --------------------------------------------------------------
+  Condition.code: >
+    NOT whitelisted whole - `code.coding` is named instead, so the variant is
+    the codings themselves rather than a {coding[], text} wrapper
+  Condition.code.text: >
+    limited analytical utility; the coding variant carries the meaning
+  Condition.category: >
+    NOT whitelisted whole - `category.coding[0]` is named instead, so a
+    second category is dropped rather than becoming a variant
+  Condition.extension:conditionEpisode: >
+    not in scope of typical source data; the new/review episode distinction is
+    derivable from the onset and recorded dates across a patient's conditions

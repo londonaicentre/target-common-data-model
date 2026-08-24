@@ -1,0 +1,146 @@
+# DiagnosticReport
+#
+# Purpose: the free text report, e.g. for radiology, histopath. May or may not
+# be in addition to individual results in Observations.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: DiagnosticReport
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-DiagnosticReport
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the report has got to - partial, final, amended.
+  # status  string (enum DiagnosticReportStatusEnum)
+  DiagnosticReport.status:
+    bindings:
+      DiagnosticReport.status: default
+
+  # --- What kind of report ------------------------------------------------
+
+  # radiology, microbiology, etc; 0..* as a report can
+  # belong to more than one service.
+  # category  array [ { coding: [ {system: string, code: string
+  #                                (enum DiagnosticServiceSectionEnum),
+  #                                display: string,
+  #                                is_source: boolean} ] } ]
+  DiagnosticReport.category:
+    key: [coding]
+    bindings:
+      DiagnosticReport.category.coding.code: DiagnosticServiceSectionEnum
+    exclude:
+      DiagnosticReport.category.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the report is about.
+  # subject_id  string (FK -> Patient.id)
+  DiagnosticReport.subject:
+    fk: Patient                 # profile allows [Patient, Group, Device,
+                                # Location]
+
+  # The Encounter the report was raised during.
+  # encounter_id  string (FK -> Encounter.id)
+  DiagnosticReport.encounter:
+    fk: Encounter
+
+  # When the specimen was taken or the study performed.
+  # effectivedatetime  timestamp
+  DiagnosticReport.effectiveDateTime:
+
+  # When the report was released.
+  # issued  timestamp
+  DiagnosticReport.issued:
+
+  # --- The text -----------------------------------------------------
+
+  # The reporter's conclusion, i.e. the main report text
+  # conclusion  string
+  DiagnosticReport.conclusion:
+
+  # --- Result linkage -----------------------------------------------------
+
+  # The structured result the report links to
+  # result_id  array [ string (FK -> Observation.id) ]
+  DiagnosticReport.result:
+    fk: Observation
+
+  # The study this radiology report describes.
+  # imagingstudy_id  array [ string (FK -> ImagingStudy.id) ]
+  DiagnosticReport.imagingStudy:
+    fk: ImagingStudy
+
+  # --- Variants -----------------------------------------------------------
+
+  # Original lab accession or report number.
+  # identifier  array [ {system: string, value: string} ]
+  DiagnosticReport.identifier:
+    key: [system, value]
+    exclude:
+      DiagnosticReport.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      DiagnosticReport.identifier.period: >
+        identifier validity windows are not populated in practice
+      DiagnosticReport.identifier.type: >
+        redundant with `system`
+      DiagnosticReport.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- What kind of report ------------------------------------------------
+  DiagnosticReport.code.coding: >
+    limited analytical utility; the panel/study code is `preferred` to a
+    SNOMED subset that needs a terminology server, and `category` carries
+    the analytical axis
+
+  # --- Timing -------------------------------------------------------------
+  DiagnosticReport.effectivePeriod: >
+    not in scope of typical source data; lab and imaging feeds populate the
+    dateTime form, which `effectiveDateTime` takes
+
+  # --- The conclusion -----------------------------------------------------
+  DiagnosticReport.conclusionCode: >
+    not in scope of typical source data; `preferred` to a SNOMED `is-a`
+    subset needing a terminology server, and rarely coded in practice -
+    `conclusion` carries the finding
+
+  # --- Result linkage -----------------------------------------------------
+  DiagnosticReport.specimen: >
+    Specimen IS modelled, but the field is 0..* and would become a variant of
+    bare ids; the accession identifier carries the link
+
+  # --- Attachments and media ----------------------------------------------
+  DiagnosticReport.presentedForm: >
+    Attachment is globally excluded (§1) as a binary payload; `conclusion`
+    carries the text
+  DiagnosticReport.media: Media not modelled; binary payloads
+
+  # --- Care team ----------------------------------------------------------
+  DiagnosticReport.performer: >
+    Practitioner not modelled, and the reference is unconstrained across
+    resource types so no single FK target is correct
+  DiagnosticReport.resultsInterpreter: >
+    Practitioner not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  DiagnosticReport.basedOn: >
+    ServiceRequest IS modelled, but the field is 0..* and the link is not
+    reliably populated in UK lab feeds
+
+  # --- Extension slices ---------------------------------------------------
+  DiagnosticReport.extension:compositionReferenceR5: >
+    Composition not modelled; would be a dangling FK
+  DiagnosticReport.extension:noteR5: >
+    limited analytical utility; `conclusion` carries the report text
+  DiagnosticReport.extension:supportingInfoR5: >
+    limited analytical utility; a graph rather than a column

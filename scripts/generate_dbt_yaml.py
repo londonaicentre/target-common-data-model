@@ -14,8 +14,9 @@ Per model:
   * accepted_values with values nested under `arguments:` (binding_strength
     severity is implemented but commented out for now)
   * relationships (foreign-key) tests on class-typed reference columns
-  * FHIR lineage in `meta` (fhir_path / fhir_type / value_set) - the meta block
-    is omitted entirely for CDM-derived columns that have none
+  * FHIR lineage in `meta` (fhir_path / fhir_type / value_set /
+    replaces_value_set) - the meta block is omitted entirely for CDM-derived
+    columns that have none
   * own columns first, shared provenance slots (meta_*) last
 
 Inlined multivalued variant classes become Snowflake VARIANT columns on their
@@ -69,9 +70,17 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
     slot = sv.induced_slot(slot_name, cls_name)
     rng = slot.range or "string"
     is_variant = slot.multivalued and (slot.inlined or slot.inlined_as_list) and rng in classes
+    # A reference (CONVENTIONS.md §10) is a class-ranged slot that is NOT
+    # inlined: it holds the target's identifier. An inlined class-ranged slot
+    # is a nested object living in this table, and points at nothing.
+    is_reference = rng in classes and slot.inlined is False
 
     if is_variant:
         data_type = "variant"
+    elif slot.multivalued:
+        # An array of scalars - a repeating primitive, or a repeating
+        # reference resolved to an array of target ids (§2).
+        data_type = "array"
     elif rng in enums or rng in classes:
         data_type = "varchar"          # coded value, or FK stored as id
     else:
@@ -93,9 +102,11 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
         # if ann(slot, "binding_strength") in ("extensible", "preferred", "example"):
         #     av["accepted_values"]["config"] = {"severity": "warn"}
         tests.append(av)
-    # relationships (foreign-key) test on class-typed reference columns.
-    elif rng in classes and not is_variant:
-        # foreign key -> referential-integrity test against the parent model
+    # relationships (foreign-key) test on reference columns (§10). Only a
+    # single-valued reference is testable: a repeating one is an array of ids,
+    # which dbt's relationships test cannot compare against a target column.
+    elif is_reference and not slot.multivalued:
+        # foreign key -> referential-integrity test against the target model
         target = sv.get_identifier_slot(rng)
         tests.append({"relationships": {"arguments": {
             "to": f"ref('{rng.lower()}')",
@@ -106,7 +117,7 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
 
     # meta - only emit keys that exist; drop the block entirely if nothing to say
     meta = {}
-    for key in ("fhir_path", "fhir_type", "value_set"):
+    for key in ("fhir_path", "fhir_type", "value_set", "replaces_value_set"):
         val = ann(slot, key)
         if val is not None:
             meta[key] = val
@@ -127,12 +138,22 @@ def build_model(sv: SchemaView, cls_name: str) -> dict:
     return {"name": cls_name.lower(), "description": one_line(cls.description), "columns": columns}
 
 
-def variant_classes(sv: SchemaView, defined: list[str]) -> set[str]:
+def nested_classes(sv: SchemaView, defined: list[str]) -> set[str]:
+    """Classes reached as the range of a slot - i.e. structure, not a table.
+
+    Covers both variants (multivalued, §5) and inlined 0..1 structs such as
+    `period {start, end}`: each is a column on its parent, so neither is a
+    model in its own right. What remains is the resource table.
+
+    A reference (§10) is excluded: its range is the target class, but it holds
+    that class's identifier rather than nesting it, so the target is a table in
+    its own right and not structure belonging to this one.
+    """
     classes = set(sv.all_classes())
     out = set()
     for cn in defined:
         for slot in sv.class_induced_slots(cn):
-            if slot.multivalued and (slot.inlined or slot.inlined_as_list) and slot.range in classes:
+            if slot.range in classes and slot.inlined is not False:
                 out.add(slot.range)
     return out
 
@@ -142,8 +163,8 @@ def main(outroot: Path) -> None:
         res = spec_path.stem.lower()
         sv = SchemaView(str(spec_path))
         defined = list(sv.all_classes(imports=False))
-        variants = variant_classes(sv, defined)
-        mains = [c for c in defined if c not in variants]
+        nested = nested_classes(sv, defined)
+        mains = [c for c in defined if c not in nested]
         doc = {"models": [build_model(sv, c) for c in mains]}
 
         outdir = outroot / "models" / "gold" / res
@@ -155,8 +176,15 @@ def main(outroot: Path) -> None:
                 f"# Source of truth: cdm/{spec_path.name} in that repo. Regenerate there; edits here are overwritten.\n"
             )
             yaml.safe_dump(doc, f, sort_keys=False, default_flow_style=False, allow_unicode=True, width=100)
-        n = len(doc["models"][0]["columns"])
-        print(f"  wrote models/gold/{res}/{res}.yml  ({n} columns)")
+        # Report the resource's own model, which is not necessarily first.
+        main_model = next(
+            (m for m in doc["models"] if m["name"] == res), doc["models"][0]
+        )
+        n = len(main_model["columns"])
+        print(
+            f"  wrote models/gold/{res}/{res}.yml  "
+            f"({n} columns, {len(doc['models'])} models)"
+        )
 
 
 if __name__ == "__main__":

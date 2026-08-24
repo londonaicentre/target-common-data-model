@@ -1,0 +1,95 @@
+# EpisodeOfCare
+#
+# Purpose: which organisation was responsible for a patient, and when. Used
+# for registration at a GP practice or trust department
+#
+# Base FHIR R4 - UK Core STU2 ships no EpisodeOfCare profile, so the
+# StructureDefinition resolves from hl7.fhir.r4.core.
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: EpisodeOfCare
+profile: http://hl7.org/fhir/StructureDefinition/EpisodeOfCare
+package: hl7.fhir.r4.core
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Where the episode has got to. `active` is the current registration.
+  # status  string (enum EpisodeOfCareStatusEnum)
+  EpisodeOfCare.status:
+    bindings:
+      EpisodeOfCare.status: default
+
+  # --- Who and where ------------------------------------------------------
+
+  # The Patient the episode is for.
+  # patient_id  string (FK -> Patient.id)
+  EpisodeOfCare.patient:
+    fk: Patient
+
+  # The practice or trust the patient is registered with
+  # managingorganization_id  string (FK -> Organization.id)
+  EpisodeOfCare.managingOrganization:
+    fk: Organization
+
+  # --- When ---------------------------------------------------------------
+
+  # Registration start and end; an open registration has no end.
+  # period  struct {start: timestamp, end: timestamp}
+  EpisodeOfCare.period:
+
+  # --- Classification -----------------------------------------------------
+
+  # What kind of episode - GP registration vs a specialist care episode.
+  # type  array [ { coding: [ {system: string, code: string,
+  #                            display: string, is_source: boolean} ] } ]
+  EpisodeOfCare.type:
+    key: [coding]
+    exclude:
+      EpisodeOfCare.type.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Registration number from the source system.
+  # identifier  array [ {system: string, value: string} ]
+  EpisodeOfCare.identifier:
+    key: [system, value]
+    exclude:
+      EpisodeOfCare.identifier.assigner: >
+        Organization already carried by managingOrganization; `system`
+        namespaces the issuer
+      EpisodeOfCare.identifier.period: >
+        identifier validity windows are not populated in practice
+      EpisodeOfCare.identifier.type: >
+        redundant with `system`
+      EpisodeOfCare.identifier.use: >
+        not reliably populated across source systems
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- Audit trails -------------------------------------------------------
+  EpisodeOfCare.statusHistory: >
+    limited analytical utility; the current status is what analysis uses and
+    transitions belong to an event model
+
+  # --- Clinical content ---------------------------------------------------
+  EpisodeOfCare.diagnosis: >
+    limited analytical utility; Condition carries the diagnosis with onset
+    and verification status, and Encounter.diagnosis carries the CDS grid
+
+  # --- Care team ----------------------------------------------------------
+  EpisodeOfCare.careManager: Practitioner not modelled; would be a dangling FK
+  EpisodeOfCare.team: CareTeam not modelled; would be a dangling FK
+
+  # --- References to other resources --------------------------------------
+  EpisodeOfCare.referralRequest: >
+    ServiceRequest IS modelled, but the field is 0..* and the referral-to-
+    episode link is not reliably populated
+  EpisodeOfCare.account: billing/finance, out of scope for a clinical CDM

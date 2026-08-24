@@ -1,0 +1,152 @@
+# Procedure
+#
+# Purpose: what intervention was done to a patient.
+# Could be an operation, a diagnostic procedure, a therapy
+#
+# `id` (PK), `meta_source` and `meta_last_updated` are added to every table
+# and are not listed below.
+
+resource: Procedure
+profile: https://fhir.hl7.org.uk/StructureDefinition/UKCore-Procedure
+package: fhir.r4.ukcore.stu2
+
+include:
+
+  # --- Status -------------------------------------------------------------
+
+  # Whether the procedure happened at all.
+  # status  string (enum EventStatusEnum)
+  Procedure.status:
+    bindings:
+      Procedure.status: default
+
+  # --- Who and when -------------------------------------------------------
+
+  # The Patient the procedure was performed on.
+  # subject_id  string (FK -> Patient.id)
+  Procedure.subject:
+    fk: Patient                 # profile allows [Patient, Group]
+
+  # The Encounter the procedure was performed during.
+  # encounter_id  string (FK -> Encounter.id)
+  Procedure.encounter:
+    fk: Encounter
+
+  # When the procedure was performed.
+  # performeddatetime  timestamp
+  # performedperiod    struct {start: timestamp, end: timestamp}
+  Procedure.performedDateTime:
+  Procedure.performedPeriod:
+
+  # --- The code that identifies the row -----------------------------------
+
+  # What was done. Source OPCS-4 or SNOMED coding plus standard-vocabulary
+  # codings added downstream; `is_source` true on the original.
+  # code_coding  array [ {system: string, code: string, display: string,
+  #                       is_source: boolean} ]
+  Procedure.code.coding:
+    key: [system, code]
+
+  # --- Body site ----------------------------------------------------------
+
+  # Where on the body - multiple locations capturable.
+  # bodysite  array [ { coding: [ {system: string, code: string,
+  #                                display: string, is_source: boolean} ] } ]
+  Procedure.bodySite:
+    key: [coding]
+    exclude:
+      Procedure.bodySite.text: >
+        rendered term; the coding carries the meaning
+
+  # --- Variants -----------------------------------------------------------
+
+  # Theatre system procedure number, local episode id.
+  # identifier  array [ {system: string, value: string} ]
+  Procedure.identifier:
+    key: [system, value]
+    exclude:
+      Procedure.identifier.assigner: >
+        the assigning Organization is not tracked per identifier; `system`
+        already namespaces the issuer
+      Procedure.identifier.period: >
+        identifier validity windows are not populated in practice
+      Procedure.identifier.type: >
+        redundant with `system`
+      Procedure.identifier.use: >
+        not reliably populated across source systems
+
+  # --- Free text ----------------------------------------------------------
+
+  # Free-text note, from note[0].
+  # note_text  string
+  Procedure.note[0].text:
+
+# ===========================================================================
+# Rejected - notable absences and why (§11)
+# ===========================================================================
+rejected:
+
+  # --- performed[x] other forms -------------------------------------------
+  # Only dateTime and Period are whitelisted.
+  Procedure.performedString: limited analytical utility; free text
+  Procedure.performedAge: >
+    not in scope of typical source data; derivable from performeddatetime and
+    birthdate
+  Procedure.performedRange: not in scope of typical source data
+
+  # --- Classification -----------------------------------------------------
+  Procedure.category: >
+    not in scope of typical source data; the OPCS-4/SNOMED code carries the
+    procedure's nature
+  Procedure.outcome: >
+    not in scope of typical source data; 3 concepts, too coarse to analyse
+  Procedure.statusReason: >
+    not in scope of typical source data; populated only on not-done rows,
+    which `status` already excludes
+
+  # --- Complications and follow-up ----------------------------------------
+  Procedure.complication: >
+    limited analytical utility; a complication is a Condition in its own
+    right and is modelled there
+  Procedure.complicationDetail: >
+    limited analytical utility; the same duplication, by reference
+  Procedure.followUp: >
+    limited analytical utility; follow-up intent is an Appointment or
+    ServiceRequest
+
+  # --- Care team ----------------------------------------------------------
+  Procedure.performer: Practitioner not modelled; would be a dangling FK
+  Procedure.recorder: Practitioner not modelled; would be a dangling FK
+  Procedure.asserter: Practitioner not modelled; would be a dangling FK
+  Procedure.location: >
+    Location IS modelled, but this is the site rather than the theatre and is
+    sparsely populated; the encounter carries the provider
+
+  # --- Devices ------------------------------------------------------------
+  Procedure.focalDevice: Device not modelled; would be a dangling FK
+  Procedure.usedReference: Device not modelled; would be a dangling FK
+  Procedure.usedCode: >
+    not in scope of typical source data; theatre stock usage is a
+    supply-chain concern
+
+  # --- References to other resources --------------------------------------
+  Procedure.basedOn: >
+    ServiceRequest IS modelled, but the order-to-procedure link is not
+    reliably populated
+  Procedure.partOf: >
+    limited analytical utility; nesting a step within a larger procedure is a
+    graph, not a column
+  Procedure.reasonCode: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  Procedure.reasonReference: >
+    limited analytical utility; the indication is carried by the linked
+    Condition
+  Procedure.report: >
+    DiagnosticReport IS modelled and carries its own subject and encounter,
+    so the join is reachable without this column
+
+  # --- Notes and provenance -----------------------------------------------
+  Procedure.instantiatesCanonical: >
+    PlanDefinition not modelled; protocol conformance is out of scope
+  Procedure.instantiatesUri: as above, by URI
