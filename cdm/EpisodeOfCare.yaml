@@ -21,8 +21,8 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- organization
-- patient
+- Organization
+- Patient
 default_range: string
 classes:
   EpisodeOfCarePeriod:

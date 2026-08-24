@@ -21,10 +21,10 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- encounter
-- imagingstudy
-- observation
-- patient
+- Encounter
+- ImagingStudy
+- Observation
+- Patient
 default_range: string
 classes:
   DiagnosticReportCategoryCoding:

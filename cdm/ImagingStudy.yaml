@@ -21,10 +21,10 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- encounter
-- location
-- patient
-- procedure
+- Encounter
+- Location
+- Patient
+- Procedure
 default_range: string
 classes:
   ImagingStudyModality:

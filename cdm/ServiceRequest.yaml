@@ -21,8 +21,8 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- encounter
-- patient
+- Encounter
+- Patient
 default_range: string
 classes:
   ServiceRequestCodeCoding:

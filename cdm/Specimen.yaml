@@ -21,7 +21,7 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- patient
+- Patient
 default_range: string
 classes:
   SpecimenTypeCoding:

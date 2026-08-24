@@ -21,10 +21,10 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- appointment
-- condition
-- organization
-- patient
+- Appointment
+- Condition
+- Organization
+- Patient
 default_range: string
 classes:
   EncounterClass:

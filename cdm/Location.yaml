@@ -21,7 +21,7 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- organization
+- Organization
 default_range: string
 classes:
   LocationTypeCoding:

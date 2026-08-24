@@ -21,9 +21,9 @@ default_prefix: cdm
 imports:
 - linkml:types
 - enums
-- encounter
-- patient
-- specimen
+- Encounter
+- Patient
+- Specimen
 default_range: string
 classes:
   ObservationCategoryCoding:
