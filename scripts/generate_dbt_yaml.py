@@ -34,7 +34,7 @@ from linkml_runtime import SchemaView
 
 REPO = Path(__file__).parent.parent
 CDM = REPO / "cdm"
-NON_RESOURCE = {"core", "enums"}   # shared slots/types + enum definitions, not resource tables
+NON_RESOURCE = {"core", "enums", "datatypes"}   # shared slots/types, enums, Coding classes - not resource tables
 
 # LinkML range -> Snowflake/dbt data_type. TimestampNtz -> timestamp_ntz per the spec.
 TYPE_MAP = {

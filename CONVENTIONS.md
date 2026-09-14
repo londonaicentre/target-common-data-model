@@ -33,6 +33,7 @@ Generation runs in two stages.
               |  stage 2   scripts/generate_linkml.py
               v
     cdm/<Resource>.yaml   (LinkML)
+    cdm/datatypes.yaml    Coding and CodeableConcept, shared (§4)
 
 A schema is generated from a resource only where `config/resources/<Resource>.yaml` exists. The config file is therefore the opt-in.
 
@@ -215,6 +216,7 @@ In practice:
 
 - Name the direct path that carries the values required.
 - Similarly, prefer a promoted scalar to a structure the consumer must dig through, especially if the structure has no affinity to source data, or carries no extra information.
+- Name a `CodeableConcept` whole and `exclude` its `.text`, rather than naming its `.coding` array, so every coded concept has the same `{coding[]}` shape. The generator rejects a whitelisted `.coding` array beneath a `CodeableConcept`; `.coding[0]` is still allowed to take a single coding.
 - Watch what sits beneath the path, not just the path. A `0..1` element can still hold arrays below it. Do not name a path whose shape you have not looked at in `build/expanded/<Resource>.yaml`! Trim what is not wanted with `exclude`.
 
 ## Global conventions
@@ -294,13 +296,30 @@ So naming a deeper path is how a value is lifted out of a structure and given a 
 
 Every slot carries `fhir_path` and `fhir_type`, and inherits the constraints of its FHIR element.
 
+**Classes.** The object behind a complex field is a LinkML class named from its path - `Encounter.period` becomes `EncounterPeriod`. Codings are the exception. A `Coding`, and a `CodeableConcept` whose `.text` is excluded (see *Good authoring practices*), has the same structure wherever it sits, so it is not given a class per path. Every resource schema imports one shared definition from `cdm/datatypes.yaml`:
+
+    Coding             {system, code, display, is_source}
+    CodeableConcept    {coding [Coding]}
+
+A bound `code` (§12) narrows the shared class in a subclass named after its vocabulary, the enum name less `Enum`. Every field bound to that vocabulary shares the subclass, across resources:
+
+    MedicationAdministration.dosage.route      -> MedicationRouteCodeableConcept
+    MedicationRequest.dosageInstruction.route  -> MedicationRouteCodeableConcept
+
+    MedicationRouteCodeableConcept   is_a CodeableConcept, coding [MedicationRouteCoding]
+    MedicationRouteCoding            is_a Coding, code: MedicationRouteEnum
+
+The binding's `value_set`, `binding_strength` and `binding_source` sit on the subclass's `code`, so one vocabulary bound at two different strengths is an error rather than a silent merge. Inside a shared class `fhir_path` is relative to the datatype (`Coding.code`); the field holding it carries the full path.
+
+A coding not in the standard shape - a `CodeableConcept` that keeps `.text`, or a `Coding` with a child excluded - is not the shared structure, and keeps a class named from its path.
+
 ### 5. Variants
 
 Where a whitelisted path is `0..*`, the field is a variant - an array of objects carrying whatever FHIR puts in them, which may include a further variant.
 
     diagnosis  [ {condition_id, use{coding[]}, rank} ]  a variant within
                                                         a variant
-    code_coding [ {system, code, display, is_source} ]  objects of values
+    identifier [ {system, value} ]                      objects of values
 
 Nesting is bounded by the path, not by a rule: a field can only be as deep as the tree beneath the path it names. Naming a leaf gives a single value; naming the resource root would give the entire resource. Keeping that depth sensible is the config author's job - see *Good authoring practices*.
 
@@ -308,8 +327,8 @@ Nesting is bounded by the path, not by a rule: a field can only be as deep as th
 
 Every `Coding` that is included gets an `is_source` flag: the coding that came from the source system has `is_source` true, and a downstream mapping step adds standard-vocabulary codings with `is_source` false. Exactly one true per array. **`is_source` is a custom field, not native to FHIR.**
 
-    Condition.code.coding      -> code_coding [ {system, code, display, is_source} ]
-    Condition.code.coding[0]   -> code_coding {system, code, display, is_source}
+    Condition.code                -> code {coding [ {system, code, display, is_source} ]}
+    Condition.category.coding[0]  -> category_coding {system, code, display, is_source}
     Encounter.diagnosis        -> diagnosis [ {..., use {coding [ {..., is_source} ]}} ]
                                   a coding inside a variant is still a coding
 
@@ -344,7 +363,7 @@ This is where the unwanted children of a complex datatype are trimmed. It is ver
 
 Any combination of the object's own fields is available. Where an object holds its own content, that content is usually the natural key. Where it holds a pointer to another resource, the `_id` field (§2) or an ordering field such as `rank` are candidates instead.
 
-LinkML records `key_fields`. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
+LinkML records `key_fields` as an annotation on the variant's slot rather than its class, since a shared datatype (§4) is keyed differently wherever it is used. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
 
 ### 10. Foreign key targets
 

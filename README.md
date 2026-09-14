@@ -23,7 +23,8 @@ build/    an opinion-free cache of FHIR: structure, which vocabulary
           |  stage 2   scripts/generate_linkml.py
           |            apply the whitelist in config/resources/
           v
-cdm/<Resource>.yaml   LinkML, plus cdm/enums.yaml
+cdm/<Resource>.yaml   LinkML, plus cdm/enums.yaml and the shared
+                      Coding/CodeableConcept classes in cdm/datatypes.yaml
 ```
 
 A schema exists for a resource only where `config/resources/<Resource>.yaml` exists.

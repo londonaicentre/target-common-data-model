@@ -34,7 +34,7 @@ from linkml_runtime import SchemaView
 
 REPO = Path(__file__).parent.parent
 CDM = REPO / "cdm"
-NON_RESOURCE = {"core", "enums"}   # shared slots/types + enum definitions, not resource tables
+NON_RESOURCE = {"core", "enums", "datatypes"}   # shared slots/types, enums, Coding classes - not resource tables
 
 # LinkML range -> the type shown on the diagram. Mirrors TYPE_MAP in
 # generate_dbt_yaml.py so the ERD and the dbt contracts agree.
@@ -99,11 +99,11 @@ def column_order(sv: SchemaView, cls_name: str) -> list[str]:
     return list(cls.attributes or {}) + list(cls.slots or [])
 
 
-def variant_note(sv: SchemaView, rng: str) -> str:
+def variant_note(sv: SchemaView, slot, rng: str) -> str:
     """The inner shape of a variant, plus its key fields (§9)."""
     fields = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
     note = f"{rng} [{{{', '.join(fields)}}}]"
-    keys = ann(sv.get_class(rng), "key_fields")
+    keys = ann(slot, "key_fields")
     if keys:
         note += f" - key: {keys}"
     return note
@@ -150,7 +150,7 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
         if slot.description:
             notes.append(one_line(slot.description))
         if is_variant:
-            notes.append(variant_note(sv, rng))
+            notes.append(variant_note(sv, slot, rng))
         elif is_reference:
             pass                       # the Ref line carries the target
         elif rng in classes:
@@ -265,8 +265,9 @@ def main(outdir: Path) -> None:
             entities.append(ent)
 
         # Every enum the schema references, including those bound on a field
-        # nested inside a variant (§12) - they belong in the DBML either way.
-        for cls_name in defined:
+        # nested inside a variant (§12) or on a shared datatype it imports
+        # (§4) - they belong in the DBML either way.
+        for cls_name in classes:
             for slot in sv.class_induced_slots(cls_name):
                 if slot.range in enums:
                     used_enums.add(slot.range)
