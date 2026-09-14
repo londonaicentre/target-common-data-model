@@ -24,11 +24,13 @@ include:
 
   # The drug. Source dm+d coding plus standard-vocabulary codings added
   # downstream; `is_source` true on the original.
-  # medicationcodeableconcept_coding
-  #     array [ {system: string, code: string, display: string,
-  #              is_source: boolean} ]
-  MedicationRequest.medicationCodeableConcept.coding:
-    key: [system, code]
+  # medicationcodeableconcept
+  #     struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  MedicationRequest.medicationCodeableConcept:
+    exclude:
+      MedicationRequest.medicationCodeableConcept.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 
@@ -132,9 +134,6 @@ rejected:
     Medication not modelled, by decision: this CDM takes dm+d inline via
     medicationCodeableConcept. A feed writing the reference form loses the
     drug code - a known and accepted limitation
-  MedicationRequest.medicationCodeableConcept.text: >
-    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
-    the rendered drug name is dropped and the dm+d coding carries the meaning
 
   # --- Classification -----------------------------------------------------
   MedicationRequest.category: >

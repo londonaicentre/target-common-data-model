@@ -34,10 +34,12 @@ include:
 
   # What was measured. Source code plus mapped equivalents added downstream;
   # `is_source` true on the original
-  # code_coding  array [ {system: string, code: string, display: string,
-  #                       is_source: boolean} ]
-  Observation.code.coding:
-    key: [system, code]
+  # code  struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  Observation.code:
+    exclude:
+      Observation.code.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 

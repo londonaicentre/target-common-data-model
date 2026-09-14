@@ -24,10 +24,12 @@ include:
   # E.g. Blood culture, urine, wound swab, CSF. Source coding plus
   # standard-vocabulary codings added downstream; `is_source` true on the
   # original.
-  # type_coding  array [ {system: string, code: string, display: string,
-  #                       is_source: boolean} ]
-  Specimen.type.coding:
-    key: [system, code]
+  # type  struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  Specimen.type:
+    exclude:
+      Specimen.type.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 

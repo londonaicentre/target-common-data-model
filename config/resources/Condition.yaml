@@ -76,10 +76,12 @@ include:
 
   # What the condition is. Source coding plus other mappings
   # added downstream; `is_source` true on the original.
-  # code_coding  array [ {system: string, code: string, display: string,
-  #                       is_source: boolean} ]
-  Condition.code.coding:
-    key: [system, code]
+  # code  struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  Condition.code:
+    exclude:
+      Condition.code.text: >
+        rendered term; the coding carries the meaning
 
   # --- Free text ----------------------------------------------------------
 
@@ -125,11 +127,6 @@ rejected:
   Condition.abatementString: limited analytical utility; free text
 
   # --- Other --------------------------------------------------------------
-  Condition.code: >
-    NOT whitelisted whole - `code.coding` is named instead, so the variant is
-    the codings themselves rather than a {coding[], text} wrapper
-  Condition.code.text: >
-    limited analytical utility; the coding variant carries the meaning
   Condition.category: >
     NOT whitelisted whole - `category.coding[0]` is named instead, so a
     second category is dropped rather than becoming a variant
