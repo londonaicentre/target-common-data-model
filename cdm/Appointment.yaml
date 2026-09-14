@@ -21,155 +21,15 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Organization
 - Patient
 default_range: string
 classes:
-  AppointmentAppointmentTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Appointment.appointmentType.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Appointment.appointmentType.coding.system
-          fhir_type: uri
-      code:
-        range: AppointmentTypeEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Appointment.appointmentType.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-AppointmentReasonCode
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Appointment.appointmentType.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Appointment.appointmentType.coding.is_source
-          fhir_type: boolean
-  AppointmentAppointmentType:
-    description: The style of appointment or patient that has been booked in the slot (not service type)
-    annotations:
-      fhir_path: Appointment.appointmentType
-    attributes:
-      coding:
-        range: AppointmentAppointmentTypeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Appointment.appointmentType.coding
-          fhir_type: Coding
-  AppointmentSpecialtyCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Appointment.specialty.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Appointment.specialty.coding.system
-          fhir_type: uri
-      code:
-        range: UKCorePracticeSettingCodeEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Appointment.specialty.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-PracticeSettingCode
-          binding_strength: extensible
-          binding_source: fhir
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Appointment.specialty.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Appointment.specialty.coding.is_source
-          fhir_type: boolean
-  AppointmentSpecialty:
-    description: The specialty of a practitioner that would be required to perform the service requested
-      in this appointment
-    annotations:
-      fhir_path: Appointment.specialty
-      key_fields: coding
-    attributes:
-      coding:
-        range: AppointmentSpecialtyCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Appointment.specialty.coding
-          fhir_type: Coding
-  AppointmentCancelationReasonCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Appointment.cancelationReason.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Appointment.cancelationReason.coding.system
-          fhir_type: uri
-      code:
-        range: AppointmentCancellationReasonEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Appointment.cancelationReason.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/appointment-cancellation-reason
-          binding_strength: example
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Appointment.cancelationReason.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Appointment.cancelationReason.coding.is_source
-          fhir_type: boolean
-  AppointmentCancelationReason:
-    description: The coded reason for the appointment being cancelled
-    annotations:
-      fhir_path: Appointment.cancelationReason
-    attributes:
-      coding:
-        range: AppointmentCancelationReasonCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Appointment.cancelationReason.coding
-          fhir_type: Coding
   AppointmentIdentifier:
     description: External Ids for this item
     annotations:
       fhir_path: Appointment.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -245,14 +105,14 @@ classes:
           fhir_path: Appointment.created
           fhir_type: dateTime
       appointmenttype:
-        range: AppointmentAppointmentType
+        range: AppointmentTypeCodeableConcept
         description: The style of appointment or patient that has been booked in the slot (not service
           type)
         annotations:
           fhir_path: Appointment.appointmentType
           fhir_type: CodeableConcept
       specialty:
-        range: AppointmentSpecialty
+        range: UKCorePracticeSettingCodeCodeableConcept
         multivalued: true
         inlined_as_list: true
         description: The specialty of a practitioner that would be required to perform the service requested
@@ -260,8 +120,9 @@ classes:
         annotations:
           fhir_path: Appointment.specialty
           fhir_type: CodeableConcept
+          key_fields: coding
       cancelationreason:
-        range: AppointmentCancelationReason
+        range: AppointmentCancellationReasonCodeableConcept
         description: The coded reason for the appointment being cancelled
         annotations:
           fhir_path: Appointment.cancelationReason
@@ -274,6 +135,7 @@ classes:
         annotations:
           fhir_path: Appointment.identifier
           fhir_type: Identifier
+          key_fields: system, value
       extension_bookingorganization_id:
         range: Organization
         required: true

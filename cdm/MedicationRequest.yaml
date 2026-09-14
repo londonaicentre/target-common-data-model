@@ -21,46 +21,15 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - Patient
 default_range: string
 classes:
-  MedicationRequestMedicationCodeableConceptCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: MedicationRequest.medicationCodeableConcept.coding
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: MedicationRequest.medicationCodeableConcept.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: MedicationRequest.medicationCodeableConcept.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: MedicationRequest.medicationCodeableConcept.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: MedicationRequest.medicationCodeableConcept.coding.is_source
-          fhir_type: boolean
   MedicationRequestIdentifier:
     description: External ids for this request
     annotations:
       fhir_path: MedicationRequest.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -108,14 +77,13 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/medicationrequest-status
           binding_strength: required
           binding_source: fhir
-      medicationcodeableconcept_coding:
-        range: MedicationRequestMedicationCodeableConceptCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
+      medicationcodeableconcept:
+        range: CodeableConcept
+        required: true
+        description: Medication to be taken
         annotations:
-          fhir_path: MedicationRequest.medicationCodeableConcept.coding
-          fhir_type: Coding
+          fhir_path: MedicationRequest.medicationCodeableConcept
+          fhir_type: CodeableConcept
       subject_id:
         range: Patient
         required: true
@@ -198,6 +166,7 @@ classes:
         annotations:
           fhir_path: MedicationRequest.identifier
           fhir_type: Identifier
+          key_fields: system, value
       note_text:
         range: string
         description: The annotation  - text content (as markdown)

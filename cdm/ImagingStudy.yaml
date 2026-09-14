@@ -21,95 +21,17 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - Location
 - Patient
 - Procedure
 default_range: string
 classes:
-  ImagingStudyModality:
-    description: All series modality if actual acquisition modalities
-    annotations:
-      fhir_path: ImagingStudy.modality
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ImagingStudy.modality.system
-          fhir_type: uri
-      code:
-        range: ImagingModalityEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ImagingStudy.modality.code
-          fhir_type: code
-          value_set: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ImagingStudy.modality.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ImagingStudy.modality.is_source
-          fhir_type: boolean
-  ImagingStudyProcedureCodeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: ImagingStudy.procedureCode.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ImagingStudy.procedureCode.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ImagingStudy.procedureCode.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ImagingStudy.procedureCode.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ImagingStudy.procedureCode.coding.is_source
-          fhir_type: boolean
-  ImagingStudyProcedureCode:
-    description: The performed procedure code
-    annotations:
-      fhir_path: ImagingStudy.procedureCode
-      key_fields: coding
-    attributes:
-      coding:
-        range: ImagingStudyProcedureCodeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: ImagingStudy.procedureCode.coding
-          fhir_type: Coding
   ImagingStudyIdentifier:
     description: Identifiers for the whole study
     annotations:
       fhir_path: ImagingStudy.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -123,107 +45,10 @@ classes:
         annotations:
           fhir_path: ImagingStudy.identifier.value
           fhir_type: string
-  ImagingStudySeriesModality:
-    description: The modality of the instances in the series
-    annotations:
-      fhir_path: ImagingStudy.series.modality
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ImagingStudy.series.modality.system
-          fhir_type: uri
-      code:
-        range: ImagingModalityEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.modality.code
-          fhir_type: code
-          value_set: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.modality.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ImagingStudy.series.modality.is_source
-          fhir_type: boolean
-  ImagingStudySeriesBodySite:
-    description: Body part examined
-    annotations:
-      fhir_path: ImagingStudy.series.bodySite
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ImagingStudy.series.bodySite.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.bodySite.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.bodySite.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ImagingStudy.series.bodySite.is_source
-          fhir_type: boolean
-  ImagingStudySeriesLaterality:
-    description: Body part laterality
-    annotations:
-      fhir_path: ImagingStudy.series.laterality
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ImagingStudy.series.laterality.system
-          fhir_type: uri
-      code:
-        range: ImagingLateralityEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.laterality.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/bodysite-laterality
-          binding_strength: example
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ImagingStudy.series.laterality.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ImagingStudy.series.laterality.is_source
-          fhir_type: boolean
   ImagingStudySeries:
     description: Each study has one or more series of instances
     annotations:
       fhir_path: ImagingStudy.series
-      key_fields: uid
     attributes:
       uid:
         range: string
@@ -239,7 +64,7 @@ classes:
           fhir_path: ImagingStudy.series.number
           fhir_type: unsignedInt
       modality:
-        range: ImagingStudySeriesModality
+        range: ImagingModalityCoding
         required: true
         description: The modality of the instances in the series
         annotations:
@@ -258,13 +83,13 @@ classes:
           fhir_path: ImagingStudy.series.numberOfInstances
           fhir_type: unsignedInt
       bodysite:
-        range: ImagingStudySeriesBodySite
+        range: Coding
         description: Body part examined
         annotations:
           fhir_path: ImagingStudy.series.bodySite
           fhir_type: Coding
       laterality:
-        range: ImagingStudySeriesLaterality
+        range: ImagingLateralityCoding
         description: Body part laterality
         annotations:
           fhir_path: ImagingStudy.series.laterality
@@ -310,21 +135,23 @@ classes:
           binding_strength: required
           binding_source: fhir
       modality:
-        range: ImagingStudyModality
+        range: ImagingModalityCoding
         multivalued: true
         inlined_as_list: true
         description: All series modality if actual acquisition modalities
         annotations:
           fhir_path: ImagingStudy.modality
           fhir_type: Coding
+          key_fields: system, code
       procedurecode:
-        range: ImagingStudyProcedureCode
+        range: CodeableConcept
         multivalued: true
         inlined_as_list: true
         description: The performed procedure code
         annotations:
           fhir_path: ImagingStudy.procedureCode
           fhir_type: CodeableConcept
+          key_fields: coding
       description:
         range: string
         description: Institution-generated description
@@ -384,6 +211,7 @@ classes:
         annotations:
           fhir_path: ImagingStudy.identifier
           fhir_type: Identifier
+          key_fields: system, value
       series:
         range: ImagingStudySeries
         multivalued: true
@@ -392,6 +220,7 @@ classes:
         annotations:
           fhir_path: ImagingStudy.series
           fhir_type: BackboneElement
+          key_fields: uid
       note_text:
         range: string
         description: The annotation  - text content (as markdown)

@@ -21,75 +21,12 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - Patient
 - Specimen
 default_range: string
 classes:
-  ObservationCategoryCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.category.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.category.coding.system
-          fhir_type: uri
-      code:
-        range: ObservationCategoryEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.category.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/observation-category
-          binding_strength: preferred
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.category.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.category.coding.is_source
-          fhir_type: boolean
-  ObservationCodeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.code.coding
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.code.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.code.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.code.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.code.coding.is_source
-          fhir_type: boolean
   ObservationValueQuantity:
     description: Actual result
     annotations:
@@ -128,92 +65,6 @@ classes:
         annotations:
           fhir_path: Observation.valueQuantity.code
           fhir_type: code
-  ObservationValueCodeableConceptCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.valueCodeableConcept.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.valueCodeableConcept.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.valueCodeableConcept.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.valueCodeableConcept.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.valueCodeableConcept.coding.is_source
-          fhir_type: boolean
-  ObservationValueCodeableConcept:
-    description: Actual result
-    annotations:
-      fhir_path: Observation.valueCodeableConcept
-    attributes:
-      coding:
-        range: ObservationValueCodeableConceptCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Observation.valueCodeableConcept.coding
-          fhir_type: Coding
-  ObservationComponentCodeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.component.code.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.component.code.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.component.code.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.component.code.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.component.code.coding.is_source
-          fhir_type: boolean
-  ObservationComponentCode:
-    description: Type of component observation (code / type)
-    annotations:
-      fhir_path: Observation.component.code
-    attributes:
-      coding:
-        range: ObservationComponentCodeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Observation.component.code.coding
-          fhir_type: Coding
   ObservationComponentValueQuantity:
     description: Actual component result
     annotations:
@@ -252,57 +103,13 @@ classes:
         annotations:
           fhir_path: Observation.component.valueQuantity.code
           fhir_type: code
-  ObservationComponentValueCodeableConceptCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Observation.component.valueCodeableConcept.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Observation.component.valueCodeableConcept.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Observation.component.valueCodeableConcept.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Observation.component.valueCodeableConcept.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Observation.component.valueCodeableConcept.coding.is_source
-          fhir_type: boolean
-  ObservationComponentValueCodeableConcept:
-    description: Actual component result
-    annotations:
-      fhir_path: Observation.component.valueCodeableConcept
-    attributes:
-      coding:
-        range: ObservationComponentValueCodeableConceptCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Observation.component.valueCodeableConcept.coding
-          fhir_type: Coding
   ObservationComponent:
     description: Component results
     annotations:
       fhir_path: Observation.component
-      key_fields: code
     attributes:
       code:
-        range: ObservationComponentCode
+        range: CodeableConcept
         required: true
         description: Type of component observation (code / type)
         annotations:
@@ -315,7 +122,7 @@ classes:
           fhir_path: Observation.component.valueQuantity
           fhir_type: Quantity
       valuecodeableconcept:
-        range: ObservationComponentValueCodeableConcept
+        range: CodeableConcept
         description: Actual component result
         annotations:
           fhir_path: Observation.component.valueCodeableConcept
@@ -360,14 +167,13 @@ classes:
         annotations:
           fhir_path: Observation.category.coding
           fhir_type: Coding
-      code_coding:
-        range: ObservationCodeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
+      code:
+        range: CodeableConcept
+        required: true
+        description: Type of observation (code / type)
         annotations:
-          fhir_path: Observation.code.coding
-          fhir_type: Coding
+          fhir_path: Observation.code
+          fhir_type: CodeableConcept
       subject_id:
         range: Patient
         inlined: false
@@ -405,7 +211,7 @@ classes:
           fhir_path: Observation.valueQuantity
           fhir_type: Quantity
       valuecodeableconcept:
-        range: ObservationValueCodeableConcept
+        range: CodeableConcept
         description: Actual result
         annotations:
           fhir_path: Observation.valueCodeableConcept
@@ -430,6 +236,7 @@ classes:
         annotations:
           fhir_path: Observation.component
           fhir_type: BackboneElement
+          key_fields: code
       note_text:
         range: string
         description: The annotation  - text content (as markdown)

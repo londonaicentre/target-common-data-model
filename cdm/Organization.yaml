@@ -21,13 +21,13 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 default_range: string
 classes:
   OrganizationIdentifier:
     description: Identifies this organization  across multiple systems
     annotations:
       fhir_path: Organization.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -41,36 +41,6 @@ classes:
         annotations:
           fhir_path: Organization.identifier.value
           fhir_type: string
-  OrganizationTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Organization.type.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Organization.type.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Organization.type.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Organization.type.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Organization.type.coding.is_source
-          fhir_type: boolean
   Organization:
     description: One row per Organization resource.
     annotations:
@@ -117,6 +87,7 @@ classes:
         annotations:
           fhir_path: Organization.identifier
           fhir_type: Identifier
+          key_fields: system, value
       name:
         range: string
         description: Name used for the organization
@@ -124,7 +95,7 @@ classes:
           fhir_path: Organization.name
           fhir_type: string
       type_coding:
-        range: OrganizationTypeCoding
+        range: Coding
         description: Code defined by a terminology system
         annotations:
           fhir_path: Organization.type.coding

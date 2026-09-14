@@ -21,41 +21,11 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - Patient
 default_range: string
 classes:
-  ServiceRequestCodeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: ServiceRequest.code.coding
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ServiceRequest.code.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ServiceRequest.code.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ServiceRequest.code.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ServiceRequest.code.coding.is_source
-          fhir_type: boolean
   ServiceRequestOccurrencePeriod:
     description: When service should occur
     annotations:
@@ -77,7 +47,6 @@ classes:
     description: Identifiers assigned to this order
     annotations:
       fhir_path: ServiceRequest.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -91,49 +60,6 @@ classes:
         annotations:
           fhir_path: ServiceRequest.identifier.value
           fhir_type: string
-  ServiceRequestExtensionSourceOfServiceRequestCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding.is_source
-          fhir_type: boolean
-  ServiceRequestExtensionSourceOfServiceRequest:
-    description: A set of codes that describe the source of the service request.
-    annotations:
-      fhir_path: ServiceRequest.extension:sourceOfServiceRequest
-    attributes:
-      coding:
-        range: ServiceRequestExtensionSourceOfServiceRequestCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: ServiceRequest.extension:sourceOfServiceRequest.coding
-          fhir_type: Coding
   ServiceRequest:
     description: One row per ServiceRequest resource.
     annotations:
@@ -168,14 +94,12 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/request-status
           binding_strength: required
           binding_source: fhir
-      code_coding:
-        range: ServiceRequestCodeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
+      code:
+        range: CodeableConcept
+        description: What is being requested/ordered
         annotations:
-          fhir_path: ServiceRequest.code.coding
-          fhir_type: Coding
+          fhir_path: ServiceRequest.code
+          fhir_type: CodeableConcept
       subject_id:
         range: Patient
         required: true
@@ -219,8 +143,9 @@ classes:
         annotations:
           fhir_path: ServiceRequest.identifier
           fhir_type: Identifier
+          key_fields: system, value
       extension_sourceofservicerequest:
-        range: ServiceRequestExtensionSourceOfServiceRequest
+        range: CodeableConcept
         required: true
         description: A set of codes that describe the source of the service request.
         annotations:

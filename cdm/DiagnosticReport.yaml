@@ -21,64 +21,17 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - ImagingStudy
 - Observation
 - Patient
 default_range: string
 classes:
-  DiagnosticReportCategoryCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: DiagnosticReport.category.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: DiagnosticReport.category.coding.system
-          fhir_type: uri
-      code:
-        range: DiagnosticServiceSectionEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: DiagnosticReport.category.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/diagnostic-service-sections
-          binding_strength: example
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: DiagnosticReport.category.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: DiagnosticReport.category.coding.is_source
-          fhir_type: boolean
-  DiagnosticReportCategory:
-    description: Service category
-    annotations:
-      fhir_path: DiagnosticReport.category
-      key_fields: coding
-    attributes:
-      coding:
-        range: DiagnosticReportCategoryCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: DiagnosticReport.category.coding
-          fhir_type: Coding
   DiagnosticReportIdentifier:
     description: Business identifier for report
     annotations:
       fhir_path: DiagnosticReport.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -127,13 +80,14 @@ classes:
           binding_strength: required
           binding_source: fhir
       category:
-        range: DiagnosticReportCategory
+        range: DiagnosticServiceSectionCodeableConcept
         multivalued: true
         inlined_as_list: true
         description: Service category
         annotations:
           fhir_path: DiagnosticReport.category
           fhir_type: CodeableConcept
+          key_fields: coding
       subject_id:
         range: Patient
         inlined: false
@@ -194,3 +148,4 @@ classes:
         annotations:
           fhir_path: DiagnosticReport.identifier
           fhir_type: Identifier
+          key_fields: system, value
