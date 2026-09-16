@@ -88,7 +88,13 @@ include:
       MedicationAdministration.dosage.route.coding.code: MedicationRouteEnum
     exclude:
       MedicationAdministration.dosage.route.text: >
-        rendered term; the coding carries the meaning
+        rendered term; promoted to its own field below so the coded route
+        keeps the shared CodeableConcept shape
+
+  # The route as the source rendered it, for feeds that send a term without
+  # a usable code.
+  # dosage_route_text  string
+  MedicationAdministration.dosage.route.text:
 
   # Free-text dose instruction as given
   # dosage_text  string

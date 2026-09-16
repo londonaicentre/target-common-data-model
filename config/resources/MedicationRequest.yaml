@@ -56,13 +56,40 @@ include:
   # dosageinstruction_text  string
   MedicationRequest.dosageInstruction[0].text:
 
-  # E.g. Oral vs IV. The coded route and the rendered term are both taken
-  # dosageinstruction_route_coding_code
-  #     string (enum MedicationRouteEnum)
-  # dosageinstruction_route_text  string
-  MedicationRequest.dosageInstruction[0].route.coding[0].code:
+  # Instructions written for the patient, as distinct from `text`.
+  # dosageinstruction_patientinstruction  string
+  MedicationRequest.dosageInstruction[0].patientInstruction:
+
+  # Take-as-needed, either as a flag or with a coded reason ("for pain").
+  # The reason is unbound: `preferred` to a SNOMED subset that needs a
+  # terminology server.
+  # dosageinstruction_asneededboolean  boolean
+  # dosageinstruction_asneededcodeableconcept
+  #     struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  MedicationRequest.dosageInstruction[0].asNeededBoolean:
+  MedicationRequest.dosageInstruction[0].asNeededCodeableConcept:
+    exclude:
+      MedicationRequest.dosageInstruction[0].asNeededCodeableConcept.text: >
+        rendered term; the coding carries the meaning
+
+  # E.g. Oral vs IV
+  # dosageinstruction_route  struct { coding: [ {system: string, code: string
+  #                                              (enum MedicationRouteEnum),
+  #                                              display: string,
+  #                                              is_source: boolean} ] }
+  MedicationRequest.dosageInstruction[0].route:
     bindings:
-      MedicationRequest.dosageInstruction[0].route.coding[0].code: MedicationRouteEnum
+      # Manual: CDM subset of the SNOMED route hierarchy (FHIR preferred)
+      MedicationRequest.dosageInstruction[0].route.coding.code: MedicationRouteEnum
+    exclude:
+      MedicationRequest.dosageInstruction[0].route.text: >
+        rendered term; promoted to its own field below so the coded route
+        keeps the shared CodeableConcept shape
+
+  # The route as the source rendered it, for feeds that send a term without
+  # a usable code.
+  # dosageinstruction_route_text  string
   MedicationRequest.dosageInstruction[0].route.text:
 
   # Dose ceiling per administration, and its unit (e.g. *50mg* tds).
@@ -164,18 +191,11 @@ rejected:
   MedicationRequest.dosageInstruction.sequence: >
     not in scope of typical source data; it orders a multi-step regimen, and
     only the first step is taken
-  MedicationRequest.dosageInstruction.patientInstruction: >
-    limited analytical utility; duplicates `text` without adding analysable
-    content
   MedicationRequest.dosageInstruction.timing: >
     not in scope of typical source data; Timing is a deep recursive structure
     (repeat.bounds[x], when, offset). `timing.code` carries BD/TDS where a
     source populates it, but UK feeds put frequency in the dose text, which
     `dosageinstruction_text` takes
-  MedicationRequest.dosageInstruction.asNeededBoolean: >
-    not in scope of typical source data
-  MedicationRequest.dosageInstruction.asNeededCodeableConcept: >
-    not in scope of typical source data
   MedicationRequest.dosageInstruction.site: >
     limited analytical utility; a prescribing intention rather than a recorded
     fact, and route carries the analytical signal. MedicationAdministration

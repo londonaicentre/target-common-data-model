@@ -167,11 +167,11 @@ Examples:
                                   -> address[], every address, each carrying
                                      its own postalCode, line, city ...
 
-    Condition.code.coding.code    an array (coding) sits ABOVE
-                                  -> code_coding_code, from coding[0]
+    Condition.note.text           an array (note) sits ABOVE
+                                  -> note_text, from note[0]
 
-    Condition.code.coding         the array itself
-                                  -> code_coding[], every coding
+    Condition.note                the array itself
+                                  -> note[], every note
 
     Encounter.diagnosis           an array of BackboneElement, holding a
                                   Reference and a CodeableConcept
@@ -279,14 +279,14 @@ The whitelisted path is re-named by dropping the resource prefix, and replacing 
     Patient.address.postalCode             -> address_postalcode
     Patient.identifier:nhsNumber.value     -> identifier_nhsnumber_value
     Condition.onsetDateTime                -> onsetdatetime
-    Condition.code.coding                  -> code_coding
+    Condition.note.text                    -> note_text
 
 The name carries the full path even where the field was promoted from deep in the tree, so it always traces back to the FHIR element it came from.
 
 Everything **under** the field keeps its FHIR name, unchanged. The whitelisted path is the field; its contents are that element's own structure.
 
     Encounter.period            -> period {start, end}
-    Condition.code.coding       -> code_coding [ {system, code, display} ]
+    Condition.code              -> code {coding [ {system, code, display, is_source} ]}
     Patient.address             -> address [ {use, line, city, postalCode} ]
 
 So naming a deeper path is how a value is lifted out of a structure and given a name of its own:
