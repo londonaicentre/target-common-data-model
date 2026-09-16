@@ -62,7 +62,7 @@ include:
         Reference to BodyStructure, which the CDM does not model; the coding
         carries the site
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Specimen number from the source system.
   # identifier  array [ {system: string, value: string} ]
@@ -121,8 +121,8 @@ rejected:
 
   # --- References to other resources --------------------------------------
   Specimen.request: >
-    ServiceRequest IS modelled, but the field is 0..* and would become a
-    variant of bare ids; the accession identifier carries the link
+    ServiceRequest IS modelled, but the field is 0..* and would become an
+    array of bare ids; the accession identifier carries the link
   Specimen.parent: >
     limited analytical utility; the aliquot chain is a graph, not a column
 

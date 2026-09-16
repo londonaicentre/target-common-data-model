@@ -146,7 +146,7 @@ include:
       Encounter.extension:OutcomeOfAttendance.text: >
         rendered term; the coding carries the meaning
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # The CDS primary / secondary diagnosis grid. `rank` orders them.
   # diagnosis  array [ {condition_id: string (FK -> Condition.id),
@@ -199,7 +199,7 @@ rejected:
   Encounter.location: >
     Location IS modelled, but `serviceProvider` already carries the "where"
     this table needs, at the organisation grain analysis works at. The
-    finer, ward-level grain is not required: it would arrive as a variant of
+    finer, ward-level grain is not required: it would arrive as an array of
     one object per ward stay - or as a table of its own at one row per
     location period - and neither is warranted for a signal nothing asks for
 
@@ -217,7 +217,7 @@ rejected:
     encounter link is not reliably populated
   Encounter.account: billing/finance, out of scope for a clinical CDM
   Encounter.reasonReference: >
-    limited analytical utility; the diagnosis variant carries the clinical
+    limited analytical utility; the diagnosis array carries the clinical
     reason more reliably
   Encounter.hospitalization.origin: >
     Location IS modelled, but admitSource carries the analytical signal
@@ -243,7 +243,7 @@ rejected:
     not in scope of typical source data; urgency reads from class and
     admissionMethod
   Encounter.reasonCode: >
-    limited analytical utility; duplicates the diagnosis variant with a
+    limited analytical utility; duplicates the diagnosis array with a
     weaker binding
   Encounter.length: >
     derivable from period_start and period_end; storing it invites the two

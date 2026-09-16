@@ -60,7 +60,7 @@ include:
       Procedure.bodySite.text: >
         rendered term; the coding carries the meaning
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Theatre system procedure number, local episode id.
   # identifier  array [ {system: string, value: string} ]

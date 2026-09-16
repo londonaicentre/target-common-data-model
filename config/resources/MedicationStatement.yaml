@@ -57,8 +57,8 @@ include:
 
   # --- Dosage -------------------------------------------------------------
 
-  # The dosage is promoted to scalars from dosage[0] rather than kept as a
-  # variant
+  # The dosage is promoted to scalars from dosage[0] rather than kept as an
+  # array
 
   # How the patient reports taking the drug ("Atorvastatin 40mg ON").
   # dosage_text  string
@@ -107,7 +107,7 @@ include:
   MedicationStatement.dosage[0].maxDosePerAdministration.value:
   MedicationStatement.dosage[0].maxDosePerAdministration.unit:
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Statement id from the source system. The profile makes `system` and
   # `value` 1..1 here, unlike most resources.
@@ -151,7 +151,7 @@ rejected:
   # --- Dosage -------------------------------------------------------------
   MedicationStatement.dosage: >
     NOT whitelisted whole - the wanted leaves are promoted out of `dosage[0]`
-    instead, so the table carries flat scalars rather than a variant. A drug
+    instead, so the table carries flat scalars rather than an array. A drug
     history asserts one dose, so the first entry is the assertion
   MedicationStatement.dosage.doseAndRate: >
     NOT REACHABLE, rather than rejected. The structured dose

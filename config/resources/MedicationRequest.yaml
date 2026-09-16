@@ -110,7 +110,7 @@ include:
   # dispenserequest_expectedsupplyduration_value  float
   MedicationRequest.dispenseRequest.expectedSupplyDuration.value:
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Prescription number from the source system.
   # identifier  array [ {system: string, value: string} ]
@@ -185,7 +185,7 @@ rejected:
   MedicationRequest.dosageInstruction: >
     NOT whitelisted whole - the wanted leaves are promoted out of
     `dosageInstruction[0]` instead, so the table carries flat scalars rather
-    than a variant holding a nested CodeableConcept and Quantity. A
+    than an array holding a nested CodeableConcept and Quantity. A
     multi-step regimen is flattened to its first step, which these feeds do
     not populate in any case
   MedicationRequest.dosageInstruction.sequence: >

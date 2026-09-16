@@ -53,7 +53,7 @@ include:
   ServiceRequest.occurrenceDateTime:
   ServiceRequest.occurrencePeriod:
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Referral or order number from the source system.
   # identifier  array [ {system: string, value: string} ]

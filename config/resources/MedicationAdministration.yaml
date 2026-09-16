@@ -123,7 +123,7 @@ include:
       MedicationAdministration.dosage.rateRatio.numerator.comparator: default
       MedicationAdministration.dosage.rateRatio.denominator.comparator: default
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Administration record id from the source system.
   # identifier  array [ {system: string, value: string} ]
