@@ -144,6 +144,12 @@ classes:
           value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-ConditionCategory
           binding_strength: extensible
           binding_source: manual
+  ConditionCategoryCodeableConcept:
+    is_a: CodeableConcept
+    description: A CodeableConcept whose codings are ConditionCategoryCoding.
+    slot_usage:
+      coding:
+        range: ConditionCategoryCoding
   ConditionClinicalCoding:
     is_a: Coding
     description: A Coding whose code is drawn from ConditionClinicalEnum.
@@ -264,6 +270,12 @@ classes:
           replaces_value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-EncounterType
           binding_strength: preferred
           binding_source: local
+  EncounterCategoryCodeableConcept:
+    is_a: CodeableConcept
+    description: A CodeableConcept whose codings are EncounterCategoryCoding.
+    slot_usage:
+      coding:
+        range: EncounterCategoryCoding
   EncounterClassCoding:
     is_a: Coding
     description: A Coding whose code is drawn from EncounterClassEnum.
@@ -366,6 +378,12 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/observation-category
           binding_strength: preferred
           binding_source: manual
+  ObservationCategoryCodeableConcept:
+    is_a: CodeableConcept
+    description: A CodeableConcept whose codings are ObservationCategoryCoding.
+    slot_usage:
+      coding:
+        range: ObservationCategoryCoding
   OutcomeOfAttendanceCoding:
     is_a: Coding
     description: A Coding whose code is drawn from OutcomeOfAttendanceEnum.

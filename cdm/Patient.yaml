@@ -21,13 +21,13 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 default_range: string
 classes:
   PatientIdentifier:
     description: An identifier for this patient
     annotations:
       fhir_path: Patient.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -45,7 +45,6 @@ classes:
     description: A name associated with the patient
     annotations:
       fhir_path: Patient.name
-      key_fields: use, family
     attributes:
       use:
         range: NameUseEnum
@@ -69,46 +68,13 @@ classes:
         annotations:
           fhir_path: Patient.name.given
           fhir_type: string
-  PatientAddressExtensionAddressKeyExtensionTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Patient.address.extension:addressKey.extension:type.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Patient.address.extension:addressKey.extension:type.coding.system
-          fhir_type: uri
-      code:
-        range: UKCoreAddressKeyTypeEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Patient.address.extension:addressKey.extension:type.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-AddressKeyType
-          binding_strength: extensible
-          binding_source: fhir
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Patient.address.extension:addressKey.extension:type.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Patient.address.extension:addressKey.extension:type.coding.is_source
-          fhir_type: boolean
   PatientAddressExtensionAddressKeyExtensionType:
     description: Address Key Type
     annotations:
       fhir_path: Patient.address.extension:addressKey.extension:type
     attributes:
       coding:
-        range: PatientAddressExtensionAddressKeyExtensionTypeCoding
+        range: UKCoreAddressKeyTypeCoding
         multivalued: true
         inlined_as_list: true
         description: Code defined by a terminology system
@@ -161,7 +127,6 @@ classes:
     description: An address for the individual
     annotations:
       fhir_path: Patient.address
-      key_fields: period, postalcode
     attributes:
       extension_addresskey:
         range: PatientAddressExtensionAddressKey
@@ -211,52 +176,6 @@ classes:
         annotations:
           fhir_path: Patient.address.period
           fhir_type: Period
-  PatientExtensionEthnicCategoryCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Patient.extension:ethnicCategory.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Patient.extension:ethnicCategory.coding.system
-          fhir_type: uri
-      code:
-        range: EthnicCategoryEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Patient.extension:ethnicCategory.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-EthnicCategory
-          binding_strength: extensible
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Patient.extension:ethnicCategory.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Patient.extension:ethnicCategory.coding.is_source
-          fhir_type: boolean
-  PatientExtensionEthnicCategory:
-    description: A code classifying the person's ethnicity
-    annotations:
-      fhir_path: Patient.extension:ethnicCategory
-    attributes:
-      coding:
-        range: PatientExtensionEthnicCategoryCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Patient.extension:ethnicCategory.coding
-          fhir_type: Coding
   Patient:
     description: One row per Patient resource.
     annotations:
@@ -296,6 +215,7 @@ classes:
         annotations:
           fhir_path: Patient.identifier
           fhir_type: Identifier
+          key_fields: system, value
       name_family:
         range: string
         description: Family name (often called 'Surname')
@@ -316,6 +236,7 @@ classes:
         annotations:
           fhir_path: Patient.name
           fhir_type: HumanName
+          key_fields: use, family
       gender:
         range: AdministrativeGenderEnum
         description: male | female | other | unknown
@@ -357,8 +278,9 @@ classes:
         annotations:
           fhir_path: Patient.address
           fhir_type: Address
+          key_fields: period, postalcode
       extension_ethniccategory:
-        range: PatientExtensionEthnicCategory
+        range: EthnicCategoryCodeableConcept
         required: true
         description: A code classifying the person's ethnicity
         annotations:

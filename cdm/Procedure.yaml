@@ -21,6 +21,7 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Encounter
 - Patient
 default_range: string
@@ -42,86 +43,10 @@ classes:
         annotations:
           fhir_path: Procedure.performedPeriod.end
           fhir_type: dateTime
-  ProcedureCodeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Procedure.code.coding
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Procedure.code.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Procedure.code.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Procedure.code.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Procedure.code.coding.is_source
-          fhir_type: boolean
-  ProcedureBodySiteCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Procedure.bodySite.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Procedure.bodySite.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Procedure.bodySite.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Procedure.bodySite.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Procedure.bodySite.coding.is_source
-          fhir_type: boolean
-  ProcedureBodySite:
-    description: Target body sites
-    annotations:
-      fhir_path: Procedure.bodySite
-      key_fields: coding
-    attributes:
-      coding:
-        range: ProcedureBodySiteCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Procedure.bodySite.coding
-          fhir_type: Coding
   ProcedureIdentifier:
     description: External Identifiers for this procedure
     annotations:
       fhir_path: Procedure.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -199,22 +124,21 @@ classes:
         annotations:
           fhir_path: Procedure.performedPeriod
           fhir_type: Period
-      code_coding:
-        range: ProcedureCodeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
+      code:
+        range: CodeableConcept
+        description: Identification of the procedure
         annotations:
-          fhir_path: Procedure.code.coding
-          fhir_type: Coding
+          fhir_path: Procedure.code
+          fhir_type: CodeableConcept
       bodysite:
-        range: ProcedureBodySite
+        range: CodeableConcept
         multivalued: true
         inlined_as_list: true
         description: Target body sites
         annotations:
           fhir_path: Procedure.bodySite
           fhir_type: CodeableConcept
+          key_fields: coding
       identifier:
         range: ProcedureIdentifier
         multivalued: true
@@ -223,6 +147,7 @@ classes:
         annotations:
           fhir_path: Procedure.identifier
           fhir_type: Identifier
+          key_fields: system, value
       note_text:
         range: string
         description: The annotation  - text content (as markdown)
