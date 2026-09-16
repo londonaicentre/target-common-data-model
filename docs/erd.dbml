@@ -643,7 +643,7 @@ Table encounter {
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Encounter.meta.lastUpdated | fhir_type: instant']
   status EncounterStatusEnum [not null, note: 'planned | arrived | triaged | in-progress | onleave | finished | cancelled + | fhir_path: Encounter.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/encounter-status']
   class variant [not null, note: 'Classification of patient encounter | EncounterClassCoding {system, code, display, is_source} | fhir_path: Encounter.class | fhir_type: Coding']
-  type_coding variant [note: 'Code defined by a terminology system | EncounterCategoryCoding {system, code, display, is_source} | fhir_path: Encounter.type.coding | fhir_type: Coding']
+  type variant [note: 'Specific type of encounter | EncounterCategoryCodeableConcept [{coding}] - key: coding | fhir_path: Encounter.type | fhir_type: CodeableConcept']
   servicetype variant [note: 'Specific type of service | CodeableConcept {coding} | fhir_path: Encounter.serviceType | fhir_type: CodeableConcept']
   subject_id varchar [note: 'The patient or group present at the encounter | fhir_path: Encounter.subject | fhir_type: Reference']
   partof_id varchar [note: 'Another Encounter this encounter is part of | fhir_path: Encounter.partOf | fhir_type: Reference']

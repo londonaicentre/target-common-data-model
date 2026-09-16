@@ -33,14 +33,21 @@ include:
     bindings:
       Encounter.class.code: EncounterClassEnum
 
-  # The CDM's own encounter axis (apc_spell, ecds_attendance).
-  # type_coding  struct {system: string, code: string
-  #                      (enum EncounterCategoryEnum), display: string,
-  #                      is_source: boolean}
-  Encounter.type.coding[0]:
+  # The CDM's own encounter axis (apc_spell, ecds_attendance); 0..* as an
+  # encounter can carry more than one type.
+  # type  array [ { coding: [ {system: string, code: string
+  #                            (enum EncounterCategoryEnum),
+  #                            display: string,
+  #                            is_source: boolean} ] } ]
+  Encounter.type:
+    key: [coding]
     bindings:
-      # Manual: CDM-defined vocabulary, not a FHIR value set.
-      Encounter.type.coding[0].code: EncounterCategoryEnum
+      # Local: CDM-defined vocabulary that replaces UKCore-EncounterType
+      # (preferred), not a FHIR value set.
+      Encounter.type.coding.code: EncounterCategoryEnum
+    exclude:
+      Encounter.type.text: >
+        rendered term; the coding carries the meaning
 
   # Care setting / treatment function.
   # servicetype  struct { coding: [ {system: string, code: string,
@@ -232,9 +239,6 @@ rejected:
     not in scope of typical source data; the elective pathway is not modelled
 
   # --- Other --------------------------------------------------------------
-  Encounter.type: >
-    NOT whitelisted whole - `type.coding[0]` is named instead, so a second
-    treatment function is dropped rather than becoming a variant
   Encounter.priority: >
     not in scope of typical source data; urgency reads from class and
     admissionMethod

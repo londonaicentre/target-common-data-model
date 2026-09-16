@@ -328,9 +328,9 @@ Nesting is bounded by the path, not by a rule: a field can only be as deep as th
 Every `Coding` that is included gets an `is_source` flag: the coding that came from the source system has `is_source` true, and a downstream mapping step adds standard-vocabulary codings with `is_source` false. Exactly one true per array. **`is_source` is a custom field, not native to FHIR.**
 
     Condition.code                -> code {coding [ {system, code, display, is_source} ]}
-    Condition.category.coding[0]  -> category_coding {system, code, display, is_source}
-    Encounter.diagnosis        -> diagnosis [ {..., use {coding [ {..., is_source} ]}} ]
-                                  a coding inside a variant is still a coding
+    Encounter.type                -> type [ {coding [ {system, code, display, is_source} ]} ]
+    Encounter.diagnosis           -> diagnosis [ {..., use {coding [ {..., is_source} ]}} ]
+                                     a coding inside a variant is still a coding
 
 Where a single coding survives, `is_source` is true on it.
 
@@ -405,15 +405,7 @@ Paths are written in full. This is verbose, and deliberately so.
 
 **A manifest entry** is used where `default` will not do. Entries can be added here to enforce FHIR `preferred` strength bindings, or custom CDM-defined vocabularies. The manifest holds hand-written bindings and nothing else.
 
-**`local_codes: true`** on a manifest entry says its codes come from outside FHIR entirely - a local vocabulary that *replaces* the field's binding rather than copying, subsetting or unioning it. Almost no entry sets it, because almost every hand-written entry still describes the value set its field binds: `EncounterClassEnum` is v3-ActEncounterCode verbatim, `MedicationRouteEnum` a subset of the SNOMED routes UK Core binds, `ConditionCategoryEnum` a union across two code systems. `EncounterCategoryEnum` is the exception - `apc_spell` and `ecds_attendance` appear in no FHIR value set at all.exclude:
-Condition.category.text: >
-not carried, in rendered outputexclude:
-Condition.category.text: >
-not carried, in rendered outputexclude:
-Condition.category.text: >
-not carried, in rendered outputexclude:
-Condition.category.text: >
-not carried, in rendered output
+**`local_codes: true`** on a manifest entry says its codes come from outside FHIR entirely - a local vocabulary that *replaces* the field's binding rather than copying, subsetting or unioning it. Almost no entry sets it, because almost every hand-written entry still describes the value set its field binds: `EncounterClassEnum` is v3-ActEncounterCode verbatim, `MedicationRouteEnum` a subset of the SNOMED routes UK Core binds, `ConditionCategoryEnum` a union across two code systems. `EncounterCategoryEnum` is the exception - `apc_spell` and `ecds_attendance` appear in no FHIR value set at all.
 
 **What `binding_source` records.** Every bound field carries one of three values, describing where its codes came from - not where they are written down:
 
