@@ -787,7 +787,7 @@ Table observation {
   meta_source varchar [note: 'Identifies where the resource comes from. | fhir_path: Observation.meta.source | fhir_type: uri']
   meta_last_updated timestamp_ntz [note: 'When the resource version last changed. | fhir_path: Observation.meta.lastUpdated | fhir_type: instant']
   status ObservationStatusEnum [not null, note: 'registered | preliminary | final | amended + | fhir_path: Observation.status | fhir_type: code | value_set: http://hl7.org/fhir/ValueSet/observation-status']
-  category_coding variant [note: 'Code defined by a terminology system | ObservationCategoryCoding {system, code, display, is_source} | fhir_path: Observation.category.coding | fhir_type: Coding']
+  category variant [note: 'Classification of type of observation | ObservationCategoryCodeableConcept [{coding}] - key: coding | fhir_path: Observation.category | fhir_type: CodeableConcept']
   code variant [not null, note: 'Type of observation (code / type) | CodeableConcept {coding} | fhir_path: Observation.code | fhir_type: CodeableConcept']
   subject_id varchar [note: 'Who and/or what the observation is about | fhir_path: Observation.subject | fhir_type: Reference']
   encounter_id varchar [note: 'Healthcare event during which this observation is made | fhir_path: Observation.encounter | fhir_type: Reference']

@@ -22,13 +22,19 @@ include:
 
   # --- Category -----------------------------------------------------------
 
-  # The coarse axis, e.g. blood test vs vital sign.
-  # category_coding  struct {system: string, code: string
-  #                          (enum ObservationCategoryEnum), display: string,
-  #                          is_source: boolean}
-  Observation.category.coding[0]:
+  # The coarse axis, e.g. blood test vs vital sign; 0..* as an observation
+  # can belong to more than one category.
+  # category  array [ { coding: [ {system: string, code: string
+  #                                (enum ObservationCategoryEnum),
+  #                                display: string,
+  #                                is_source: boolean} ] } ]
+  Observation.category:
+    key: [coding]
     bindings:
       Observation.category.coding.code: ObservationCategoryEnum
+    exclude:
+      Observation.category.text: >
+        rendered term; the coding carries the meaning
 
   # --- What was measured --------------------------------------------------
 
