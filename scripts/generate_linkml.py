@@ -16,11 +16,15 @@ The pipeline, per resource:
               |
               |  prune      global exclusions (CONVENTIONS.md §1)
               |  select     the config whitelist       (§7, §8)
-              |  shape      first-entry / variant / _id / is_source (§2, §5, §6)
+              |  shape      first-entry / array / _id / is_source (§2, §5, §6)
               |  bind       FHIR bindings + manual overrides   (§12)
               |  render     LinkML classes and slots           (§4)
               v
     cdm/<Resource>.yaml  +  build/fhir_bindings.yaml
+
+Every Coding and CodeableConcept in its standard shape is emitted once, in
+cdm/datatypes.yaml, rather than as a class per path; a bound one is a subclass
+named after its vocabulary (CONVENTIONS.md §4).
 
 Bindings are declared, never inferred (CONVENTIONS.md "How bindings work"). A
 config names the field carrying the bare `code` and says where its vocabulary
@@ -64,7 +68,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +85,7 @@ OUTPUT_DIR = REPO_ROOT / "cdm"
 BINDINGS_PATH = REPO_ROOT / "build" / "fhir_bindings.yaml"
 FHIR_ENUMS_PATH = REPO_ROOT / "build" / "fhir_enums.yaml"
 ENUMS_PATH = OUTPUT_DIR / "enums.yaml"
+DATATYPES_PATH = OUTPUT_DIR / "datatypes.yaml"
 
 SCHEMA_BASE_URI = "https://cdm.aicentre.co.uk"
 
@@ -193,7 +198,7 @@ def child_name(path: str, parent_path: str) -> str:
 
 
 def class_name(resource: str, path: str) -> str:
-    """CamelCase class name for a variant or inline object."""
+    """CamelCase class name for an inline object, repeating or not."""
     tail = strip_indices(path[len(resource) + 1 :]) if path.startswith(resource + ".") else path
     parts = re.split(r"[.:]", tail)
     return resource + "".join(p[:1].upper() + p[1:] for p in parts if p)
@@ -589,15 +594,18 @@ class Slot:
     fk_target: str | None = None
     inlined_class: str | None = None
     identifier: bool = False
+    key_fields: list[str] = field(default_factory=list)
 
 
 @dataclass
-class VariantClass:
+class ObjectClass:
     name: str
     fhir_path: str
     description: str | None
-    key_fields: list[str] = field(default_factory=list)
     slots: list[Slot] = field(default_factory=list)
+    # A shared datatype (§4), defined in cdm/datatypes.yaml rather than in the
+    # resource schema that reaches it.
+    shared: bool = False
 
 
 @dataclass
@@ -608,9 +616,208 @@ class ResourceSchema:
     fhir_version: str | None
     description: str | None
     slots: list[Slot] = field(default_factory=list)
-    classes: list[VariantClass] = field(default_factory=list)
+    classes: list[ObjectClass] = field(default_factory=list)
     enums_used: set[str] = field(default_factory=set)
     fk_targets: set[str] = field(default_factory=set)
+    datatypes_used: set[str] = field(default_factory=set)
+
+
+# ---------------------------------------------------------------------------
+# Shared datatypes (§4)
+#
+# A Coding is the same structure wherever it sits, and so is a CodeableConcept
+# once its `.text` is excluded. Each is emitted once in cdm/datatypes.yaml
+# rather than as a class named after every path that reaches it. A bound
+# `code` narrows the shared Coding in a subclass named after its vocabulary,
+# which every field bound to that vocabulary then shares:
+#
+#     Coding                          {system, code, display, is_source}
+#       AdmitSourceCoding             code: AdmitSourceEnum
+#     CodeableConcept                 {coding [Coding]}
+#       AdmitSourceCodeableConcept    coding: [AdmitSourceCoding]
+#
+# Anything else - a CodeableConcept that keeps `.text`, a Coding with a child
+# excluded - is not the shared structure, and keeps a class named by path.
+# ---------------------------------------------------------------------------
+
+CODING = "Coding"
+CODEABLE_CONCEPT = "CodeableConcept"
+
+# The standard Coding: FHIR's children less the global exclusions (§1), plus
+# `is_source` (§6). `code` is absent because its range is where a binding
+# lands, and is checked on its own.
+CODING_RANGES = {"system": "uri", "display": "string", "is_source": "boolean"}
+
+
+class SharedTypes:
+    """The Coding and CodeableConcept classes every resource schema shares.
+
+    Filled in as resources resolve: `adopt` is offered each Coding and
+    CodeableConcept that `ClassBuilder` builds, and `render` emits whichever
+    shared classes were adopted at least once.
+    """
+
+    def __init__(self) -> None:
+        # The first standard class of each kind, whose FHIR element
+        # descriptions the shared class takes.
+        self._coding: ObjectClass | None = None
+        self._concept: ObjectClass | None = None
+        # Bound subclasses by vocabulary stem, each with the binding it narrows
+        # `code` to. A concept subclass exists only where one was adopted.
+        self._bound_codings: dict[str, BindingInfo] = {}
+        self._bound_concepts: set[str] = set()
+
+    def adopt(self, cls: ObjectClass, fhir_type: str) -> str | None:
+        """The shared class `cls` is structurally, or None if it is not standard.
+
+        Raises ResolutionError where a vocabulary is bound with a different
+        strength or source than a field already sharing its subclass, since the
+        subclass records only one.
+        """
+        if fhir_type == CODING:
+            return self._adopt_coding(cls)
+        if fhir_type == CODEABLE_CONCEPT:
+            return self._adopt_concept(cls)
+        return None
+
+    def _adopt_coding(self, cls: ObjectClass) -> str | None:
+        slots = {s.name: s for s in cls.slots}
+        if set(slots) != {*CODING_RANGES, "code"}:
+            return None
+        if any(
+            s.required or s.multivalued or s.fk_target or s.inlined_class
+            for s in cls.slots
+        ):
+            return None
+        if any(slots[n].range != r for n, r in CODING_RANGES.items()):
+            return None
+        code = slots["code"]
+        if code.binding is None and code.range != "string":
+            return None
+
+        self._coding = self._coding or cls
+        if code.binding is None:
+            return CODING
+
+        stem = code.binding.enum_name.removesuffix("Enum")
+        seen = self._bound_codings.setdefault(stem, code.binding)
+        if seen != code.binding:
+            raise ResolutionError(
+                f"`{code.fhir_path}` binds {code.binding.enum_name} "
+                f"({code.binding.strength}, {code.binding.source}), but another "
+                f"field sharing {stem}{CODING} binds it ({seen.strength}, "
+                f"{seen.source})"
+            )
+        return f"{stem}{CODING}"
+
+    def _adopt_concept(self, cls: ObjectClass) -> str | None:
+        if [s.name for s in cls.slots] != ["coding"]:
+            return None
+        coding = cls.slots[0]
+        if coding.required or not coding.multivalued:
+            return None
+        if coding.range == CODING:
+            self._concept = self._concept or cls
+            return CODEABLE_CONCEPT
+        stem = coding.range.removesuffix(CODING)
+        if stem not in self._bound_codings:
+            return None
+        self._concept = self._concept or cls
+        self._bound_concepts.add(stem)
+        return f"{stem}{CODEABLE_CONCEPT}"
+
+    def names(self) -> set[str]:
+        out = {f"{stem}{CODING}" for stem in self._bound_codings}
+        out |= {f"{stem}{CODEABLE_CONCEPT}" for stem in self._bound_concepts}
+        if self._coding:
+            out.add(CODING)
+        if self._concept:
+            out.add(CODEABLE_CONCEPT)
+        return out
+
+    def render(self) -> str:
+        classes: dict[str, Any] = {}
+        if self._coding:
+            classes[CODING] = self._base(
+                CODING,
+                "A reference to a code defined by a terminology system.",
+                self._coding,
+            )
+        if self._concept:
+            classes[CODEABLE_CONCEPT] = self._base(
+                CODEABLE_CONCEPT,
+                "A concept that may be defined by a formal reference to a "
+                "terminology.",
+                self._concept,
+            )
+        for stem in sorted(self._bound_codings):
+            binding = self._bound_codings[stem]
+            classes[f"{stem}{CODING}"] = {
+                "is_a": CODING,
+                "description": f"A Coding whose code is drawn from {binding.enum_name}.",
+                "slot_usage": {
+                    "code": {
+                        "range": binding.enum_name,
+                        "annotations": {
+                            "fhir_path": f"{CODING}.code",
+                            "fhir_type": "code",
+                            **binding_annotations(binding),
+                        },
+                    }
+                },
+            }
+            if stem in self._bound_concepts:
+                classes[f"{stem}{CODEABLE_CONCEPT}"] = {
+                    "is_a": CODEABLE_CONCEPT,
+                    "description": f"A CodeableConcept whose codings are {stem}{CODING}.",
+                    "slot_usage": {"coding": {"range": f"{stem}{CODING}"}},
+                }
+
+        doc: dict[str, Any] = {
+            "id": f"{SCHEMA_BASE_URI}/datatypes",
+            "name": "datatypes",
+            "description": (
+                "FHIR datatypes shared by every FlatFHIR resource schema: the "
+                "standard Coding and CodeableConcept, and a subclass of each per "
+                "vocabulary a `code` is bound to."
+            ),
+            "prefixes": dict(SCHEMA_PREFIXES),
+            "default_prefix": SCHEMA_DEFAULT_PREFIX,
+            "imports": ["linkml:types", "enums"],
+            "default_range": "string",
+            "classes": classes,
+        }
+        header = (
+            "# AUTO-GENERATED by scripts/generate_linkml.py - DO NOT EDIT.\n"
+            "#\n"
+            "# The Coding and CodeableConcept classes shared by the resource\n"
+            "# schemas, which import this file (CONVENTIONS.md §4).\n"
+            "#\n"
+            "# Regenerate with:  uv run scripts/generate_linkml.py\n"
+        )
+        return header + yaml.safe_dump(
+            doc, sort_keys=False, width=100, allow_unicode=True
+        )
+
+    @staticmethod
+    def _base(name: str, description: str, first: ObjectClass) -> dict[str, Any]:
+        """A shared class, its fields unbound and their paths relative to it."""
+        attributes = {}
+        for s in first.slots:
+            generic = replace(
+                s,
+                range=CODING if s.inlined_class else ("string" if s.binding else s.range),
+                fhir_path=f"{name}.{s.name}",
+                enum=None,
+                binding=None,
+                inlined_class=CODING if s.inlined_class else None,
+            )
+            attributes[s.name] = render_slot(generic)
+        return {
+            "description": description,
+            "annotations": {"fhir_path": name},
+            "attributes": attributes,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -712,8 +919,8 @@ class EntrySpec:
 
     # -- queries used during emission -------------------------------------
     @property
-    def is_variant(self) -> bool:
-        """§5. A whitelisted path that repeats is a variant, unless the author
+    def is_array(self) -> bool:
+        """§5. A whitelisted path that repeats is an array, unless the author
         named `[0]` on its last segment to take the first entry alone."""
         return bool(self.el.get("repeating")) and not INDEX_SUFFIX.search(
             self.entry.split(".")[-1]
@@ -759,19 +966,19 @@ class ClassBuilder:
         path: str,
         el: dict,
         schema: ResourceSchema,
-        *,
-        key_fields: list[str],
-    ) -> VariantClass | None:
+    ) -> ObjectClass | None:
         """Everything under `path` becomes the object's fields (§4).
 
         Contents keep their FHIR names. A repeating element inside the object
-        is itself a nested variant; a Reference inside it is an `_id` (§2).
+        is itself a nested array; a Reference inside it is an `_id` (§2). A
+        Coding or CodeableConcept in its standard shape comes back as the
+        shared datatype, marked `shared`, which the caller leaves out of the
+        resource schema.
         """
-        cls = VariantClass(
-            name=self._unique_class_name(path),
+        cls = ObjectClass(
+            name="",
             fhir_path=path,
             description=el.get("description"),
-            key_fields=key_fields,
         )
 
         for child in self._members(spec, path):
@@ -793,7 +1000,22 @@ class ClassBuilder:
                 )
             )
 
-        return cls if cls.slots else None
+        if not cls.slots:
+            return None
+
+        # §4. Named only once it is known not to be shared, so a shared
+        # datatype never advances the counter that disambiguates path names.
+        try:
+            shared = self._resolver.shared.adopt(cls, el["fhir_type"])
+        except ResolutionError as exc:
+            self._resolver._fail(str(exc))
+            shared = None
+        if shared:
+            cls.name, cls.shared = shared, True
+            schema.datatypes_used.add(shared)
+        else:
+            cls.name = self._unique_class_name(path)
+        return cls
 
     def _members(self, spec: EntrySpec, path: str) -> list[dict]:
         """Direct children of `path` that survive this entry's exclusions."""
@@ -801,7 +1023,7 @@ class ClassBuilder:
 
     def _add_member(
         self,
-        cls: VariantClass,
+        cls: ObjectClass,
         child: dict,
         parent_path: str,
         spec: EntrySpec,
@@ -854,11 +1076,12 @@ class ClassBuilder:
             return
 
         # A complex child becomes a nested inline object - an array of them
-        # where it repeats (§5: a variant may hold a further variant).
-        nested = self.build(spec, cpath, child, schema, key_fields=[])
+        # where it repeats (§5: an array may hold a further array).
+        nested = self.build(spec, cpath, child, schema)
         if nested is None:
             return
-        schema.classes.append(nested)
+        if not nested.shared:
+            schema.classes.append(nested)
         cls.slots.append(
             Slot(
                 name=cname,
@@ -883,7 +1106,7 @@ class Resolver:
     """Turns a whitelist into a `ResourceSchema`.
 
     Orchestrates one resource: reads each entry through `EntrySpec`, emits the
-    field or variant it resolves to, and delegates inline object construction
+    field or array it resolves to, and delegates inline object construction
     to `ClassBuilder`. It also owns the single bridge to `BindingResolver`
     (`binding_for`) and the strict/warn error policy (`_fail`).
     """
@@ -893,6 +1116,7 @@ class Resolver:
         tree: ElementTree,
         cfg: dict,
         bindings: BindingResolver,
+        shared: SharedTypes,
         *,
         strict: bool = True,
         modelled: frozenset[str] = frozenset(),
@@ -900,6 +1124,7 @@ class Resolver:
         self.tree = tree
         self.cfg = cfg
         self.bindings = bindings
+        self.shared = shared
         self.resource = tree.resource
         self.strict = strict
         # Resources the CDM models, i.e. those with a config. A Reference to
@@ -975,11 +1200,24 @@ class Resolver:
 
         spec = EntrySpec(entry, opts, el, self)
 
-        # §5. A whitelisted path that repeats is a variant; anything else is a
+        # A CodeableConcept is named whole, so every coded concept has the same
+        # {coding[]} shape. Naming its `.coding` array would strip the wrapper;
+        # `.coding[0]` still takes a single Coding.
+        if spec.is_array and path.endswith(".coding"):
+            parent = self.tree.get(path.rsplit(".", 1)[0]) or {}
+            if parent.get("fhir_type") == "CodeableConcept":
+                self._fail(
+                    f"{self.resource}: `{entry}` names the codings of a "
+                    f"CodeableConcept; name `{path.rsplit('.', 1)[0]}` whole "
+                    f"(excluding its `.text`) or take `.coding[0]`"
+                )
+                return
+
+        # §5. A whitelisted path that repeats is an array; anything else is a
         # single field, taking the first entry of any array above it (§"How the
         # whitelist works").
-        if spec.is_variant:
-            self._emit_variant(spec, schema)
+        if spec.is_array:
+            self._emit_array(spec, schema)
         else:
             self._emit_field(spec, schema)
 
@@ -1059,13 +1297,14 @@ class Resolver:
             schema.slots.append(slot)
             return
 
-        cls = self.classes.build(spec, path, el, schema, key_fields=[])
+        cls = self.classes.build(spec, path, el, schema)
         if cls is None:
             # Nothing survived beneath a complex element - emit nothing rather
             # than an empty object.
             self.warnings.append(f"`{entry}` has no surviving children; skipped")
             return
-        schema.classes.append(cls)
+        if not cls.shared:
+            schema.classes.append(cls)
         schema.slots.append(
             Slot(
                 name=name,
@@ -1078,8 +1317,8 @@ class Resolver:
             )
         )
 
-    # -- a variant (§5) ----------------------------------------------------
-    def _emit_variant(self, spec: EntrySpec, schema: ResourceSchema) -> None:
+    # -- an array (§5) -----------------------------------------------------
+    def _emit_array(self, spec: EntrySpec, schema: ResourceSchema) -> None:
         entry, path, el = spec.entry, spec.path, spec.el
         name = slot_name(entry, self.resource)
         fhir_type = el["fhir_type"]
@@ -1120,19 +1359,20 @@ class Resolver:
             )
             return
 
-        # §9. Every variant that is an array of objects declares a key. A
+        # §9. Every array of objects declares a key. A
         # repeating primitive or Reference resolves to an array of scalars
         # above, where there is no object to identify.
         if not spec.key_fields:
-            self._fail(f"{self.resource}: variant `{entry}` declares no `key` (§9)")
+            self._fail(f"{self.resource}: array `{entry}` declares no `key` (§9)")
 
-        cls = self.classes.build(spec, path, el, schema, key_fields=spec.key_fields)
+        cls = self.classes.build(spec, path, el, schema)
         if cls is None:
-            self.warnings.append(f"variant `{entry}` has no surviving children; skipped")
+            self.warnings.append(f"array `{entry}` has no surviving children; skipped")
             return
 
-        self._check_keys(entry, cls)
-        schema.classes.append(cls)
+        self._check_keys(entry, spec.key_fields, cls)
+        if not cls.shared:
+            schema.classes.append(cls)
         schema.slots.append(
             Slot(
                 name=name,
@@ -1142,15 +1382,16 @@ class Resolver:
                 multivalued=True,
                 description=el.get("description"),
                 inlined_class=cls.name,
+                key_fields=spec.key_fields,
             )
         )
 
-    def _check_keys(self, entry: str, cls: VariantClass) -> None:
+    def _check_keys(self, entry: str, keys: list[str], cls: ObjectClass) -> None:
         available = {s.name for s in cls.slots}
-        for k in cls.key_fields:
+        for k in keys:
             if k not in available:
                 self._fail(
-                    f"{self.resource}: key `{k}` on variant `{entry}` is not a "
+                    f"{self.resource}: key `{k}` on array `{entry}` is not a "
                     f"field of the object (have: {', '.join(sorted(available))})"
                 )
 
@@ -1192,24 +1433,33 @@ def render_slot(slot: Slot) -> dict[str, Any]:
         out["description"] = slot.description
 
     ann: dict[str, Any] = {"fhir_path": slot.fhir_path, "fhir_type": slot.fhir_type}
+    if slot.key_fields:
+        # A LinkML annotation value is a scalar, so the key is recorded as a
+        # comma-separated list of the object's own field names (§9). It sits on
+        # the slot rather than the class, as a shared datatype (§4) is keyed
+        # differently wherever it is used.
+        ann["key_fields"] = ", ".join(slot.key_fields)
     if slot.fk_target:
         ann["fk_target"] = slot.fk_target
     if slot.binding:
-        if slot.binding.value_set:
-            # Local codes are not the bound value set, so the URL is recorded
-            # as what the field replaces rather than what it conforms to (§12).
-            # `binding_strength` still follows, qualifying the replaced binding.
-            key = (
-                "replaces_value_set"
-                if slot.binding.source == "local"
-                else "value_set"
-            )
-            ann[key] = slot.binding.value_set
-        if slot.binding.strength:
-            ann["binding_strength"] = slot.binding.strength
-        ann["binding_source"] = slot.binding.source
+        ann.update(binding_annotations(slot.binding))
     out["annotations"] = ann
     return out
+
+
+def binding_annotations(binding: BindingInfo) -> dict[str, Any]:
+    """Where a bound field's codes come from (§12)."""
+    ann: dict[str, Any] = {}
+    if binding.value_set:
+        # Local codes are not the bound value set, so the URL is recorded as
+        # what the field replaces rather than what it conforms to (§12).
+        # `binding_strength` still follows, qualifying the replaced binding.
+        key = "replaces_value_set" if binding.source == "local" else "value_set"
+        ann[key] = binding.value_set
+    if binding.strength:
+        ann["binding_strength"] = binding.strength
+    ann["binding_source"] = binding.source
+    return ann
 
 
 def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
@@ -1241,7 +1491,9 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
         # mutual imports this produces (Encounter <-> Patient, and the
         # self-import a self-reference such as Encounter.partOf would ask for,
         # which is dropped as a schema cannot import itself).
-        "imports": ["linkml:types", "enums"] + sorted(t for t in referenced),
+        "imports": ["linkml:types", "enums"]
+        + (["datatypes"] if schema.datatypes_used else [])
+        + sorted(t for t in referenced),
         "default_range": "string",
     }
 
@@ -1250,12 +1502,7 @@ def render_schema(schema: ResourceSchema, cfg_path: Path) -> str:
         block: dict[str, Any] = {}
         if cls.description:
             block["description"] = cls.description
-        ann: dict[str, Any] = {"fhir_path": cls.fhir_path}
-        if cls.key_fields:
-            # A LinkML annotation value is a scalar, so the key is recorded as
-            # a comma-separated list of the object's own field names (§9).
-            ann["key_fields"] = ", ".join(cls.key_fields)
-        block["annotations"] = ann
+        block["annotations"] = {"fhir_path": cls.fhir_path}
         block["attributes"] = {s.name: render_slot(s) for s in cls.slots}
         classes[cls.name] = block
 
@@ -1455,15 +1702,25 @@ def main() -> None:
     resolver_bindings = BindingResolver(
         manifest, expander, fhir_bindings, fhir_enums
     )
+    shared = SharedTypes()
     exit_code = 0
     written: list[str] = []
+    # Class name -> the resource schema defining it, checked against the
+    # shared datatypes once every resource is resolved.
+    resource_classes: dict[str, str] = {}
 
     # Every configured resource, regardless of --resource: a Reference target
     # is modelled if a config exists for it, which does not depend on which
     # resource is being generated in this run.
     modelled = frozenset(n for n, _, _ in configured_resources(None))
 
-    for name, cfg_path, cfg in configured_resources(args.resource):
+    # Every resource is resolved whatever --resource selects, and only the
+    # selected one is written. cdm/enums.yaml and cdm/datatypes.yaml are shared
+    # by all of them, so building either from one resource would drop what
+    # the others use.
+    configured_resources(args.resource)  # exits if --resource has no config
+    for name, cfg_path, cfg in configured_resources(None):
+        selected = args.resource in (None, name)
         expanded_path = EXPANDED_DIR / f"{name}.yaml"
         if not expanded_path.exists():
             print(
@@ -1481,6 +1738,7 @@ def main() -> None:
             tree,
             cfg,
             resolver_bindings,
+            shared,
             strict=not args.keep_going,
             modelled=modelled,
         )
@@ -1490,6 +1748,11 @@ def main() -> None:
         except ResolutionError as exc:
             print(f"ERROR [{name}]: {exc}", file=sys.stderr)
             exit_code = 1
+            continue
+
+        for cls in schema.classes:
+            resource_classes[cls.name] = name
+        if not selected:
             continue
 
         rendered = render_schema(schema, cfg_path)
@@ -1509,6 +1772,17 @@ def main() -> None:
         for w in resolver.warnings:
             print(f"  WARNING [{name}]: {w}", file=sys.stderr)
 
+    # Once a schema imports datatypes.yaml, a shared datatype and a class of its
+    # own sit in one namespace, so a clash would silently merge the two.
+    for cls_name in sorted(shared.names() & (set(resource_classes) | modelled)):
+        owner = resource_classes.get(cls_name, cls_name)
+        print(
+            f"ERROR: shared datatype `{cls_name}` clashes with a class of the "
+            f"{owner} schema",
+            file=sys.stderr,
+        )
+        exit_code = 1
+
     for w in resolver_bindings.warnings:
         print(f"  WARNING [bindings]: {w}", file=sys.stderr)
 
@@ -1525,12 +1799,15 @@ def main() -> None:
     # A whitelisted field that FHIR binds, which no config declared. Emitted
     # as a plain field; reported so the omission is visible, never acted on
     # (CONVENTIONS.md "Post-generation checks").
-    if resolver_bindings.undeclared:
+    undeclared = [
+        u for u in resolver_bindings.undeclared if args.resource in (None, u[0])
+    ]
+    if undeclared:
         print(
-            f"\n{len(resolver_bindings.undeclared)} whitelisted fields carry a "
+            f"\n{len(undeclared)} whitelisted fields carry a "
             f"FHIR binding no config declares (emitted as plain fields):"
         )
-        for res, path, vs in resolver_bindings.undeclared:
+        for res, path, vs in undeclared:
             print(f"  {res:<13} {path:<58} {vs}")
 
     if not args.dry_run:
@@ -1542,6 +1819,7 @@ def main() -> None:
             expander,
         )
         ENUMS_PATH.write_text(enums_doc, encoding="utf-8", newline="\n")
+        DATATYPES_PATH.write_text(shared.render(), encoding="utf-8", newline="\n")
 
         print()
         for line in written:
@@ -1549,6 +1827,10 @@ def main() -> None:
         print(
             f"{'enums':<14} {enum_count:>3} enums     "
             f"-> {ENUMS_PATH.relative_to(REPO_ROOT)}"
+        )
+        print(
+            f"{'datatypes':<14} {len(shared.names()):>3} classes   "
+            f"-> {DATATYPES_PATH.relative_to(REPO_ROOT)}"
         )
         if resolver_bindings.redundant:
             print(

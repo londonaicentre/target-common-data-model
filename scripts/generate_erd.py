@@ -14,10 +14,11 @@ One entity per resource table. Following CONVENTIONS.md:
   * References are `_id` scalars carrying an `fk_target` annotation (§2, §10),
     which is what becomes a relationship. Many-to-one onto the target's PK;
     optional on the FK side where the slot is not `required`.
-  * Inlined multivalued variant classes are Snowflake VARIANT columns on their
-    parent (§5), NOT entities - drawing them as tables would misrepresent the
-    grain. They render as a `variant` column, with the inner shape and the
-    `key_fields` (§9) in the note.
+  * Inlined classes - arrays of objects (§5) and 0..1 structs alike - are
+    columns on their parent, NOT entities; drawing them as tables would
+    misrepresent the grain. Each is declared with its full structured type,
+    e.g. `array(object(system varchar, code varchar, ...))`, never VARIANT.
+    The note carries the class name and, for an array, its `key_fields` (§9).
   * Enums (cdm/enums.yaml) become DBML enum objects, so a bound column links
     through to its permissible values.
 
@@ -34,7 +35,7 @@ from linkml_runtime import SchemaView
 
 REPO = Path(__file__).parent.parent
 CDM = REPO / "cdm"
-NON_RESOURCE = {"core", "enums"}   # shared slots/types + enum definitions, not resource tables
+NON_RESOURCE = {"core", "enums", "datatypes"}   # shared slots/types, enums, Coding classes - not resource tables
 
 # LinkML range -> the type shown on the diagram. Mirrors TYPE_MAP in
 # generate_dbt_yaml.py so the ERD and the dbt contracts agree.
@@ -75,10 +76,10 @@ def ident(name):
 def nested_classes(sv: SchemaView, defined: list[str]) -> set[str]:
     """Classes reached as the range of a slot - i.e. structure, not a table.
 
-    Covers both variants (multivalued, §5) and inlined 0..1 structs such as
-    `period {start, end}`, at any depth: a Coding sitting inside a variant is
-    itself reached from that variant, so it is caught too. What remains is the
-    resource table - the one class nothing points at.
+    Covers both arrays of objects (multivalued, §5) and inlined 0..1 structs
+    such as `period {start, end}`, at any depth: a Coding sitting inside an
+    array is itself reached from that array, so it is caught too. What remains
+    is the resource table - the one class nothing points at.
 
     A reference (§10) is excluded: its range is the target class, but it holds
     that class's identifier rather than nesting it, so the target is a table in
@@ -99,11 +100,33 @@ def column_order(sv: SchemaView, cls_name: str) -> list[str]:
     return list(cls.attributes or {}) + list(cls.slots or [])
 
 
-def variant_note(sv: SchemaView, rng: str) -> str:
-    """The inner shape of a variant, plus its key fields (§9)."""
-    fields = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
-    note = f"{rng} [{{{', '.join(fields)}}}]"
-    keys = ann(sv.get_class(rng), "key_fields")
+def physical_type(sv: SchemaView, slot, enums, classes) -> str:
+    """The declared Snowflake type of a slot, spelt out in full (§5).
+
+    Nothing is VARIANT: an inlined class is `object(field type, ...)` and a
+    repeating slot is `array(...)`, recursively, so a column's shape is fixed by
+    the schema rather than discovered from the data. Mirrors physical_type in
+    generate_dbt_yaml.py.
+    """
+    rng = slot.range or "string"
+    if rng in classes and slot.inlined is False:
+        inner = "varchar"              # a reference holds the target id (§2)
+    elif rng in classes:
+        fields = [f for f in sv.class_induced_slots(rng) if not f.identifier]
+        inner = "object(" + ", ".join(
+            f"{f.name} {physical_type(sv, f, enums, classes)}" for f in fields
+        ) + ")"
+    elif rng in enums:
+        inner = "varchar"
+    else:
+        inner = TYPE_MAP.get(rng, "varchar")
+    return f"array({inner})" if slot.multivalued else inner
+
+
+def array_note(sv: SchemaView, slot, rng: str) -> str:
+    """The class behind an array of objects, plus its key fields (§9)."""
+    note = f"{rng}[]"
+    keys = ann(slot, "key_fields")
     if keys:
         note += f" - key: {keys}"
     return note
@@ -116,22 +139,16 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
     for slot_name in column_order(sv, cls_name):
         slot = sv.induced_slot(slot_name, cls_name)
         rng = slot.range or "string"
-        is_variant = slot.multivalued and (slot.inlined or slot.inlined_as_list) and rng in classes
+        is_array = slot.multivalued and (slot.inlined or slot.inlined_as_list) and rng in classes
         # §10. A reference holds the target's id, so it is a scalar column
         # here, not the target's structure inlined.
         is_reference = rng in classes and slot.inlined is False
         fk_target = ann(slot, "fk_target")
 
-        if is_variant:
-            data_type = "variant"
-        elif is_reference:
-            data_type = "array" if slot.multivalued else "varchar"
-        elif rng in enums:
+        if rng in enums and not slot.multivalued:
             data_type = rng            # a DBML enum object, linked from the column
-        elif rng in classes:
-            data_type = "variant"      # inlined 0..1 struct, e.g. period {start, end}
         else:
-            data_type = TYPE_MAP.get(rng, "varchar")
+            data_type = physical_type(sv, slot, enums, classes)
 
         settings = []
         if slot.identifier:
@@ -149,13 +166,12 @@ def collect(sv: SchemaView, cls_name: str, enums, classes) -> dict:
         notes = []
         if slot.description:
             notes.append(one_line(slot.description))
-        if is_variant:
-            notes.append(variant_note(sv, rng))
+        if is_array:
+            notes.append(array_note(sv, slot, rng))
         elif is_reference:
             pass                       # the Ref line carries the target
         elif rng in classes:
-            fields = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
-            notes.append(f"{rng} {{{', '.join(fields)}}}")
+            notes.append(rng)
         for key in ("fhir_path", "fhir_type", "value_set", "replaces_value_set"):
             val = ann(slot, key)
             if val is not None:
@@ -201,8 +217,8 @@ def render_dbml(entities: list[dict], enums: list[dict]) -> str:
         "//",
         "// View by pasting into https://dbdiagram.io, or publish with dbdocs.",
         "//",
-        "// Variant columns (CONVENTIONS.md §5) are Snowflake VARIANT on the parent",
-        "// table, not tables of their own - the note carries the inner shape.",
+        "// Object and array columns (CONVENTIONS.md §5) are declared with their full",
+        "// structured type on the parent table, not tables of their own.",
         "",
         "Project flatfhir {",
         "  database_type: 'Snowflake'",
@@ -265,8 +281,9 @@ def main(outdir: Path) -> None:
             entities.append(ent)
 
         # Every enum the schema references, including those bound on a field
-        # nested inside a variant (§12) - they belong in the DBML either way.
-        for cls_name in defined:
+        # nested inside an object or array (§12) or on a shared datatype it imports
+        # (§4) - they belong in the DBML either way.
+        for cls_name in classes:
             for slot in sv.class_induced_slots(cls_name):
                 if slot.range in enums:
                     used_enums.add(slot.range)
