@@ -145,15 +145,30 @@ classes:
         annotations:
           fhir_path: MedicationStatement.dosage.text
           fhir_type: string
-      dosage_route_coding_code:
-        range: MedicationRouteEnum
-        description: Symbol in syntax defined by the system
+      dosage_patientinstruction:
+        range: string
+        description: Patient or consumer oriented instructions
         annotations:
-          fhir_path: MedicationStatement.dosage.route.coding.code
-          fhir_type: code
-          value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-SubstanceOrProductAdministrationRoute
-          binding_strength: preferred
-          binding_source: manual
+          fhir_path: MedicationStatement.dosage.patientInstruction
+          fhir_type: string
+      dosage_asneededboolean:
+        range: boolean
+        description: Take "as needed" (for x)
+        annotations:
+          fhir_path: MedicationStatement.dosage.asNeededBoolean
+          fhir_type: boolean
+      dosage_asneededcodeableconcept:
+        range: CodeableConcept
+        description: Take "as needed" (for x)
+        annotations:
+          fhir_path: MedicationStatement.dosage.asNeededCodeableConcept
+          fhir_type: CodeableConcept
+      dosage_route:
+        range: MedicationRouteCodeableConcept
+        description: How drug should enter body
+        annotations:
+          fhir_path: MedicationStatement.dosage.route
+          fhir_type: CodeableConcept
       dosage_route_text:
         range: string
         description: Plain text representation of the concept

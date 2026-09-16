@@ -94,12 +94,15 @@ classes:
         annotations:
           fhir_path: Organization.name
           fhir_type: string
-      type_coding:
-        range: Coding
-        description: Code defined by a terminology system
+      type:
+        range: CodeableConcept
+        multivalued: true
+        inlined_as_list: true
+        description: Kind of organization
         annotations:
-          fhir_path: Organization.type.coding
-          fhir_type: Coding
+          fhir_path: Organization.type
+          fhir_type: CodeableConcept
+          key_fields: coding
       active:
         range: boolean
         description: Whether the organization's record is still in active use

@@ -130,12 +130,15 @@ classes:
         annotations:
           fhir_path: Encounter.class
           fhir_type: Coding
-      type_coding:
-        range: EncounterCategoryCoding
-        description: Code defined by a terminology system
+      type:
+        range: EncounterCategoryCodeableConcept
+        multivalued: true
+        inlined_as_list: true
+        description: Specific type of encounter
         annotations:
-          fhir_path: Encounter.type.coding
-          fhir_type: Coding
+          fhir_path: Encounter.type
+          fhir_type: CodeableConcept
+          key_fields: coding
       servicetype:
         range: CodeableConcept
         description: Specific type of service

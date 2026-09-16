@@ -305,6 +305,12 @@ classes:
         annotations:
           fhir_path: MedicationAdministration.dosage.route
           fhir_type: CodeableConcept
+      dosage_route_text:
+        range: string
+        description: Plain text representation of the concept
+        annotations:
+          fhir_path: MedicationAdministration.dosage.route.text
+          fhir_type: string
       dosage_text:
         range: string
         description: Free text dosage instructions e.g. SIG

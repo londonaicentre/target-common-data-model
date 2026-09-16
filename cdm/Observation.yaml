@@ -161,12 +161,15 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/observation-status
           binding_strength: required
           binding_source: fhir
-      category_coding:
-        range: ObservationCategoryCoding
-        description: Code defined by a terminology system
+      category:
+        range: ObservationCategoryCodeableConcept
+        multivalued: true
+        inlined_as_list: true
+        description: Classification of  type of observation
         annotations:
-          fhir_path: Observation.category.coding
-          fhir_type: Coding
+          fhir_path: Observation.category
+          fhir_type: CodeableConcept
+          key_fields: coding
       code:
         range: CodeableConcept
         required: true
