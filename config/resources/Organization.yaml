@@ -44,10 +44,15 @@ include:
   # name  string
   Organization.name:
 
-  # E.g. Trust vs practice vs department.
-  # type_coding  struct {system: string, code: string, display: string,
-  #                      is_source: boolean}
-  Organization.type.coding[0]:
+  # E.g. Trust vs practice vs department; 0..* as an organisation can carry
+  # more than one type.
+  # type  array [ { coding: [ {system: string, code: string, display: string,
+  #                            is_source: boolean} ] } ]
+  Organization.type:
+    key: [coding]
+    exclude:
+      Organization.type.text: >
+        rendered term; the coding carries the meaning
 
   # Whether the organisation is still in use.
   # active  boolean
@@ -80,9 +85,6 @@ rejected:
   # --- Other --------------------------------------------------------------
   Organization.alias: >
     limited analytical utility; name matching belongs to the linkage layer
-  Organization.type: >
-    NOT whitelisted whole - `type.coding[0]` is named instead, so a second
-    organisation type is dropped rather than becoming a variant
   Organization.extension:mainLocation: >
     Location IS modelled, but the reference is sparsely populated and
     Location.managingOrganization carries the link in the direction feeds

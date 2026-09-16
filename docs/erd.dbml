@@ -811,7 +811,7 @@ Table organization {
   identifier_odssitecode_value varchar [not null, note: 'The value that is unique | fhir_path: Organization.identifier:odsSiteCode.value | fhir_type: string']
   identifier variant [note: 'Identifies this organization across multiple systems | OrganizationIdentifier [{system, value}] - key: system, value | fhir_path: Organization.identifier | fhir_type: Identifier']
   name varchar [note: 'Name used for the organization | fhir_path: Organization.name | fhir_type: string']
-  type_coding variant [note: 'Code defined by a terminology system | Coding {system, code, display, is_source} | fhir_path: Organization.type.coding | fhir_type: Coding']
+  type variant [note: 'Kind of organization | CodeableConcept [{coding}] - key: coding | fhir_path: Organization.type | fhir_type: CodeableConcept']
   active boolean [note: 'Whether the organization\'s record is still in active use | fhir_path: Organization.active | fhir_type: boolean']
   partof_id varchar [note: 'The organization of which this organization forms a part | fhir_path: Organization.partOf | fhir_type: Reference']
 
