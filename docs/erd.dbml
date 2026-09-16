@@ -612,7 +612,7 @@ Table condition {
   recordeddate timestamp_ntz [note: 'Date record was first recorded | fhir_path: Condition.recordedDate | fhir_type: dateTime']
   clinicalstatus variant [note: 'active | recurrence | relapse | inactive | remission | resolved | ConditionClinicalCodeableConcept {coding} | fhir_path: Condition.clinicalStatus | fhir_type: CodeableConcept']
   verificationstatus variant [note: 'unconfirmed | provisional | differential | confirmed | refuted | entered-in-error | ConditionVerStatusCodeableConcept {coding} | fhir_path: Condition.verificationStatus | fhir_type: CodeableConcept']
-  category_coding variant [note: 'Code defined by a terminology system | ConditionCategoryCoding {system, code, display, is_source} | fhir_path: Condition.category.coding | fhir_type: Coding']
+  category variant [note: 'problem-list-item | encounter-diagnosis | ConditionCategoryCodeableConcept [{coding}] - key: coding | fhir_path: Condition.category | fhir_type: CodeableConcept']
   code variant [note: 'Identification of the condition, problem or diagnosis | CodeableConcept {coding} | fhir_path: Condition.code | fhir_type: CodeableConcept']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: Condition.note.text | fhir_type: markdown']
 

@@ -63,14 +63,21 @@ include:
 
   # --- Category -----------------------------------------------------------
 
-  # Category, e.g. problem-list entry vs encounter diagnosis.
-  # category_coding  struct {system: string, code: string
-  #                          (enum ConditionCategoryEnum), display: string,
-  #                          is_source: boolean}
-  Condition.category.coding[0]:
+  # Category, e.g. problem-list entry vs encounter diagnosis; 0..* as the
+  # categorisation is contextual and a condition can carry more than one.
+  # category  array [ { coding: [ {system: string, code: string
+  #                                (enum ConditionCategoryEnum),
+  #                                display: string,
+  #                                is_source: boolean} ] } ]
+  Condition.category:
+    key: [coding]
     bindings:
-      # Manual: unions UK Core and FHIR core, so it spans two code systems.
+      # Manual: UKCore-ConditionCategory (extensible) unions UK Core and FHIR
+      # core, so it spans two code systems and cannot be derived.
       Condition.category.coding.code: ConditionCategoryEnum
+    exclude:
+      Condition.category.text: >
+        rendered term; the coding carries the meaning
 
   # --- The fact -----------------------------------
 
@@ -127,9 +134,6 @@ rejected:
   Condition.abatementString: limited analytical utility; free text
 
   # --- Other --------------------------------------------------------------
-  Condition.category: >
-    NOT whitelisted whole - `category.coding[0]` is named instead, so a
-    second category is dropped rather than becoming a variant
   Condition.extension:conditionEpisode: >
     not in scope of typical source data; the new/review episode distinction is
     derivable from the onset and recorded dates across a patient's conditions

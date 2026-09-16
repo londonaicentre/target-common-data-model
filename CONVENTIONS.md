@@ -405,7 +405,15 @@ Paths are written in full. This is verbose, and deliberately so.
 
 **A manifest entry** is used where `default` will not do. Entries can be added here to enforce FHIR `preferred` strength bindings, or custom CDM-defined vocabularies. The manifest holds hand-written bindings and nothing else.
 
-**`local_codes: true`** on a manifest entry says its codes come from outside FHIR entirely - a local vocabulary that *replaces* the field's binding rather than copying, subsetting or unioning it. Almost no entry sets it, because almost every hand-written entry still describes the value set its field binds: `EncounterClassEnum` is v3-ActEncounterCode verbatim, `MedicationRouteEnum` a subset of the SNOMED routes UK Core binds, `ConditionCategoryEnum` a union across two code systems. `EncounterCategoryEnum` is the exception - `apc_spell` and `ecds_attendance` appear in no FHIR value set at all.
+**`local_codes: true`** on a manifest entry says its codes come from outside FHIR entirely - a local vocabulary that *replaces* the field's binding rather than copying, subsetting or unioning it. Almost no entry sets it, because almost every hand-written entry still describes the value set its field binds: `EncounterClassEnum` is v3-ActEncounterCode verbatim, `MedicationRouteEnum` a subset of the SNOMED routes UK Core binds, `ConditionCategoryEnum` a union across two code systems. `EncounterCategoryEnum` is the exception - `apc_spell` and `ecds_attendance` appear in no FHIR value set at all.exclude:
+Condition.category.text: >
+not carried, in rendered outputexclude:
+Condition.category.text: >
+not carried, in rendered outputexclude:
+Condition.category.text: >
+not carried, in rendered outputexclude:
+Condition.category.text: >
+not carried, in rendered output
 
 **What `binding_source` records.** Every bound field carries one of three values, describing where its codes came from - not where they are written down:
 
