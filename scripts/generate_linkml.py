@@ -16,7 +16,7 @@ The pipeline, per resource:
               |
               |  prune      global exclusions (CONVENTIONS.md §1)
               |  select     the config whitelist       (§7, §8)
-              |  shape      first-entry / variant / _id / is_source (§2, §5, §6)
+              |  shape      first-entry / array / _id / is_source (§2, §5, §6)
               |  bind       FHIR bindings + manual overrides   (§12)
               |  render     LinkML classes and slots           (§4)
               v
@@ -198,7 +198,7 @@ def child_name(path: str, parent_path: str) -> str:
 
 
 def class_name(resource: str, path: str) -> str:
-    """CamelCase class name for a variant or inline object."""
+    """CamelCase class name for an inline object, repeating or not."""
     tail = strip_indices(path[len(resource) + 1 :]) if path.startswith(resource + ".") else path
     parts = re.split(r"[.:]", tail)
     return resource + "".join(p[:1].upper() + p[1:] for p in parts if p)
@@ -598,7 +598,7 @@ class Slot:
 
 
 @dataclass
-class VariantClass:
+class ObjectClass:
     name: str
     fhir_path: str
     description: str | None
@@ -616,7 +616,7 @@ class ResourceSchema:
     fhir_version: str | None
     description: str | None
     slots: list[Slot] = field(default_factory=list)
-    classes: list[VariantClass] = field(default_factory=list)
+    classes: list[ObjectClass] = field(default_factory=list)
     enums_used: set[str] = field(default_factory=set)
     fk_targets: set[str] = field(default_factory=set)
     datatypes_used: set[str] = field(default_factory=set)
@@ -660,14 +660,14 @@ class SharedTypes:
     def __init__(self) -> None:
         # The first standard class of each kind, whose FHIR element
         # descriptions the shared class takes.
-        self._coding: VariantClass | None = None
-        self._concept: VariantClass | None = None
+        self._coding: ObjectClass | None = None
+        self._concept: ObjectClass | None = None
         # Bound subclasses by vocabulary stem, each with the binding it narrows
         # `code` to. A concept subclass exists only where one was adopted.
         self._bound_codings: dict[str, BindingInfo] = {}
         self._bound_concepts: set[str] = set()
 
-    def adopt(self, cls: VariantClass, fhir_type: str) -> str | None:
+    def adopt(self, cls: ObjectClass, fhir_type: str) -> str | None:
         """The shared class `cls` is structurally, or None if it is not standard.
 
         Raises ResolutionError where a vocabulary is bound with a different
@@ -680,7 +680,7 @@ class SharedTypes:
             return self._adopt_concept(cls)
         return None
 
-    def _adopt_coding(self, cls: VariantClass) -> str | None:
+    def _adopt_coding(self, cls: ObjectClass) -> str | None:
         slots = {s.name: s for s in cls.slots}
         if set(slots) != {*CODING_RANGES, "code"}:
             return None
@@ -710,7 +710,7 @@ class SharedTypes:
             )
         return f"{stem}{CODING}"
 
-    def _adopt_concept(self, cls: VariantClass) -> str | None:
+    def _adopt_concept(self, cls: ObjectClass) -> str | None:
         if [s.name for s in cls.slots] != ["coding"]:
             return None
         coding = cls.slots[0]
@@ -800,7 +800,7 @@ class SharedTypes:
         )
 
     @staticmethod
-    def _base(name: str, description: str, first: VariantClass) -> dict[str, Any]:
+    def _base(name: str, description: str, first: ObjectClass) -> dict[str, Any]:
         """A shared class, its fields unbound and their paths relative to it."""
         attributes = {}
         for s in first.slots:
@@ -919,8 +919,8 @@ class EntrySpec:
 
     # -- queries used during emission -------------------------------------
     @property
-    def is_variant(self) -> bool:
-        """§5. A whitelisted path that repeats is a variant, unless the author
+    def is_array(self) -> bool:
+        """§5. A whitelisted path that repeats is an array, unless the author
         named `[0]` on its last segment to take the first entry alone."""
         return bool(self.el.get("repeating")) and not INDEX_SUFFIX.search(
             self.entry.split(".")[-1]
@@ -966,16 +966,16 @@ class ClassBuilder:
         path: str,
         el: dict,
         schema: ResourceSchema,
-    ) -> VariantClass | None:
+    ) -> ObjectClass | None:
         """Everything under `path` becomes the object's fields (§4).
 
         Contents keep their FHIR names. A repeating element inside the object
-        is itself a nested variant; a Reference inside it is an `_id` (§2). A
+        is itself a nested array; a Reference inside it is an `_id` (§2). A
         Coding or CodeableConcept in its standard shape comes back as the
         shared datatype, marked `shared`, which the caller leaves out of the
         resource schema.
         """
-        cls = VariantClass(
+        cls = ObjectClass(
             name="",
             fhir_path=path,
             description=el.get("description"),
@@ -1023,7 +1023,7 @@ class ClassBuilder:
 
     def _add_member(
         self,
-        cls: VariantClass,
+        cls: ObjectClass,
         child: dict,
         parent_path: str,
         spec: EntrySpec,
@@ -1076,7 +1076,7 @@ class ClassBuilder:
             return
 
         # A complex child becomes a nested inline object - an array of them
-        # where it repeats (§5: a variant may hold a further variant).
+        # where it repeats (§5: an array may hold a further array).
         nested = self.build(spec, cpath, child, schema)
         if nested is None:
             return
@@ -1106,7 +1106,7 @@ class Resolver:
     """Turns a whitelist into a `ResourceSchema`.
 
     Orchestrates one resource: reads each entry through `EntrySpec`, emits the
-    field or variant it resolves to, and delegates inline object construction
+    field or array it resolves to, and delegates inline object construction
     to `ClassBuilder`. It also owns the single bridge to `BindingResolver`
     (`binding_for`) and the strict/warn error policy (`_fail`).
     """
@@ -1203,7 +1203,7 @@ class Resolver:
         # A CodeableConcept is named whole, so every coded concept has the same
         # {coding[]} shape. Naming its `.coding` array would strip the wrapper;
         # `.coding[0]` still takes a single Coding.
-        if spec.is_variant and path.endswith(".coding"):
+        if spec.is_array and path.endswith(".coding"):
             parent = self.tree.get(path.rsplit(".", 1)[0]) or {}
             if parent.get("fhir_type") == "CodeableConcept":
                 self._fail(
@@ -1213,11 +1213,11 @@ class Resolver:
                 )
                 return
 
-        # §5. A whitelisted path that repeats is a variant; anything else is a
+        # §5. A whitelisted path that repeats is an array; anything else is a
         # single field, taking the first entry of any array above it (§"How the
         # whitelist works").
-        if spec.is_variant:
-            self._emit_variant(spec, schema)
+        if spec.is_array:
+            self._emit_array(spec, schema)
         else:
             self._emit_field(spec, schema)
 
@@ -1317,8 +1317,8 @@ class Resolver:
             )
         )
 
-    # -- a variant (§5) ----------------------------------------------------
-    def _emit_variant(self, spec: EntrySpec, schema: ResourceSchema) -> None:
+    # -- an array (§5) -----------------------------------------------------
+    def _emit_array(self, spec: EntrySpec, schema: ResourceSchema) -> None:
         entry, path, el = spec.entry, spec.path, spec.el
         name = slot_name(entry, self.resource)
         fhir_type = el["fhir_type"]
@@ -1359,15 +1359,15 @@ class Resolver:
             )
             return
 
-        # §9. Every variant that is an array of objects declares a key. A
+        # §9. Every array of objects declares a key. A
         # repeating primitive or Reference resolves to an array of scalars
         # above, where there is no object to identify.
         if not spec.key_fields:
-            self._fail(f"{self.resource}: variant `{entry}` declares no `key` (§9)")
+            self._fail(f"{self.resource}: array `{entry}` declares no `key` (§9)")
 
         cls = self.classes.build(spec, path, el, schema)
         if cls is None:
-            self.warnings.append(f"variant `{entry}` has no surviving children; skipped")
+            self.warnings.append(f"array `{entry}` has no surviving children; skipped")
             return
 
         self._check_keys(entry, spec.key_fields, cls)
@@ -1386,12 +1386,12 @@ class Resolver:
             )
         )
 
-    def _check_keys(self, entry: str, keys: list[str], cls: VariantClass) -> None:
+    def _check_keys(self, entry: str, keys: list[str], cls: ObjectClass) -> None:
         available = {s.name for s in cls.slots}
         for k in keys:
             if k not in available:
                 self._fail(
-                    f"{self.resource}: key `{k}` on variant `{entry}` is not a "
+                    f"{self.resource}: key `{k}` on array `{entry}` is not a "
                     f"field of the object (have: {', '.join(sorted(available))})"
                 )
 

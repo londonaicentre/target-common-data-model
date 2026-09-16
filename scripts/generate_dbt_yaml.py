@@ -19,8 +19,10 @@ Per model:
     columns that have none
   * own columns first, shared provenance slots (meta_*) last
 
-Inlined multivalued variant classes become Snowflake VARIANT columns on their
-parent; their inner shape is surfaced as meta.variant_class / meta.variant_fields.
+Inlined classes - arrays of objects (§5) and 0..1 structs alike - are columns
+on their parent, declared with their full Snowflake structured type, e.g.
+`array(object(system varchar, code varchar, ...))`, never VARIANT. The LinkML
+class behind the column is surfaced as meta.object_class.
 
 Usage:  uv run scripts/generate_dbt_yaml.py [OUTPUT_ROOT]   (default: dbt_metadata/)
 """
@@ -66,25 +68,39 @@ def column_order(sv: SchemaView, cls_name: str) -> list[str]:
     return list(cls.attributes or {}) + list(cls.slots or [])
 
 
+def physical_type(sv: SchemaView, slot, enums, classes) -> str:
+    """The declared Snowflake type of a slot, spelt out in full (§5).
+
+    Nothing is VARIANT: an inlined class is `object(field type, ...)` and a
+    repeating slot is `array(...)`, recursively, so a column's shape is fixed by
+    the schema rather than discovered from the data. Mirrors physical_type in
+    generate_erd.py.
+    """
+    rng = slot.range or "string"
+    if rng in classes and slot.inlined is False:
+        inner = "varchar"              # a reference holds the target id (§2)
+    elif rng in classes:
+        fields = [f for f in sv.class_induced_slots(rng) if not f.identifier]
+        inner = "object(" + ", ".join(
+            f"{f.name} {physical_type(sv, f, enums, classes)}" for f in fields
+        ) + ")"
+    elif rng in enums:
+        inner = "varchar"              # coded value
+    else:
+        inner = TYPE_MAP.get(rng, "varchar")
+    return f"array({inner})" if slot.multivalued else inner
+
+
 def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) -> dict:
     slot = sv.induced_slot(slot_name, cls_name)
     rng = slot.range or "string"
-    is_variant = slot.multivalued and (slot.inlined or slot.inlined_as_list) and rng in classes
     # A reference (CONVENTIONS.md §10) is a class-ranged slot that is NOT
     # inlined: it holds the target's identifier. An inlined class-ranged slot
     # is a nested object living in this table, and points at nothing.
     is_reference = rng in classes and slot.inlined is False
+    is_object = rng in classes and not is_reference
 
-    if is_variant:
-        data_type = "variant"
-    elif slot.multivalued:
-        # An array of scalars - a repeating primitive, or a repeating
-        # reference resolved to an array of target ids (§2).
-        data_type = "array"
-    elif rng in enums or rng in classes:
-        data_type = "varchar"          # coded value, or FK stored as id
-    else:
-        data_type = TYPE_MAP.get(rng, "varchar")
+    data_type = physical_type(sv, slot, enums, classes)
 
     col = {"name": slot.name, "data_type": data_type}
     if slot.description:
@@ -121,9 +137,8 @@ def build_column(sv: SchemaView, cls_name: str, slot_name: str, enums, classes) 
         val = ann(slot, key)
         if val is not None:
             meta[key] = val
-    if is_variant:
-        meta["variant_class"] = rng
-        meta["variant_fields"] = [s.name for s in sv.class_induced_slots(rng) if not s.identifier]
+    if is_object:
+        meta["object_class"] = rng
     if meta:
         col["meta"] = meta
 
@@ -141,9 +156,9 @@ def build_model(sv: SchemaView, cls_name: str) -> dict:
 def nested_classes(sv: SchemaView, defined: list[str]) -> set[str]:
     """Classes reached as the range of a slot - i.e. structure, not a table.
 
-    Covers both variants (multivalued, §5) and inlined 0..1 structs such as
-    `period {start, end}`: each is a column on its parent, so neither is a
-    model in its own right. What remains is the resource table.
+    Covers both arrays of objects (multivalued, §5) and inlined 0..1 structs
+    such as `period {start, end}`: each is a column on its parent, so neither
+    is a model in its own right. What remains is the resource table.
 
     A reference (§10) is excluded: its range is the target class, but it holds
     that class's identifier rather than nesting it, so the target is a table in
