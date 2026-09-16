@@ -2,7 +2,7 @@
 
 This repository contains a computable and machine-readable CDM called "FlatFHIR" - a flattened analytical data model derived from UK Core FHIR R4 (4.0.1).
 
-Within the CDM, each FHIR resource becomes one fact or dimension table, partially flattened for SQL analytics, and with specific elements taken as tabular fields. Repeating and complex FHIR elements may be held as `variant` columns.
+Within the CDM, each FHIR resource becomes one fact or dimension table, partially flattened for SQL analytics, and with specific elements taken as tabular fields. Repeating and complex FHIR elements may be held as columns of a declared structured type - e.g. `array(object(system varchar, code varchar, ...))` - never as untyped `variant`.
 
 The schemas in `cdm/` are **generated** and should never be edited by hand. All generation is driven by configuration files in `config/` that name the FHIR paths that become fields. These configuration files are **hand-written**, but we strongly recommend using a coding agent to help with validation of paths and bindings against the source.
 
@@ -81,7 +81,7 @@ uv run scripts/generate_erd.py       # -> docs/
 
 1. Add `config/resources/<Resource>.yaml` naming the profile and, initially, any single path. The file is the opt-in.
 2. Run stage 1, then **read `build/expanded/<Resource>.yaml`** to see the shape beneath each path before whitelisting it. Naming a path whose shape you have not looked at is how you get an array of objects holding arrays of objects.
-3. Write the whitelist. Add `key` on every variant, `fk` on every reference, and `exclude` with a reason for unwanted children.
+3. Write the whitelist. Add `key` on every array, `fk` on every reference, and `exclude` with a reason for unwanted children.
 4. Declare bindings. `build/fhir_bindings.yaml` lists every bound field in the resource, keyed by the field the binding applies to — copy those paths into `bindings:` and mark each `default` or a manifest entry name (CONVENTIONS.md §12).
 5. Run stage 2. A `default` FHIR cannot honour is an error; the run also reports any bound field left undeclared.
 6. Regenerate the dbt artifacts.

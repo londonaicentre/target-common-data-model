@@ -76,7 +76,7 @@ exclude_anonymous_extensions: true
 # 5. Coding children that are terminology-server bookkeeping.
 #
 # Applied to any element of type Coding at any depth, including the Codings
-# inside a CodeableConcept and inside a variant. What survives is
+# inside a CodeableConcept and inside an array. What survives is
 # system / code / display - plus `is_source`, which the CDM adds (§6).
 # ---------------------------------------------------------------------------
 exclude_coding_children:
