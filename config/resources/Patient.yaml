@@ -82,7 +82,7 @@ include:
   # --- Geography ----------------------------------------------------------
 
   # Postcode of the current address, from address[0]. Kept alongside the
-  # variant below as the promoted single value.
+  # array below as the promoted single value.
   # address_postalcode  string
   Patient.address.postalCode:
 

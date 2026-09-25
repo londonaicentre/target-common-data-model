@@ -82,7 +82,7 @@ include:
   ImagingStudy.procedureReference:
     fk: Procedure
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # The DICOM Study Instance UID (system urn:dicom:uid) and the RIS accession
   # number.
@@ -102,7 +102,7 @@ include:
 
   # One object per DICOM series within the study. This is where body site and
   # laterality actually live in ImagingStudy - the resource carries no
-  # study-level bodySite - so the variant is the only way to reach them.
+  # study-level bodySite - so the array is the only way to reach them.
   #
   # series  array [ {uid: string, number: integer,
   #                  modality: {system: string, code: string
@@ -131,7 +131,7 @@ include:
         not modelled
       ImagingStudy.series.specimen: >
         Specimen IS modelled, but the reference is 0..* beneath a 0..* path,
-        so it lands as an array of bare ids inside the variant; specimen
+        so it lands as an array of bare ids inside the `series` array; specimen
         imaging is vanishingly rare in the source feeds
 
   # --- Free text ----------------------------------------------------------
@@ -149,11 +149,11 @@ rejected:
   ImagingStudy.numberOfInstances: >
     limited analytical utility; a study-level image count is a PACS storage
     metric rather than a clinical fact, and the series-level count remains
-    inside the `series` variant
+    inside the `series` array
 
   # --- Series detail ------------------------------------------------------
   ImagingStudy.series.bodySite: >
-    NOT whitelisted separately - it is reached inside the `series` variant,
+    NOT whitelisted separately - it is reached inside the `series` array,
     which is where FHIR puts it. Promoting it would take series[0] only and
     misreport a multi-region study. Unbound in any case: `example` to the
     SNOMED body-site subset, which needs a terminology server

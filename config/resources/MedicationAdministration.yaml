@@ -24,11 +24,13 @@ include:
 
   # The drug. Source dm+d coding plus standard-vocabulary codings added
   # downstream; `is_source` true on the original.
-  # medicationcodeableconcept_coding
-  #     array [ {system: string, code: string, display: string,
-  #              is_source: boolean} ]
-  MedicationAdministration.medicationCodeableConcept.coding:
-    key: [system, code]
+  # medicationcodeableconcept
+  #     struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  MedicationAdministration.medicationCodeableConcept:
+    exclude:
+      MedicationAdministration.medicationCodeableConcept.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 
@@ -86,7 +88,13 @@ include:
       MedicationAdministration.dosage.route.coding.code: MedicationRouteEnum
     exclude:
       MedicationAdministration.dosage.route.text: >
-        rendered term; the coding carries the meaning
+        rendered term; promoted to its own field below so the coded route
+        keeps the shared CodeableConcept shape
+
+  # The route as the source rendered it, for feeds that send a term without
+  # a usable code.
+  # dosage_route_text  string
+  MedicationAdministration.dosage.route.text:
 
   # Free-text dose instruction as given
   # dosage_text  string
@@ -115,7 +123,7 @@ include:
       MedicationAdministration.dosage.rateRatio.numerator.comparator: default
       MedicationAdministration.dosage.rateRatio.denominator.comparator: default
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Administration record id from the source system.
   # identifier  array [ {system: string, value: string} ]
@@ -148,9 +156,6 @@ rejected:
     Medication not modelled, by decision: this CDM takes dm+d inline via
     medicationCodeableConcept. A feed writing the reference form loses the
     drug code - a known and accepted limitation
-  MedicationAdministration.medicationCodeableConcept.text: >
-    NOT whitelisted - `medicationCodeableConcept.coding` is named instead, so
-    the rendered drug name is dropped and the dm+d coding carries the meaning
 
   # --- Status reason ------------------------------------------------------
   MedicationAdministration.statusReason: >

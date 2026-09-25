@@ -23,10 +23,12 @@ include:
 
   # What was asked for. Source SNOMED coding plus standard-vocabulary codings
   # added downstream; `is_source` true on the original.
-  # code_coding  array [ {system: string, code: string, display: string,
-  #                       is_source: boolean} ]
-  ServiceRequest.code.coding:
-    key: [system, code]
+  # code  struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  ServiceRequest.code:
+    exclude:
+      ServiceRequest.code.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 
@@ -51,7 +53,7 @@ include:
   ServiceRequest.occurrenceDateTime:
   ServiceRequest.occurrencePeriod:
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Referral or order number from the source system.
   # identifier  array [ {system: string, value: string} ]

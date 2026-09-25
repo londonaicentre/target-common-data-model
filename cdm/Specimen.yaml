@@ -21,40 +21,10 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Patient
 default_range: string
 classes:
-  SpecimenTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Specimen.type.coding
-      key_fields: system, code
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Specimen.type.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Specimen.type.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Specimen.type.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Specimen.type.coding.is_source
-          fhir_type: boolean
   SpecimenCollectionCollectedPeriod:
     description: Collection time
     annotations:
@@ -72,54 +42,10 @@ classes:
         annotations:
           fhir_path: Specimen.collection.collectedPeriod.end
           fhir_type: dateTime
-  SpecimenCollectionBodySiteCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Specimen.collection.bodySite.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Specimen.collection.bodySite.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Specimen.collection.bodySite.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Specimen.collection.bodySite.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Specimen.collection.bodySite.coding.is_source
-          fhir_type: boolean
-  SpecimenCollectionBodySite:
-    description: Anatomical collection site
-    annotations:
-      fhir_path: Specimen.collection.bodySite
-    attributes:
-      coding:
-        range: SpecimenCollectionBodySiteCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Specimen.collection.bodySite.coding
-          fhir_type: Coding
   SpecimenIdentifier:
     description: External Identifier
     annotations:
       fhir_path: Specimen.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -166,14 +92,12 @@ classes:
           value_set: http://hl7.org/fhir/ValueSet/specimen-status
           binding_strength: required
           binding_source: fhir
-      type_coding:
-        range: SpecimenTypeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
+      type:
+        range: CodeableConcept
+        description: Kind of material that forms the specimen
         annotations:
-          fhir_path: Specimen.type.coding
-          fhir_type: Coding
+          fhir_path: Specimen.type
+          fhir_type: CodeableConcept
       subject_id:
         range: Patient
         inlined: false
@@ -202,7 +126,7 @@ classes:
           fhir_path: Specimen.receivedTime
           fhir_type: dateTime
       collection_bodysite:
-        range: SpecimenCollectionBodySite
+        range: CodeableConcept
         description: Anatomical collection site
         annotations:
           fhir_path: Specimen.collection.bodySite
@@ -215,6 +139,7 @@ classes:
         annotations:
           fhir_path: Specimen.identifier
           fhir_type: Identifier
+          key_fields: system, value
       accessionidentifier_value:
         range: string
         description: The value that is unique

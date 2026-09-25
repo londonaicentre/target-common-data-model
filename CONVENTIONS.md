@@ -1,6 +1,6 @@
 # Flattened-FHIR (FlatFHIR) CDM Conventions
 
-FlatFHIR is used as an intermediate layer in a medallion data pipeline, predominantly built from transactional source data. Each FHIR resource is modelled as a table in a fact/dimensional schema, with variants to capture usefully repeating items.
+FlatFHIR is used as an intermediate layer in a medallion data pipeline, predominantly built from transactional source data. Each FHIR resource is modelled as a table in a fact/dimensional schema, with usefully repeating and nested items held in columns of a declared structured type - `array(...)` and `object(...)` - rather than untyped VARIANT (§5).
 
 This document describes conventions that are followed when generating machine readable descriptions of schema from FHIR definitions.
 
@@ -33,6 +33,7 @@ Generation runs in two stages.
               |  stage 2   scripts/generate_linkml.py
               v
     cdm/<Resource>.yaml   (LinkML)
+    cdm/datatypes.yaml    Coding and CodeableConcept, shared (§4)
 
 A schema is generated from a resource only where `config/resources/<Resource>.yaml` exists. The config file is therefore the opt-in.
 
@@ -135,7 +136,7 @@ In each resource config, `include` names the FHIR paths that become fields. A pa
 
 The rule for what a named path gives you is:
 
-**A field holds everything that sits under its path, as it is, unless it is part of an array that exists above the path, in which case it resolves to that array's first entry. Where the path itself is `0..*`, the field is a variant.**
+**A field holds everything that sits under its path, as it is, unless it is part of an array that exists above the path, in which case it resolves to that array's first entry. Where the path itself is `0..*`, the field is an array.**
 
 Naming a deep path **promotes** it to the top level of the table, lifting it out of whatever structure held it. This is the only mechanism for reaching into a FHIR tree.
 
@@ -154,8 +155,8 @@ Examples:
                                   -> period_end
 
     Condition.clinicalStatus      0..1, but .coding beneath it is 0..*
-                                  -> clinicalstatus {coding[], text} - a
-                                     variant inside a non-repeating field
+                                  -> clinicalstatus {coding[], text} - an
+                                     array inside a non-repeating field
 
     Patient.address.postalCode    an array (address) sits ABOVE
                                   -> address_postalcode, from address[0].
@@ -166,11 +167,11 @@ Examples:
                                   -> address[], every address, each carrying
                                      its own postalCode, line, city ...
 
-    Condition.code.coding.code    an array (coding) sits ABOVE
-                                  -> code_coding_code, from coding[0]
+    Condition.note.text           an array (note) sits ABOVE
+                                  -> note_text, from note[0]
 
-    Condition.code.coding         the array itself
-                                  -> code_coding[], every coding
+    Condition.note                the array itself
+                                  -> note[], every note
 
     Encounter.diagnosis           an array of BackboneElement, holding a
                                   Reference and a CodeableConcept
@@ -178,8 +179,8 @@ Examples:
                                      {condition_id, use{...}, rank}
 
     Encounter                     the resource root
-                                  -> the entire resource, variants within
-                                     variants. See below - do not do this.
+                                  -> the entire resource, arrays within
+                                     arrays. See below - do not do this.
 
 An array above the path can also be written explicitly as `[0]`. It selects that array's first entry and nothing else, so `Patient.address.postalCode` and `Patient.address[0].postalCode` are the same field - the second says so out loud rather than leaving it to be inferred from the cardinality.
 
@@ -201,7 +202,7 @@ Paths are allowed to overlap. A path and its own child can both be named; they a
 An entry may also carry the following configurables:
 
     exclude    child paths that should not appear beneath it (§8)
-    key        for a variant, the fields that identify one object (§9)
+    key        for an array, the fields that identify one object (§9)
     fk         for a Reference, which resource it points at (§10)
     bindings   which fields beneath it are bound, and to what (§12)
 
@@ -215,6 +216,7 @@ In practice:
 
 - Name the direct path that carries the values required.
 - Similarly, prefer a promoted scalar to a structure the consumer must dig through, especially if the structure has no affinity to source data, or carries no extra information.
+- Name a `CodeableConcept` whole and `exclude` its `.text`, rather than naming its `.coding` array, so every coded concept has the same `{coding[]}` shape. The generator rejects a whitelisted `.coding` array beneath a `CodeableConcept`; `.coding[0]` is still allowed to take a single coding.
 - Watch what sits beneath the path, not just the path. A `0..1` element can still hold arrays below it. Do not name a path whose shape you have not looked at in `build/expanded/<Resource>.yaml`! Trim what is not wanted with `exclude`.
 
 ## Global conventions
@@ -250,13 +252,13 @@ A FHIR `Reference` is a pointer from one resource to another - the equivalent of
 
     Encounter.subject             -> subject_id
     Encounter.partOf              -> partof_id
-    Encounter.diagnosis.condition -> condition_id   (inside a variant)
+    Encounter.diagnosis.condition -> condition_id   (inside an array)
 
 This is the one rule a whitelist path cannot express, because it is a rename rather than a selection: the value comes from `subject.reference` but the field is `subject_id`.
 
 The `_id` name comes from the FHIR element, not the target resource: `Encounter.subject` is `subject_id`, not `patient_id`. Which resource it points at is declared per resource (§7).
 
-Applies at any depth, so a `Reference` inside a variant becomes an `_id` field on the variant object.
+Applies at any depth, so a `Reference` inside an array becomes an `_id` field on each object in it.
 
 ### 3. Primary key and provenance
 
@@ -277,14 +279,14 @@ The whitelisted path is re-named by dropping the resource prefix, and replacing 
     Patient.address.postalCode             -> address_postalcode
     Patient.identifier:nhsNumber.value     -> identifier_nhsnumber_value
     Condition.onsetDateTime                -> onsetdatetime
-    Condition.code.coding                  -> code_coding
+    Condition.note.text                    -> note_text
 
 The name carries the full path even where the field was promoted from deep in the tree, so it always traces back to the FHIR element it came from.
 
 Everything **under** the field keeps its FHIR name, unchanged. The whitelisted path is the field; its contents are that element's own structure.
 
     Encounter.period            -> period {start, end}
-    Condition.code.coding       -> code_coding [ {system, code, display} ]
+    Condition.code              -> code {coding [ {system, code, display, is_source} ]}
     Patient.address             -> address [ {use, line, city, postalCode} ]
 
 So naming a deeper path is how a value is lifted out of a structure and given a name of its own:
@@ -294,13 +296,43 @@ So naming a deeper path is how a value is lifted out of a structure and given a 
 
 Every slot carries `fhir_path` and `fhir_type`, and inherits the constraints of its FHIR element.
 
-### 5. Variants
+**Classes.** The object behind a complex field is a LinkML class named from its path - `Encounter.period` becomes `EncounterPeriod`. Codings are the exception. A `Coding`, and a `CodeableConcept` whose `.text` is excluded (see *Good authoring practices*), has the same structure wherever it sits, so it is not given a class per path. Every resource schema imports one shared definition from `cdm/datatypes.yaml`:
 
-Where a whitelisted path is `0..*`, the field is a variant - an array of objects carrying whatever FHIR puts in them, which may include a further variant.
+    Coding             {system, code, display, is_source}
+    CodeableConcept    {coding [Coding]}
 
-    diagnosis  [ {condition_id, use{coding[]}, rank} ]  a variant within
-                                                        a variant
-    code_coding [ {system, code, display, is_source} ]  objects of values
+A bound `code` (§12) narrows the shared class in a subclass named after its vocabulary, the enum name less `Enum`. Every field bound to that vocabulary shares the subclass, across resources:
+
+    MedicationAdministration.dosage.route      -> MedicationRouteCodeableConcept
+    MedicationRequest.dosageInstruction.route  -> MedicationRouteCodeableConcept
+
+    MedicationRouteCodeableConcept   is_a CodeableConcept, coding [MedicationRouteCoding]
+    MedicationRouteCoding            is_a Coding, code: MedicationRouteEnum
+
+The binding's `value_set`, `binding_strength` and `binding_source` sit on the subclass's `code`, so one vocabulary bound at two different strengths is an error rather than a silent merge. Inside a shared class `fhir_path` is relative to the datatype (`Coding.code`); the field holding it carries the full path.
+
+A coding not in the standard shape - a `CodeableConcept` that keeps `.text`, or a `Coding` with a child excluded - is not the shared structure, and keeps a class named from its path.
+
+### 5. Arrays and objects
+
+Where a whitelisted path is `0..*`, the field is an array - an array of objects carrying whatever FHIR puts in them, which may include a further array. A complex type that does not repeat is a single object.
+
+    diagnosis  [ {condition_id, use{coding[]}, rank} ]  an array within
+                                                        an array
+    identifier [ {system, value} ]                      objects of values
+
+**Every such column has a declared, physical type - none is VARIANT.** The shape is spelt out in full, recursively, so the warehouse enforces it and a consumer never has to discover it from the data:
+
+    period      object(start timestamp_ntz, end timestamp_ntz)
+    identifier  array(object(system varchar, value varchar))
+    diagnosis   array(object(condition_id varchar,
+                             use object(coding array(object(system varchar,
+                                                            code varchar,
+                                                            display varchar,
+                                                            is_source boolean))),
+                             rank number))
+
+A repeating primitive or Reference is an array of scalars, e.g. `appointment_id array(varchar)`. The generated dbt contracts carry these as `data_type`, and the ERD as the column type.
 
 Nesting is bounded by the path, not by a rule: a field can only be as deep as the tree beneath the path it names. Naming a leaf gives a single value; naming the resource root would give the entire resource. Keeping that depth sensible is the config author's job - see *Good authoring practices*.
 
@@ -308,10 +340,10 @@ Nesting is bounded by the path, not by a rule: a field can only be as deep as th
 
 Every `Coding` that is included gets an `is_source` flag: the coding that came from the source system has `is_source` true, and a downstream mapping step adds standard-vocabulary codings with `is_source` false. Exactly one true per array. **`is_source` is a custom field, not native to FHIR.**
 
-    Condition.code.coding      -> code_coding [ {system, code, display, is_source} ]
-    Condition.code.coding[0]   -> code_coding {system, code, display, is_source}
-    Encounter.diagnosis        -> diagnosis [ {..., use {coding [ {..., is_source} ]}} ]
-                                  a coding inside a variant is still a coding
+    Condition.code                -> code {coding [ {system, code, display, is_source} ]}
+    Encounter.type                -> type [ {coding [ {system, code, display, is_source} ]} ]
+    Encounter.diagnosis           -> diagnosis [ {..., use {coding [ {..., is_source} ]}} ]
+                                     a coding inside an array is still a coding
 
 Where a single coding survives, `is_source` is true on it.
 
@@ -328,7 +360,7 @@ These are declared per resource in `config/resources/<Resource>.yaml`.
 Each entry may carry:
 
     exclude    child paths that should not appear beneath it (§8)
-    key        for a variant, the fields that identify one object (§9)
+    key        for an array, the fields that identify one object (§9)
     fk         for a Reference, which resource it points at (§10)
     bindings   which fields beneath it are bound, and to what (§12)
 
@@ -338,13 +370,13 @@ For each whitelist entry, `exclude` lists paths that should not appear. A reason
 
 This is where the unwanted children of a complex datatype are trimmed. It is verbose and repeated across resources by design.
 
-### 9. Variant keys
+### 9. Array keys
 
-`key` names the fields that, together with the parent PK, uniquely identify one object in the array. Required on every variant.
+`key` names the fields that, together with the parent PK, uniquely identify one object in the array. Required on every array of objects.
 
 Any combination of the object's own fields is available. Where an object holds its own content, that content is usually the natural key. Where it holds a pointer to another resource, the `_id` field (§2) or an ordering field such as `rank` are candidates instead.
 
-LinkML records `key_fields`. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
+LinkML records `key_fields` as an annotation on the array's slot rather than its class, since a shared datatype (§4) is keyed differently wherever it is used. Whether the consumer also materialises a single hashed column over them is a join-ergonomics decision downstream, not part of this spec.
 
 ### 10. Foreign key targets
 
@@ -352,7 +384,7 @@ A profile may allow several targets for a reference, so `fk` declares which one 
 
     Encounter.subject:             Patient     # profile allows [Patient, Group]
     Encounter.partOf:              Encounter
-    Encounter.diagnosis.condition: Condition   # inside a variant - meta only
+    Encounter.diagnosis.condition: Condition   # inside an array - meta only
 
 Only declare a target the CDM actually models, and only where rows genuinely point at it.
 
@@ -419,7 +451,7 @@ Note that `binding_source: local` is a plain vocabulary term alongside `fhir` an
 
 **Every whitelisted path must exist in the expanded tree.**
 
-**Every variant must declare a `key`.**
+**Every array of objects must declare a `key`.**
 
 **Every declared binding path must exist**, must sit beneath the entry declaring it, and must be a field the schema emits.
 

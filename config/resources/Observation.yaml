@@ -22,22 +22,30 @@ include:
 
   # --- Category -----------------------------------------------------------
 
-  # The coarse axis, e.g. blood test vs vital sign.
-  # category_coding  struct {system: string, code: string
-  #                          (enum ObservationCategoryEnum), display: string,
-  #                          is_source: boolean}
-  Observation.category.coding[0]:
+  # The coarse axis, e.g. blood test vs vital sign; 0..* as an observation
+  # can belong to more than one category.
+  # category  array [ { coding: [ {system: string, code: string
+  #                                (enum ObservationCategoryEnum),
+  #                                display: string,
+  #                                is_source: boolean} ] } ]
+  Observation.category:
+    key: [coding]
     bindings:
       Observation.category.coding.code: ObservationCategoryEnum
+    exclude:
+      Observation.category.text: >
+        rendered term; the coding carries the meaning
 
   # --- What was measured --------------------------------------------------
 
   # What was measured. Source code plus mapped equivalents added downstream;
   # `is_source` true on the original
-  # code_coding  array [ {system: string, code: string, display: string,
-  #                       is_source: boolean} ]
-  Observation.code.coding:
-    key: [system, code]
+  # code  struct { coding: [ {system: string, code: string, display: string,
+  #                          is_source: boolean} ] }
+  Observation.code:
+    exclude:
+      Observation.code.text: >
+        rendered term; the coding carries the meaning
 
   # --- Who and when -------------------------------------------------------
 
@@ -85,7 +93,7 @@ include:
   Observation.referenceRange.low.value:
   Observation.referenceRange.high.value:
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Multi-part results - systolic and diastolic are two components of one
   # blood pressure. A 'blood pressure' observation would include a SBP and DBP
@@ -110,7 +118,7 @@ include:
         not in scope of typical source data; abnormality is derived from the
         value against referenceRange rather than taken from a lab flag
       Observation.component.valueString: >
-        limited analytical utility; free text inside a variant
+        limited analytical utility; free text inside an array
       Observation.component.valueBoolean: not in scope of typical source data
       Observation.component.valueInteger: >
         not in scope of typical source data; integer results arrive as
@@ -151,8 +159,8 @@ rejected:
   # --- Reference ranges ---------------------------------------------------
   Observation.referenceRange: >
     NOT whitelisted whole - `referenceRange.low.value` and `.high.value` are
-    named instead, so the age and population qualifiers do not become a
-    variant
+    named instead, so the age and population qualifiers do not become an
+    array
   Observation.referenceRange.type: not in scope of typical source data
   Observation.referenceRange.appliesTo: not in scope of typical source data
   Observation.referenceRange.age: not in scope of typical source data

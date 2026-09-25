@@ -75,7 +75,7 @@ include:
   DiagnosticReport.imagingStudy:
     fk: ImagingStudy
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Original lab accession or report number.
   # identifier  array [ {system: string, value: string} ]
@@ -116,7 +116,7 @@ rejected:
 
   # --- Result linkage -----------------------------------------------------
   DiagnosticReport.specimen: >
-    Specimen IS modelled, but the field is 0..* and would become a variant of
+    Specimen IS modelled, but the field is 0..* and would become an array of
     bare ids; the accession identifier carries the link
 
   # --- Attachments and media ----------------------------------------------

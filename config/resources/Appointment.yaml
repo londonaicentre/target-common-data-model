@@ -82,7 +82,7 @@ include:
       Appointment.cancelationReason.text: >
         coding used to carry meaning
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Booking reference from the source system
   # identifier  array [ {system: string, value: string} ]
@@ -139,7 +139,7 @@ rejected:
   Appointment.participant: >
     NOT whitelisted whole - `participant[0].actor` is named instead, so the
     patient promotes to a single canonical FK rather than the table carrying
-    a variant of every actor
+    an array of every actor
   Appointment.participant.required: >
     not in scope of typical source data; a booking-negotiation flag, and the
     CDM takes the patient participant only
@@ -161,8 +161,8 @@ rejected:
 
   # --- References to other resources --------------------------------------
   Appointment.basedOn: >
-    ServiceRequest IS modelled, but the field is 0..* and would become a
-    variant holding a single id in practice
+    ServiceRequest IS modelled, but the field is 0..* and would become an
+    array holding a single id in practice
   Appointment.supportingInformation: >
     unconstrained pointer across resource types; no FK target is correct
 

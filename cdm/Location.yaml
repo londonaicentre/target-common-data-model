@@ -21,104 +21,14 @@ default_prefix: aiccdm
 imports:
 - linkml:types
 - enums
+- datatypes
 - Organization
 default_range: string
 classes:
-  LocationTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Location.type.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Location.type.coding.system
-          fhir_type: uri
-      code:
-        range: string
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Location.type.coding.code
-          fhir_type: code
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Location.type.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Location.type.coding.is_source
-          fhir_type: boolean
-  LocationType:
-    description: Type of function performed
-    annotations:
-      fhir_path: Location.type
-      key_fields: coding
-    attributes:
-      coding:
-        range: LocationTypeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Location.type.coding
-          fhir_type: Coding
-  LocationPhysicalTypeCoding:
-    description: Code defined by a terminology system
-    annotations:
-      fhir_path: Location.physicalType.coding
-    attributes:
-      system:
-        range: uri
-        description: Identity of the terminology system
-        annotations:
-          fhir_path: Location.physicalType.coding.system
-          fhir_type: uri
-      code:
-        range: LocationPhysicalTypeEnum
-        description: Symbol in syntax defined by the system
-        annotations:
-          fhir_path: Location.physicalType.coding.code
-          fhir_type: code
-          value_set: http://hl7.org/fhir/ValueSet/location-physical-type
-          binding_strength: example
-          binding_source: manual
-      display:
-        range: string
-        description: Representation defined by the system
-        annotations:
-          fhir_path: Location.physicalType.coding.display
-          fhir_type: string
-      is_source:
-        range: boolean
-        description: True on the coding that came from the source system; false on codings added by a
-          downstream mapping step. CDM-defined, not native to FHIR (§6).
-        annotations:
-          fhir_path: Location.physicalType.coding.is_source
-          fhir_type: boolean
-  LocationPhysicalType:
-    description: Physical form of the location
-    annotations:
-      fhir_path: Location.physicalType
-    attributes:
-      coding:
-        range: LocationPhysicalTypeCoding
-        multivalued: true
-        inlined_as_list: true
-        description: Code defined by a terminology system
-        annotations:
-          fhir_path: Location.physicalType.coding
-          fhir_type: Coding
   LocationIdentifier:
     description: Unique code or number identifying the location to its users
     annotations:
       fhir_path: Location.identifier
-      key_fields: system, value
     attributes:
       system:
         range: uri
@@ -179,15 +89,16 @@ classes:
           fhir_path: Location.name
           fhir_type: string
       type:
-        range: LocationType
+        range: CodeableConcept
         multivalued: true
         inlined_as_list: true
         description: Type of function performed
         annotations:
           fhir_path: Location.type
           fhir_type: CodeableConcept
+          key_fields: coding
       physicaltype:
-        range: LocationPhysicalType
+        range: LocationPhysicalTypeCodeableConcept
         description: Physical form of the location
         annotations:
           fhir_path: Location.physicalType
@@ -216,3 +127,4 @@ classes:
         annotations:
           fhir_path: Location.identifier
           fhir_type: Identifier
+          key_fields: system, value

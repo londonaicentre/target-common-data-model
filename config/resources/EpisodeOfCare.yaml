@@ -52,7 +52,7 @@ include:
       EpisodeOfCare.type.text: >
         rendered term; the coding carries the meaning
 
-  # --- Variants -----------------------------------------------------------
+  # --- Arrays -------------------------------------------------------------
 
   # Registration number from the source system.
   # identifier  array [ {system: string, value: string} ]
