@@ -1677,7 +1677,7 @@ def main() -> None:
     manifest = (load_yaml(MANIFEST_PATH).get("enums") or {})
 
     pkgs = global_cfg.get("packages") or {}
-    packages = tuple(p for p in (pkgs.get("profile"), pkgs.get("core")) if p)
+    packages = tuple(p for p in (pkgs.get("profile"), pkgs.get("core"), pkgs.get("terminology")) if p)
     if not packages:
         print("ERROR: global.yaml declares no packages", file=sys.stderr)
         sys.exit(1)

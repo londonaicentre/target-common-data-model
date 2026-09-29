@@ -402,6 +402,24 @@ classes:
     slot_usage:
       coding:
         range: OutcomeOfAttendanceCoding
+  TreatmentFunctionCoding:
+    is_a: Coding
+    description: A Coding whose code is drawn from TreatmentFunctionEnum.
+    slot_usage:
+      code:
+        range: TreatmentFunctionEnum
+        annotations:
+          fhir_path: Coding.code
+          fhir_type: code
+          replaces_value_set: https://fhir.hl7.org.uk/ValueSet/UKCore-CareSettingType
+          binding_strength: preferred
+          binding_source: local
+  TreatmentFunctionCodeableConcept:
+    is_a: CodeableConcept
+    description: A CodeableConcept whose codings are TreatmentFunctionCoding.
+    slot_usage:
+      coding:
+        range: TreatmentFunctionCoding
   UKCoreAddressKeyTypeCoding:
     is_a: Coding
     description: A Coding whose code is drawn from UKCoreAddressKeyTypeEnum.

@@ -140,7 +140,7 @@ classes:
           fhir_type: CodeableConcept
           key_fields: coding
       servicetype:
-        range: CodeableConcept
+        range: TreatmentFunctionCodeableConcept
         description: Specific type of service
         annotations:
           fhir_path: Encounter.serviceType

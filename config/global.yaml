@@ -16,6 +16,7 @@
 packages:
   profile: fhir.r4.ukcore.stu2      # UK Core resource profiles
   core: hl7.fhir.r4.core            # base datatype snapshots and value sets
+  terminology: uk.nhsdigital.r4     # NHS code systems outside UK Core (treatment function)
 
 # ===========================================================================
 # Exclusions

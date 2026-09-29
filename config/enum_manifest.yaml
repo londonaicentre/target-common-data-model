@@ -96,6 +96,13 @@ enums:
       - { code: SS, display: "short stay" }
       - { code: VR, display: "virtual" }
 
+  TreatmentFunctionEnum:
+    description: "NHS treatment function codes (NHSDataModelAndDictionary-treatment-function). Replaces the preferred UKCore-CareSettingType binding on Encounter.serviceType."
+    source: codesystem
+    url: https://fhir.nhs.uk/CodeSystem/NHSDataModelAndDictionary-treatment-function
+    package: uk.nhsdigital.r4
+    local_codes: true
+
   AdmissionMethodEnum:
     description: "NHS England admission method codes (UKCore-AdmissionMethodEngland)."
     source: codesystem
