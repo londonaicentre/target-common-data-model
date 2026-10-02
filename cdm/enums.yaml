@@ -687,6 +687,359 @@ enums:
         description: Another appointment given
       '3':
         description: Appointment to be made at a later date
+  TreatmentFunctionEnum:
+    description: NHS treatment function codes (NHSDataModelAndDictionary-treatment-function). Replaces
+      the preferred UKCore-CareSettingType binding on Encounter.serviceType.
+    annotations:
+      binding_source: local
+      origin: https://fhir.nhs.uk/CodeSystem/NHSDataModelAndDictionary-treatment-function
+    permissible_values:
+      '100':
+        description: GENERAL SURGERY
+      '101':
+        description: UROLOGY
+      '102':
+        description: TRANSPLANTATION SURGERY
+      '103':
+        description: BREAST SURGERY
+      '104':
+        description: COLORECTAL SURGERY
+      '105':
+        description: HEPATOBILIARY AND PANCREATIC SURGERY
+      '106':
+        description: UPPER GASTROINTESTINAL SURGERY
+      '107':
+        description: VASCULAR SURGERY
+      '108':
+        description: SPINAL SURGERY SERVICE
+      '110':
+        description: TRAUMA AND ORTHOPAEDICS
+      '120':
+        description: ENT
+      '130':
+        description: OPHTHALMOLOGY
+      '140':
+        description: ORAL SURGERY
+      '141':
+        description: RESTORATIVE DENTISTRY
+      '142':
+        description: PAEDIATRIC DENTISTRY
+      '143':
+        description: ORTHODONTICS
+      '144':
+        description: MAXILLO-FACIAL SURGERY
+      '150':
+        description: NEUROSURGERY
+      '160':
+        description: PLASTIC SURGERY
+      '161':
+        description: BURNS CARE
+      '170':
+        description: CARDIOTHORACIC SURGERY
+      '171':
+        description: PAEDIATRIC SURGERY
+      '172':
+        description: CARDIAC SURGERY
+      '173':
+        description: THORACIC SURGERY
+      '174':
+        description: CARDIOTHORACIC TRANSPLANTATION
+      '180':
+        description: ACCIDENT AND EMERGENCY
+      '191':
+        description: PAIN MANAGEMENT
+      '211':
+        description: PAEDIATRIC UROLOGY
+      '212':
+        description: PAEDIATRIC TRANSPLANTATION SURGERY
+      '213':
+        description: PAEDIATRIC GASTROINTESTINAL SURGERY
+      '214':
+        description: PAEDIATRIC TRAUMA AND ORTHOPAEDICS
+      '215':
+        description: PAEDIATRIC EAR NOSE AND THROAT
+      '216':
+        description: PAEDIATRIC OPHTHALMOLOGY
+      '217':
+        description: PAEDIATRIC MAXILLO-FACIAL SURGERY
+      '218':
+        description: PAEDIATRIC NEUROSURGERY
+      '219':
+        description: PAEDIATRIC PLASTIC SURGERY
+      '220':
+        description: PAEDIATRIC BURNS CARE
+      '221':
+        description: PAEDIATRIC CARDIAC SURGERY
+      '222':
+        description: PAEDIATRIC THORACIC SURGERY
+      '223':
+        description: PAEDIATRIC EPILEPSY
+      '241':
+        description: PAEDIATRIC PAIN MANAGEMENT
+      '242':
+        description: PAEDIATRIC INTENSIVE CARE
+      '251':
+        description: PAEDIATRIC GASTROENTEROLOGY
+      '252':
+        description: PAEDIATRIC ENDOCRINOLOGY
+      '253':
+        description: PAEDIATRIC CLINICAL HAEMATOLOGY
+      '254':
+        description: PAEDIATRIC AUDIOLOGICAL MEDICINE
+      '255':
+        description: PAEDIATRIC CLINICAL IMMUNOLOGY AND ALLERGY SERVICE
+      '256':
+        description: PAEDIATRIC INFECTIOUS DISEASES
+      '257':
+        description: PAEDIATRIC DERMATOLOGY
+      '258':
+        description: PAEDIATRIC RESPIRATORY MEDICINE
+      '259':
+        description: PAEDIATRIC NEPHROLOGY
+      '260':
+        description: PAEDIATRIC MEDICAL ONCOLOGY
+      '261':
+        description: PAEDIATRIC METABOLIC DISEASE
+      '262':
+        description: PAEDIATRIC RHEUMATOLOGY
+      '263':
+        description: PAEDIATRIC DIABETIC MEDICINE
+      '264':
+        description: PAEDIATRIC CYSTIC FIBROSIS
+      '280':
+        description: PAEDIATRIC INTERVENTIONAL RADIOLOGY
+      '290':
+        description: COMMUNITY PAEDIATRICS
+      '291':
+        description: PAEDIATRIC NEURO-DISABILITY
+      '190':
+        description: ANAESTHETICS
+      '192':
+        description: CRITICAL CARE MEDICINE
+      '300':
+        description: GENERAL MEDICINE
+      '301':
+        description: GASTROENTEROLOGY
+      '302':
+        description: ENDOCRINOLOGY
+      '303':
+        description: CLINICAL HAEMATOLOGY
+      '304':
+        description: CLINICAL PHYSIOLOGY
+      '305':
+        description: CLINICAL PHARMACOLOGY
+      '306':
+        description: HEPATOLOGY
+      '307':
+        description: DIABETIC MEDICINE
+      '308':
+        description: BLOOD AND MARROW TRANSPLANTATION
+      '309':
+        description: HAEMOPHILIA SERVICE
+      '310':
+        description: AUDIOLOGICAL MEDICINE
+      '311':
+        description: CLINICAL GENETICS
+      '312':
+        description: not a Treatment Function
+      '313':
+        description: CLINICAL IMMUNOLOGY and ALLERGY SERVICE
+      '314':
+        description: REHABILITATION SERVICE
+      '315':
+        description: PALLIATIVE MEDICINE
+      '316':
+        description: CLINICAL IMMUNOLOGY
+      '317':
+        description: ALLERGY SERVICE
+      '318':
+        description: INTERMEDIATE CARE
+      '319':
+        description: RESPITE CARE
+      '320':
+        description: CARDIOLOGY
+      '321':
+        description: PAEDIATRIC CARDIOLOGY
+      '322':
+        description: CLINICAL MICROBIOLOGY
+      '323':
+        description: SPINAL INJURIES
+      '324':
+        description: ANTICOAGULANT SERVICE
+      '325':
+        description: SPORT AND EXERCISE MEDICINE
+      '327':
+        description: CARDIAC REHABILITATION
+      '328':
+        description: STROKE MEDICINE
+      '329':
+        description: TRANSIENT ISCHAEMIC ATTACK
+      '330':
+        description: DERMATOLOGY
+      '331':
+        description: CONGENITAL HEART DISEASE SERVICE
+      '340':
+        description: RESPIRATORY MEDICINE
+      '341':
+        description: RESPIRATORY PHYSIOLOGY
+      '342':
+        description: PROGRAMMED PULMONARY REHABILITATION
+      '343':
+        description: ADULT CYSTIC FIBROSIS SERVICE
+      '344':
+        description: COMPLEX SPECIALISED REHABILITATION SERVICE
+      '345':
+        description: SPECIALIST REHABILITATION SERVICE
+      '346':
+        description: LOCAL SPECIALIST REHABILITATION SERVICE
+      '350':
+        description: INFECTIOUS DISEASES
+      '352':
+        description: TROPICAL MEDICINE
+      '360':
+        description: GENITOURINARY MEDICINE
+      '361':
+        description: NEPHROLOGY
+      '370':
+        description: MEDICAL ONCOLOGY
+      '371':
+        description: NUCLEAR MEDICINE
+      '400':
+        description: NEUROLOGY
+      '401':
+        description: CLINICAL NEUROPHYSIOLOGY
+      '410':
+        description: RHEUMATOLOGY
+      '420':
+        description: PAEDIATRICS
+      '421':
+        description: PAEDIATRIC NEUROLOGY
+      '422':
+        description: NEONATOLOGY
+      '424':
+        description: WELL BABIES
+      '430':
+        description: GERIATRIC MEDICINE
+      '450':
+        description: DENTAL MEDICINE SPECIALTIES
+      '460':
+        description: MEDICAL OPHTHALMOLOGY
+      '500':
+        description: not a Treatment Function
+      '501':
+        description: OBSTETRICS
+      '502':
+        description: GYNAECOLOGY
+      '503':
+        description: GYNAECOLOGICAL ONCOLOGY
+      '510':
+        description: Retired
+      '520':
+        description: Retired
+      '560':
+        description: MIDWIFERY SERVICE
+      '600':
+        description: not a Treatment Function
+      '610':
+        description: Retired
+      '620':
+        description: Retired
+      '650':
+        description: PHYSIOTHERAPY
+      '651':
+        description: OCCUPATIONAL THERAPY
+      '652':
+        description: SPEECH AND LANGUAGE THERAPY
+      '653':
+        description: PODIATRY
+      '654':
+        description: DIETETICS
+      '655':
+        description: ORTHOPTICS
+      '656':
+        description: CLINICAL PSYCHOLOGY
+      '657':
+        description: PROSTHETICS
+      '658':
+        description: ORTHOTICS
+      '659':
+        description: DRAMA THERAPY
+      '660':
+        description: ART THERAPY
+      '661':
+        description: MUSIC THERAPY
+      '662':
+        description: OPTOMETRY
+      '663':
+        description: PODIATRIC SURGERY
+      '700':
+        description: LEARNING DISABILITY
+      '710':
+        description: ADULT MENTAL ILLNESS
+      '711':
+        description: CHILD and ADOLESCENT PSYCHIATRY
+      '712':
+        description: FORENSIC PSYCHIATRY
+      '713':
+        description: PSYCHOTHERAPY
+      '715':
+        description: OLD AGE PSYCHIATRY
+      '720':
+        description: EATING DISORDERS
+      '721':
+        description: ADDICTION SERVICES
+      '722':
+        description: LIAISON PSYCHIATRY
+      '723':
+        description: PSYCHIATRIC INTENSIVE CARE
+      '724':
+        description: PERINATAL PSYCHIATRY
+      '725':
+        description: MENTAL HEALTH RECOVERY AND REHABILITATION SERVICE
+      '726':
+        description: MENTAL HEALTH DUAL DIAGNOSIS SERVICE
+      '727':
+        description: DEMENTIA ASSESSMENT SERVICE
+      '800':
+        description: CLINICAL ONCOLOGY (previously RADIOTHERAPY)
+      '810':
+        description: not a Treatment Function
+      '811':
+        description: INTERVENTIONAL RADIOLOGY
+      '812':
+        description: DIAGNOSTIC IMAGING
+      '820':
+        description: not a Treatment Function
+      '821':
+        description: not a Treatment Function
+      '822':
+        description: CHEMICAL PATHOLOGY
+      '823':
+        description: not a Treatment Function
+      '824':
+        description: not a Treatment Function
+      '830':
+        description: not a Treatment Function
+      '831':
+        description: not a Treatment Function
+      '832':
+        description: Retired
+      '834':
+        description: MEDICAL VIROLOGY
+      '840':
+        description: AUDIOLOGY
+      '900':
+        description: not a Treatment Function
+      '901':
+        description: not a Treatment Function
+      '920':
+        description: DIABETIC EDUCATION SERVICE
+      '950':
+        description: not a Treatment Function
+      '960':
+        description: not a Treatment Function
+      '990':
+        description: Retired
   AddressUseEnum:
     description: Derived from http://hl7.org/fhir/ValueSet/address-use (compose of 5 concepts).
     annotations:

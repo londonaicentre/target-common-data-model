@@ -47,12 +47,18 @@ class ValueSetExpander:
     @lru_cache(maxsize=None)
     def _index(self, package: str) -> dict[tuple[str, str], str]:
         """(resourceType, canonical url) -> absolute path, for one package."""
-        index_path = REPO_ROOT / "node_modules" / package / ".index.json"
-        if not index_path.exists():
-            return {}
-        pkg_dir = index_path.parent
+        pkg_dir = REPO_ROOT / "node_modules" / package
+        index_path = pkg_dir / ".index.json"
+        if index_path.exists():
+            entries = json.loads(index_path.read_text(encoding="utf-8")).get("files", [])
+        else:
+            # some packages (for eg ; uk.nhsdigital.r4) have no index, so read their resources directly.
+            entries = [
+                {**json.loads(p.read_text(encoding="utf-8")), "filename": p.name}
+                for p in pkg_dir.glob("*.json")
+            ]
         out: dict[tuple[str, str], str] = {}
-        for entry in json.loads(index_path.read_text(encoding="utf-8")).get("files", []):
+        for entry in entries:
             url, rtype = entry.get("url"), entry.get("resourceType")
             if url and rtype:
                 out.setdefault((rtype, url), str(pkg_dir / entry["filename"]))

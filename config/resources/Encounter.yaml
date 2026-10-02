@@ -49,10 +49,15 @@ include:
       Encounter.type.text: >
         rendered term; the coding carries the meaning
 
-  # Care setting / treatment function.
-  # servicetype  struct { coding: [ {system: string, code: string,
+  # The service the patient was seen by, as an NHS treatment function.
+  # servicetype  struct { coding: [ {system: string, code: string
+  #                                  (enum TreatmentFunctionEnum),
   #                                  display: string, is_source: boolean} ] }
   Encounter.serviceType:
+    bindings:
+      # Local: NHS treatment function, replacing UKCore-CareSettingType
+      # (preferred), not a FHIR value set.
+      Encounter.serviceType.coding.code: TreatmentFunctionEnum
     exclude:
       Encounter.serviceType.text: >
         rendered term; the coding carries the meaning
