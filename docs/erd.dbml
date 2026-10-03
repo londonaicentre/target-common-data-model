@@ -978,6 +978,7 @@ Table observation {
   effectivedatetime timestamp_ntz [note: 'Clinically relevant time/time-period for observation | fhir_path: Observation.effectiveDateTime | fhir_type: dateTime']
   valuequantity "object(value varchar, comparator varchar, unit varchar, system varchar, code varchar)" [note: 'Actual result | ObservationValueQuantity | fhir_path: Observation.valueQuantity | fhir_type: Quantity']
   valuecodeableconcept "object(coding array(object(system varchar, code varchar, display varchar, is_source boolean)))" [note: 'Actual result | CodeableConcept | fhir_path: Observation.valueCodeableConcept | fhir_type: CodeableConcept']
+  valuestring varchar [note: 'Actual result | fhir_path: Observation.valueString | fhir_type: string']
   referencerange_low_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: Observation.referenceRange.low.value | fhir_type: decimal']
   referencerange_high_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: Observation.referenceRange.high.value | fhir_type: decimal']
   component "array(object(code object(coding array(object(system varchar, code varchar, display varchar, is_source boolean))), valuequantity object(value varchar, comparator varchar, unit varchar, system varchar, code varchar), valuecodeableconcept object(coding array(object(system varchar, code varchar, display varchar, is_source boolean)))))" [note: 'Component results | ObservationComponent[] - key: code | fhir_path: Observation.component | fhir_type: BackboneElement']

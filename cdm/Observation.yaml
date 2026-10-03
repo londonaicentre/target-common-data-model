@@ -219,6 +219,12 @@ classes:
         annotations:
           fhir_path: Observation.valueCodeableConcept
           fhir_type: CodeableConcept
+      valuestring:
+        range: string
+        description: Actual result
+        annotations:
+          fhir_path: Observation.valueString
+          fhir_type: string
       referencerange_low_value:
         range: float
         description: Numerical value (with implicit precision)
