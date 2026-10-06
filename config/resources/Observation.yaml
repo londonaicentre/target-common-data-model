@@ -87,6 +87,12 @@ include:
       Observation.valueCodeableConcept.text: >
         rendered term; the coding carries the meaning
 
+  # Free-text results. Many source results are only held as text (form
+  # answers, lab comments such as 'Detected' or 'See report') and would
+  # otherwise be lost.
+  # valuestring  string
+  Observation.valueString:
+
   # The lab's own normal range, from referenceRange[0]
   # referencerange_low_value   float
   # referencerange_high_value  float
@@ -167,8 +173,7 @@ rejected:
   Observation.referenceRange.text: limited analytical utility; free text
 
   # --- Other value[x] forms -----------------------------------------------
-  # Only Quantity and CodeableConcept are whitelisted.
-  Observation.valueString: limited analytical utility; free text
+  # Only Quantity, CodeableConcept and String are whitelisted.
   Observation.valueBoolean: >
     not in scope of typical source data; boolean results arrive as a coded
     concept
