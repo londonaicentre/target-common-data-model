@@ -44,6 +44,14 @@ include:
   MedicationAdministration.context:
     fk: Encounter               # profile allows [Encounter, EpisodeOfCare]
 
+  # The prescription (order) this dose was given against. EPMA / MAR
+  # systems record administrations against the order they fulfil, so this
+  # links what was prescribed to what was given. Nullable: feeds without
+  # the link leave it empty, so join to MedicationRequest with a left join.
+  # request_id  string (FK -> MedicationRequest.id)
+  MedicationAdministration.request:
+    fk: MedicationRequest
+
   # A dose nested within a larger administration event. Carried to future
   # proof the model, for example parent infusion + rate changes.
   # partof_id  array [ string (FK -> MedicationAdministration.id) ]
@@ -178,10 +186,6 @@ rejected:
     Practitioner not modelled; would be a dangling FK
 
   # --- References to other resources --------------------------------------
-  MedicationAdministration.request: >
-    MedicationRequest IS modelled, but the link is not reliably populated in
-    UK feeds and a mostly-null FK invites joins that silently drop
-    administrations
   MedicationAdministration.reasonCode: >
     limited analytical utility; the indication is carried by the linked
     Condition

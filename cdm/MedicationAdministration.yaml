@@ -23,6 +23,7 @@ imports:
 - enums
 - datatypes
 - Encounter
+- MedicationRequest
 - Patient
 default_range: string
 classes:
@@ -249,6 +250,14 @@ classes:
           fhir_path: MedicationAdministration.context
           fhir_type: Reference
           fk_target: Encounter
+      request_id:
+        range: MedicationRequest
+        inlined: false
+        description: Request administration performed against
+        annotations:
+          fhir_path: MedicationAdministration.request
+          fhir_type: Reference
+          fk_target: MedicationRequest
       partof_id:
         range: MedicationAdministration
         multivalued: true
