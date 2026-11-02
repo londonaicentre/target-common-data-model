@@ -896,6 +896,7 @@ Table medicationadministration {
   medicationcodeableconcept "object(coding array(object(system varchar, code varchar, display varchar, is_source boolean)))" [not null, note: 'What was administered | CodeableConcept | fhir_path: MedicationAdministration.medicationCodeableConcept | fhir_type: CodeableConcept']
   subject_id varchar [not null, note: 'Who received medication | fhir_path: MedicationAdministration.subject | fhir_type: Reference']
   context_id varchar [note: 'Encounter or Episode of Care administered as part of | fhir_path: MedicationAdministration.context | fhir_type: Reference']
+  request_id varchar [note: 'Request administration performed against | fhir_path: MedicationAdministration.request | fhir_type: Reference']
   partof_id "array(varchar)" [note: 'Part of referenced event | fhir_path: MedicationAdministration.partOf | fhir_type: Reference']
   effectivedatetime timestamp_ntz [not null, note: 'Start and end time of administration | fhir_path: MedicationAdministration.effectiveDateTime | fhir_type: dateTime']
   effectiveperiod "object(start timestamp_ntz, end timestamp_ntz)" [not null, note: 'Start and end time of administration | MedicationAdministrationEffectivePeriod | fhir_path: MedicationAdministration.effectivePeriod | fhir_type: Period']
@@ -1099,6 +1100,7 @@ Ref: location.partof_id > location.id
 Ref: location.managingorganization_id > organization.id
 Ref: medicationadministration.subject_id > patient.id
 Ref: medicationadministration.context_id > encounter.id
+Ref: medicationadministration.request_id > medicationrequest.id
 Ref: medicationadministration.partof_id > medicationadministration.id
 Ref: medicationrequest.subject_id > patient.id
 Ref: medicationrequest.encounter_id > encounter.id
