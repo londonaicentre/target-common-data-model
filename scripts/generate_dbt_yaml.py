@@ -43,7 +43,7 @@ TYPE_MAP = {
     "string": "varchar", "uri": "varchar",
     "boolean": "boolean", "date": "date",
     "datetime": "timestamp_ntz", "TimestampNtz": "timestamp_ntz",
-    "integer": "number", "decimal": "number",
+    "integer": "number", "float": "float",
 }
 
 
