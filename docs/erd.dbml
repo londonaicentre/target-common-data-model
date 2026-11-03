@@ -935,7 +935,8 @@ Table medicationrequest {
   dispenserequest_quantity_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationRequest.dispenseRequest.quantity.value | fhir_type: decimal']
   dispenserequest_quantity_unit varchar [note: 'Unit representation | fhir_path: MedicationRequest.dispenseRequest.quantity.unit | fhir_type: string']
   dispenserequest_expectedsupplyduration_value varchar [note: 'Numerical value (with implicit precision) | fhir_path: MedicationRequest.dispenseRequest.expectedSupplyDuration.value | fhir_type: decimal']
-  dispenserequest_validityperiod "object(start timestamp_ntz, end timestamp_ntz)" [note: 'Time period supply is authorized for | MedicationRequestDispenseRequestValidityPeriod | fhir_path: MedicationRequest.dispenseRequest.validityPeriod | fhir_type: Period']
+  dispenserequest_validityperiod_start timestamp_ntz [note: 'Starting time with inclusive boundary | fhir_path: MedicationRequest.dispenseRequest.validityPeriod.start | fhir_type: dateTime']
+  dispenserequest_validityperiod_end timestamp_ntz [note: 'End time with inclusive boundary, if not ongoing | fhir_path: MedicationRequest.dispenseRequest.validityPeriod.end | fhir_type: dateTime']
   identifier "array(object(system varchar, value varchar))" [note: 'External ids for this request | MedicationRequestIdentifier[] - key: system, value | fhir_path: MedicationRequest.identifier | fhir_type: Identifier']
   note_text varchar [note: 'The annotation - text content (as markdown) | fhir_path: MedicationRequest.note.text | fhir_type: markdown']
 
