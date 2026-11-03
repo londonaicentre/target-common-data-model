@@ -114,8 +114,10 @@ include:
   # prescriptions this marks the start and end (stop/discontinue) of the
   # order, so it is the exposure window; authoredOn is only when it was
   # written.
-  # dispenserequest_validityperiod  struct {start: timestamp, end: timestamp}
-  MedicationRequest.dispenseRequest.validityPeriod:
+  # dispenserequest_validityperiod_start  timestamp
+  # dispenserequest_validityperiod_end    timestamp
+  MedicationRequest.dispenseRequest.validityPeriod.start:
+  MedicationRequest.dispenseRequest.validityPeriod.end:
 
   # --- Arrays -------------------------------------------------------------
 

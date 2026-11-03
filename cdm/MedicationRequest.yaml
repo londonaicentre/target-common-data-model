@@ -26,23 +26,6 @@ imports:
 - Patient
 default_range: string
 classes:
-  MedicationRequestDispenseRequestValidityPeriod:
-    description: Time period supply is authorized for
-    annotations:
-      fhir_path: MedicationRequest.dispenseRequest.validityPeriod
-    attributes:
-      start:
-        range: datetime
-        description: Starting time with inclusive boundary
-        annotations:
-          fhir_path: MedicationRequest.dispenseRequest.validityPeriod.start
-          fhir_type: dateTime
-      end:
-        range: datetime
-        description: End time with inclusive boundary, if not ongoing
-        annotations:
-          fhir_path: MedicationRequest.dispenseRequest.validityPeriod.end
-          fhir_type: dateTime
   MedicationRequestIdentifier:
     description: External ids for this request
     annotations:
@@ -190,12 +173,18 @@ classes:
         annotations:
           fhir_path: MedicationRequest.dispenseRequest.expectedSupplyDuration.value
           fhir_type: decimal
-      dispenserequest_validityperiod:
-        range: MedicationRequestDispenseRequestValidityPeriod
-        description: Time period supply is authorized for
+      dispenserequest_validityperiod_start:
+        range: datetime
+        description: Starting time with inclusive boundary
         annotations:
-          fhir_path: MedicationRequest.dispenseRequest.validityPeriod
-          fhir_type: Period
+          fhir_path: MedicationRequest.dispenseRequest.validityPeriod.start
+          fhir_type: dateTime
+      dispenserequest_validityperiod_end:
+        range: datetime
+        description: End time with inclusive boundary, if not ongoing
+        annotations:
+          fhir_path: MedicationRequest.dispenseRequest.validityPeriod.end
+          fhir_type: dateTime
       identifier:
         range: MedicationRequestIdentifier
         multivalued: true
