@@ -110,6 +110,13 @@ include:
   # dispenserequest_expectedsupplyduration_value  float
   MedicationRequest.dispenseRequest.expectedSupplyDuration.value:
 
+  # When the prescription is valid from and to. For inpatient (EPMA)
+  # prescriptions this marks the start and end (stop/discontinue) of the
+  # order, so it is the exposure window; authoredOn is only when it was
+  # written.
+  # dispenserequest_validityperiod  struct {start: timestamp, end: timestamp}
+  MedicationRequest.dispenseRequest.validityPeriod:
+
   # --- Arrays -------------------------------------------------------------
 
   # Prescription number from the source system.
@@ -229,10 +236,6 @@ rejected:
   MedicationRequest.dispenseRequest.numberOfRepeatsAllowed: >
     not in scope of typical source data; repeats authorised is a prescribing
     policy field rather than an exposure fact, and is not reliably populated
-  MedicationRequest.dispenseRequest.validityPeriod: >
-    limited analytical utility; the prescription validity window is an
-    administrative window rather than an exposure one, which authoredOn and
-    expectedSupplyDuration.value carry
   MedicationRequest.dispenseRequest.initialFill: >
     not in scope of typical source data; a US pharmacy-benefit concept
   MedicationRequest.dispenseRequest.dispenseInterval: >
