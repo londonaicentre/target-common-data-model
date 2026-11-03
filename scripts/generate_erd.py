@@ -5,8 +5,8 @@
 """Generate an ERD of the CDM from the LinkML spec, as DBML.
 
 For each cdm/<resource>.yaml, resolve the schema via LinkML SchemaView and emit
-docs/erd.dbml - paste into https://dbdiagram.io to render, or publish with
-dbdocs. Carries enums as first-class objects and the FHIR lineage
+docs/erd.dbml - synced to dbdiagram.io by .github/workflows/dbdiagram.yml,
+or paste it into https://dbdiagram.io to render. Carries enums as first-class objects and the FHIR lineage
 (fhir_path / fhir_type / value_set / replaces_value_set) as column notes.
 
 One entity per resource table. Following CONVENTIONS.md:
@@ -215,7 +215,7 @@ def render_dbml(entities: list[dict], enums: list[dict]) -> str:
         "// An ERD of the FlatFHIR CDM, generated from the LinkML spec in cdm/.",
         "// Source of truth is cdm/<Resource>.yaml; regenerate rather than editing.",
         "//",
-        "// View by pasting into https://dbdiagram.io, or publish with dbdocs.",
+        "// Synced to dbdiagram.io on change by .github/workflows/dbdiagram.yml.",
         "//",
         "// Object and array columns (CONVENTIONS.md §5) are declared with their full",
         "// structured type on the parent table, not tables of their own.",

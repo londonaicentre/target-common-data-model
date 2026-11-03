@@ -3,7 +3,7 @@
 // An ERD of the FlatFHIR CDM, generated from the LinkML spec in cdm/.
 // Source of truth is cdm/<Resource>.yaml; regenerate rather than editing.
 //
-// View by pasting into https://dbdiagram.io, or publish with dbdocs.
+// Synced to dbdiagram.io on change by .github/workflows/dbdiagram.yml.
 //
 // Object and array columns (CONVENTIONS.md §5) are declared with their full
 // structured type on the parent table, not tables of their own.
