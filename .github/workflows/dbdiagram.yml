@@ -1,0 +1,48 @@
+name: Sync dbdiagram
+
+# Pushes the ERD (docs/erd.dbml) to its dbdiagram.io diagram whenever it
+# changes on main.
+#
+# Needs:
+#   secret   DBDIAGRAM_TOKEN       a CLI token (`dbdiagram tokens`)
+#   variable DBDIAGRAM_DIAGRAM_ID  the diagram to update (dbdiagram.io/d/<id>).
+#                                  Leave it unset for the first manual run to
+#                                  create the diagram, then set it from the log;
+#                                  otherwise every run would create a new one.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/erd.dbml'
+  workflow_dispatch:
+
+jobs:
+  dbdiagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # .npmrc points at the FHIR package registry, so name npmjs explicitly
+      - run: npm install -g --registry=https://registry.npmjs.org dbdiagram@0.6.3
+
+      - run: dbdiagram validate docs/erd.dbml
+
+      - name: Push the ERD
+        env:
+          DBDIAGRAM_TOKEN: ${{ secrets.DBDIAGRAM_TOKEN }}
+          DIAGRAM_ID: ${{ vars.DBDIAGRAM_DIAGRAM_ID }}
+        run: |
+          if [ -n "$DIAGRAM_ID" ]; then
+            dbdiagram push docs/erd.dbml --diagram-id "$DIAGRAM_ID"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            dbdiagram push docs/erd.dbml --name "FlatFHIR CDM"
+            echo "::notice::Created a new diagram; set DBDIAGRAM_DIAGRAM_ID to its id"
+          else
+            echo "::error::DBDIAGRAM_DIAGRAM_ID is not set; run this workflow by hand once to create the diagram"
+            exit 1
+          fi
