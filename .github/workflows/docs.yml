@@ -1,0 +1,60 @@
+name: Docs
+
+# Builds the browsable CDM docs (LinkML pages + ERD) and publishes them to
+# GitHub Pages. Needs Pages enabled with Source: GitHub Actions
+# (Settings -> Pages).
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cdm/**'
+      - 'docs/erd.dbml'
+      - 'mkdocs.yml'
+      - 'scripts/generate_docs_site.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v8.3.2
+
+      - name: Generate page sources from the spec
+        run: uv run scripts/generate_docs_site.py
+
+      # .npmrc points at the FHIR package registry, so name npmjs explicitly
+      - name: Render the ERD
+        run: >
+          npx --yes --registry=https://registry.npmjs.org
+          -p @softwaretechnik/dbml-renderer@1.0.31
+          dbml-renderer -i build/site_docs/erd.dbml -o build/site_docs/erd.svg
+
+      - name: Build the site
+        run: uvx --with mkdocs-material==9.8.0 --from mkdocs==1.6.1 mkdocs build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

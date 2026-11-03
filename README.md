@@ -60,7 +60,17 @@ The contract generator reads `cdm/` through the LinkML `SchemaView` API rather t
 
 `scripts/generate_erd.py` renders the model as an entity-relationship diagram, for reviewing the shape of the CDM while iterating on configs. It reads `cdm/` through `SchemaView`, the same as the contract generator, and emits `docs/erd.dbml`.
 
-Paste that file into [dbdiagram.io](https://dbdiagram.io) to render it. On every change to `docs/erd.dbml` on `main`, the `Publish dbdocs` workflow also publishes it to [dbdocs.io](https://dbdocs.io) as the `flatfhir` project (it needs a `DBDOCS_TOKEN` repository secret, from `npx dbdocs token -g`). It is [DBML](https://dbml.dbdiagram.io/docs/), which carries every column with its `fhir_path`, `fhir_type` and `value_set` (or `replaces_value_set`, where a local vocabulary displaces the bound one) as a note, and the enums from `cdm/enums.yaml` as first-class objects, so a bound column links through to its permissible values.
+Paste that file into [dbdiagram.io](https://dbdiagram.io) to render it.
+
+## Docs site
+
+`.github/workflows/docs.yml` publishes a browsable site to GitHub Pages on every spec change on `main`: a page per table, column and enum (LinkML's doc generator, with the FHIR lineage annotations) plus the ERD rendered as an SVG. Build it locally with:
+
+```bash
+uv run scripts/generate_docs_site.py
+npx --registry=https://registry.npmjs.org -p @softwaretechnik/dbml-renderer@1.0.31 dbml-renderer -i build/site_docs/erd.dbml -o build/site_docs/erd.svg
+uvx --with mkdocs-material==9.8.0 --from mkdocs==1.6.1 mkdocs serve
+``` It is [DBML](https://dbml.dbdiagram.io/docs/), which carries every column with its `fhir_path`, `fhir_type` and `value_set` (or `replaces_value_set`, where a local vocabulary displaces the bound one) as a note, and the enums from `cdm/enums.yaml` as first-class objects, so a bound column links through to its permissible values.
 
 ## How to...
 

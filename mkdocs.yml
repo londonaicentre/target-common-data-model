@@ -1,0 +1,39 @@
+# Docs site for the FlatFHIR CDM, published to GitHub Pages by
+# .github/workflows/docs.yml. Page sources are generated into build/site_docs
+# by scripts/generate_docs_site.py; nothing under docs_dir is committed.
+site_name: FlatFHIR CDM
+site_description: A flattened analytical data model derived from UK Core FHIR R4.
+repo_url: https://github.com/londonaicentre/target-common-data-model
+docs_dir: build/site_docs
+site_dir: build/site
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+
+nav:
+  - Overview: index.md
+  - ERD: erd.md
+
+markdown_extensions:
+  - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
